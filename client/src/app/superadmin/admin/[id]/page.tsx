@@ -1,0 +1,421 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+
+// Mock data for the admin - will be replaced with API call
+const mockAdminData = {
+  id: '1',
+  name: 'Sarah Johnson',
+  email: 'sarah.johnson@velo.com',
+  role: 'Financial Admin',
+  status: 'Active',
+  twoFactorEnabled: true,
+  dateAdded: 'March 15, 2024',
+  adminId: 'ADM-2024-0315',
+  lastLoginIP: '192.168.1.105',
+  lastPasswordReset: 'January 8, 2024',
+  activeSessions: 3,
+  passwordSecurity: 'Secure',
+  permissions: [
+    { name: 'Access Payout Reports', enabled: true },
+    { name: 'Manage Financial Transactions', enabled: true },
+    { name: 'Review Revenue Analytics', enabled: true },
+    { name: 'Process Creator Payouts', enabled: true },
+    { name: 'Access Financial Dashboard', enabled: true },
+    { name: 'Generate Financial Reports', enabled: true },
+    { name: 'User Account Management', enabled: false },
+    { name: 'Content Moderation', enabled: false },
+  ],
+};
+
+const mockActivityLog = [
+  {
+    id: '1',
+    timestamp: 'Dec 15, 2024 14:32',
+    action: 'Processed Creator Payout',
+    details: 'Approved $2,450 payout to Creator ID: CR-4821',
+    ipAddress: '192.168.1.105',
+    status: 'Success',
+  },
+  {
+    id: '2',
+    timestamp: 'Dec 15, 2024 13:18',
+    action: 'Generated Financial Report',
+    details: 'Monthly revenue report for November 2024',
+    ipAddress: '192.168.1.105',
+    status: 'Success',
+  },
+  {
+    id: '3',
+    timestamp: 'Dec 15, 2024 09:45',
+    action: 'Login',
+    details: 'Successful login with 2FA verification',
+    ipAddress: '192.168.1.105',
+    status: 'Success',
+  },
+  {
+    id: '4',
+    timestamp: 'Dec 14, 2024 16:22',
+    action: 'Reviewed Transaction',
+    details: 'Flagged suspicious transaction TXN-78291',
+    ipAddress: '192.168.1.105',
+    status: 'Flagged',
+  },
+  {
+    id: '5',
+    timestamp: 'Dec 14, 2024 14:15',
+    action: 'Updated Financial Settings',
+    details: 'Modified payout threshold from $100 to $150',
+    ipAddress: '192.168.1.105',
+    status: 'Success',
+  },
+  {
+    id: '6',
+    timestamp: 'Dec 14, 2024 11:30',
+    action: 'Processed Creator Payout',
+    details: 'Approved $890 payout to Creator ID: CR-3256',
+    ipAddress: '192.168.1.105',
+    status: 'Success',
+  },
+];
+
+export default function AdminAuditPage() {
+  const params = useParams();
+  const [dateFilter, setDateFilter] = useState('');
+  const [actionFilter, setActionFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const admin = mockAdminData;
+  const totalActivities = 247;
+  const activitiesPerPage = 6;
+  const totalPages = Math.ceil(totalActivities / activitiesPerPage);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Success':
+        return 'bg-green-100 text-green-700 border border-green-300';
+      case 'Flagged':
+        return 'bg-red-100 text-red-600 border border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-700 border border-gray-300';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/superadmin/management"
+              className="text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Admin Audit: {admin.name}</h1>
+              <p className="text-gray-500">Detailed oversight and account management</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium">
+              {admin.role}
+            </span>
+            <span className="px-4 py-2 bg-gray-100 text-gray-900 rounded-full text-sm font-medium border border-gray-300">
+              {admin.status}
+            </span>
+            <span className="px-4 py-2 bg-gray-100 text-gray-900 rounded-full text-sm font-medium border border-gray-300">
+              2FA Active
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <button className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+            Edit Admin Role
+          </button>
+
+          <div className="flex items-center gap-3">
+            <button className="flex items-center gap-2 px-6 py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+              Suspend Account
+            </button>
+            <button className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete Permanently
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Profile and Permissions Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Admin Profile & Contact */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-6">Admin Profile & Contact</h2>
+
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-xl">
+              {admin.name.split(' ').map(n => n[0]).join('')}
+            </div>
+            <div>
+              <div className="font-bold text-gray-900 text-lg">{admin.name}</div>
+              <div className="text-gray-500">{admin.email}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Full Name</label>
+              <input
+                type="text"
+                value={admin.name}
+                disabled
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Email Address</label>
+              <input
+                type="email"
+                value={admin.email}
+                disabled
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Date Added</label>
+              <input
+                type="text"
+                value={admin.dateAdded}
+                disabled
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Admin ID</label>
+              <input
+                type="text"
+                value={admin.adminId}
+                disabled
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-500"
+              />
+            </div>
+          </div>
+
+          {/* Security Information */}
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-orange-600 mb-3">Security Information</h3>
+            <div className="space-y-2 text-sm">
+              <div className="text-orange-600">
+                <span className="font-medium">Last Login IP:</span> {admin.lastLoginIP}
+              </div>
+              <div className="text-orange-600">
+                <span className="font-medium">Last Password Reset:</span> {admin.lastPasswordReset}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Assigned Role & Permissions */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-6">Assigned Role & Permissions</h2>
+
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700 font-medium">Current Role</span>
+              <span className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium">
+                {admin.role}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">Permissions & Module Access</h3>
+            <div className="space-y-3">
+              {admin.permissions.map((permission, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  {permission.enabled ? (
+                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  <span className="text-gray-700">{permission.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Security & Access Management */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <h2 className="text-lg font-bold text-gray-900 mb-6">Security & Access Management</h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Two-Factor Authentication */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-gray-700 font-medium">Two-Factor Authentication</span>
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium border border-green-300">
+                Active
+              </span>
+            </div>
+            <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-200 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Force 2FA Reset
+            </button>
+          </div>
+
+          {/* Password Security */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-gray-700 font-medium">Password Security</span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-900 rounded-full text-sm font-medium border border-gray-300">
+                Secure
+              </span>
+            </div>
+            <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-200 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              Force Password Reset
+            </button>
+          </div>
+
+          {/* Active Sessions */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-gray-700 font-medium">Active Sessions</span>
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium border border-green-300">
+                {admin.activeSessions} Active
+              </span>
+            </div>
+            <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-600 font-medium hover:bg-red-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Revoke All Sessions
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Detailed Admin Activity Log */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold text-gray-900">Detailed Admin Activity Log</h2>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="mm/dd/yyyy"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+            />
+            <select
+              value={actionFilter}
+              onChange={(e) => setActionFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+            >
+              <option value="all">All Actions</option>
+              <option value="login">Login</option>
+              <option value="payout">Payout</option>
+              <option value="report">Report</option>
+              <option value="settings">Settings</option>
+            </select>
+            <button className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Activity Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="text-center py-4 px-4 font-semibold text-gray-600 text-sm">Timestamp</th>
+                <th className="text-center py-4 px-4 font-semibold text-gray-600 text-sm">Action</th>
+                <th className="text-center py-4 px-4 font-semibold text-gray-600 text-sm">Details</th>
+                <th className="text-center py-4 px-4 font-semibold text-gray-600 text-sm">IP Address</th>
+                <th className="text-center py-4 px-4 font-semibold text-gray-600 text-sm">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mockActivityLog.map((activity) => (
+                <tr key={activity.id} className="border-b border-gray-100">
+                  <td className="py-4 px-4 text-center text-gray-600">{activity.timestamp}</td>
+                  <td className="py-4 px-4 text-center text-gray-900 font-medium">{activity.action}</td>
+                  <td className="py-4 px-4 text-center text-gray-600">{activity.details}</td>
+                  <td className="py-4 px-4 text-center text-gray-600">{activity.ipAddress}</td>
+                  <td className="py-4 px-4 text-center">
+                    <span className={`inline-block px-3 py-1 rounded-lg text-sm font-medium ${getStatusColor(activity.status)}`}>
+                      {activity.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between mt-6">
+          <span className="text-sm text-gray-500">
+            Showing 1-{activitiesPerPage} of {totalActivities} activities
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            {[1, 2, 3].map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-10 h-10 rounded-lg font-medium transition-colors ${
+                  currentPage === page
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

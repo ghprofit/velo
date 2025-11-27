@@ -43,22 +43,7 @@ export default function VerifyPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <div className="flex items-center gap-3">
-              {/* Lock Icon */}
-              <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
-                <rect x="8" y="14" width="16" height="12" rx="2" fill="black"/>
-                <path d="M11 14V10C11 7.23858 13.2386 5 16 5C18.7614 5 21 7.23858 21 10V14" stroke="black" strokeWidth="2" fill="none"/>
-                <circle cx="16" cy="20" r="1.5" fill="white"/>
-              </svg>
-
-              {/* VeloLink Text */}
-              <div className="border-l-2 border-gray-900 pl-3">
-                <div className="text-2xl">
-                  <span className="font-bold text-gray-900">Velo</span>
-                  <span className="font-light text-gray-900">Link</span>
-                </div>
-              </div>
-            </div>
+            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
           </div>
 
           {/* Step Indicator */}
@@ -68,7 +53,7 @@ export default function VerifyPage() {
               <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-semibold text-lg">
                 ✓
               </div>
-              <span className="text-sm font-medium text-gray-700">Profile</span>
+              <span className="hidden text-sm font-medium text-gray-700">Profile</span>
 
               {/* Line */}
               <div className="w-15 h-0.5 bg-green-500"></div>
@@ -77,7 +62,7 @@ export default function VerifyPage() {
               <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-semibold text-lg">
                 2
               </div>
-              <span className="text-sm font-medium text-gray-900">ID Verification</span>
+              <span className="hidden text-sm font-medium text-gray-900">ID Verification</span>
 
               {/* Line */}
               <div className="w-15 h-0.5 bg-gray-300"></div>
@@ -86,7 +71,7 @@ export default function VerifyPage() {
               <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-lg">
                 3
               </div>
-              <span className="text-sm font-medium text-gray-500">Complete</span>
+              <span className="hidden text-sm font-medium text-gray-500">Complete</span>
             </div>
           </div>
 

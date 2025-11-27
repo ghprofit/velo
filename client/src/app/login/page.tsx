@@ -29,25 +29,7 @@ export default function LoginPage() {
         <div className="space-y-8">
           {/* Logo */}
           <div className="flex items-center gap-6">
-            {/* Lock Icon with Dollar Sign */}
-            <div className="w-32 h-32 bg-gray-900 rounded-2xl flex items-center justify-center shrink-0">
-              <div className="relative">
-                {/* Lock body */}
-                <div className="w-20 h-24 bg-gray-900 rounded-lg border-8 border-white flex items-center justify-center">
-                  <span className="text-4xl font-bold text-white">$</span>
-                </div>
-                {/* Lock shackle */}
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-12 border-8 border-white border-b-0 rounded-t-full"></div>
-              </div>
-            </div>
-
-            {/* VeloLink Text */}
-            <div className="border-l-4 border-gray-900 pl-6">
-              <div className="space-y-1">
-                <h1 className="text-5xl font-bold text-gray-900">Velo</h1>
-                <h1 className="text-5xl font-light text-gray-900">Link</h1>
-              </div>
-            </div>
+            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
           </div>
 
           {/* Tagline */}

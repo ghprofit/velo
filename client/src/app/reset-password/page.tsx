@@ -104,22 +104,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-lg">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            {/* Lock Icon */}
-            <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
-              <rect x="8" y="14" width="16" height="12" rx="2" fill="black"/>
-              <path d="M11 14V10C11 7.23858 13.2386 5 16 5C18.7614 5 21 7.23858 21 10V14" stroke="black" strokeWidth="2" fill="none"/>
-              <circle cx="16" cy="20" r="1.5" fill="white"/>
-            </svg>
-
-            {/* VeloLink Text */}
-            <div className="border-l-2 border-gray-900 pl-3">
-              <div className="text-2xl">
-                <span className="font-bold text-gray-900">Velo</span>
-                <span className="font-light text-gray-900">Link</span>
-              </div>
-            </div>
-          </div>
+          <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
           <p className="text-sm text-gray-500">Secure password reset</p>
         </div>
 

@@ -1,12 +1,19 @@
-import axios from 'axios';
-import crypto from 'crypto';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createVerificationSession = createVerificationSession;
+exports.getVerificationDecision = getVerificationDecision;
+exports.verifyWebhookSignature = verifyWebhookSignature;
+exports.parseVerificationStatus = parseVerificationStatus;
+exports.getVerificationStatusMessage = getVerificationStatusMessage;
+const axios_1 = __importDefault(require("axios"));
+const crypto_1 = __importDefault(require("crypto"));
 const VERIFF_API_KEY = process.env.VERIFF_API_KEY || '';
 const VERIFF_BASE_URL = process.env.VERIFF_BASE_URL || 'https://stationapi.veriff.com';
 const VERIFF_API_SECRET = process.env.VERIFF_API_SECRET || '';
-/**
- * Create a Veriff verification session
- */
-export async function createVerificationSession(userId, callback) {
+async function createVerificationSession(userId, callback) {
     try {
         const payload = {
             verification: {
@@ -15,11 +22,11 @@ export async function createVerificationSession(userId, callback) {
                     firstName: '',
                     lastName: '',
                 },
-                vendorData: userId, // Store user ID for later reference
+                vendorData: userId,
                 timestamp: new Date().toISOString(),
             },
         };
-        const response = await axios.post(`${VERIFF_BASE_URL}/v1/sessions`, payload, {
+        const response = await axios_1.default.post(`${VERIFF_BASE_URL}/v1/sessions`, payload, {
             headers: {
                 'Content-Type': 'application/json',
                 'X-AUTH-CLIENT': VERIFF_API_KEY,
@@ -32,12 +39,9 @@ export async function createVerificationSession(userId, callback) {
         throw new Error('Failed to create verification session');
     }
 }
-/**
- * Get verification decision from Veriff
- */
-export async function getVerificationDecision(sessionId) {
+async function getVerificationDecision(sessionId) {
     try {
-        const response = await axios.get(`${VERIFF_BASE_URL}/v1/sessions/${sessionId}/decision`, {
+        const response = await axios_1.default.get(`${VERIFF_BASE_URL}/v1/sessions/${sessionId}/decision`, {
             headers: {
                 'Content-Type': 'application/json',
                 'X-AUTH-CLIENT': VERIFF_API_KEY,
@@ -50,16 +54,13 @@ export async function getVerificationDecision(sessionId) {
         throw new Error('Failed to get verification decision');
     }
 }
-/**
- * Verify Veriff webhook signature
- */
-export function verifyWebhookSignature(payload, signature) {
+function verifyWebhookSignature(payload, signature) {
     try {
         if (!VERIFF_API_SECRET) {
             console.warn('VERIFF_API_SECRET not configured');
             return false;
         }
-        const hash = crypto
+        const hash = crypto_1.default
             .createHmac('sha256', VERIFF_API_SECRET)
             .update(payload)
             .digest('hex');
@@ -70,15 +71,7 @@ export function verifyWebhookSignature(payload, signature) {
         return false;
     }
 }
-/**
- * Parse Veriff verification status
- */
-export function parseVerificationStatus(code) {
-    // Veriff decision codes
-    // 9001 - approved
-    // 9102 - declined
-    // 9103 - resubmission requested
-    // 9104 - expired
+function parseVerificationStatus(code) {
     switch (code) {
         case 9001:
             return 'VERIFIED';
@@ -90,10 +83,7 @@ export function parseVerificationStatus(code) {
             return 'PENDING';
     }
 }
-/**
- * Get human-readable verification status message
- */
-export function getVerificationStatusMessage(status) {
+function getVerificationStatusMessage(status) {
     switch (status) {
         case 'VERIFIED':
             return 'Identity verification successful';

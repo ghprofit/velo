@@ -1,35 +1,31 @@
-import sgMail from '@sendgrid/mail';
-import { PrismaClient } from '@prisma/client';
-import crypto from 'crypto';
-const prisma = new PrismaClient();
-// Initialize SendGrid
-sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.sendWelcomeEmail = exports.sendVerificationEmail = exports.markEmailAsVerified = exports.verifyEmailToken = exports.createEmailVerificationToken = exports.generateVerificationCode = exports.generateVerificationToken = void 0;
+const mail_1 = __importDefault(require("@sendgrid/mail"));
+const client_1 = require("@prisma/client");
+const crypto_1 = __importDefault(require("crypto"));
+const prisma = new client_1.PrismaClient();
+mail_1.default.setApiKey(process.env.SENDGRID_API_KEY || '');
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@velolink.com';
 const FROM_NAME = process.env.SENDGRID_FROM_NAME || 'VeloLink';
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
-/**
- * Generate a secure verification token
- */
-export const generateVerificationToken = () => {
-    return crypto.randomBytes(32).toString('hex');
+const generateVerificationToken = () => {
+    return crypto_1.default.randomBytes(32).toString('hex');
 };
-/**
- * Generate a 6-digit verification code
- */
-export const generateVerificationCode = () => {
+exports.generateVerificationToken = generateVerificationToken;
+const generateVerificationCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
-/**
- * Create email verification token in database
- */
-export const createEmailVerificationToken = async (userId) => {
-    const token = generateVerificationToken();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    // Delete any existing token for this user
+exports.generateVerificationCode = generateVerificationCode;
+const createEmailVerificationToken = async (userId) => {
+    const token = (0, exports.generateVerificationToken)();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await prisma.emailVerificationToken.deleteMany({
         where: { userId },
     });
-    // Create new token
     await prisma.emailVerificationToken.create({
         data: {
             userId,
@@ -39,10 +35,8 @@ export const createEmailVerificationToken = async (userId) => {
     });
     return token;
 };
-/**
- * Verify email verification token
- */
-export const verifyEmailToken = async (token) => {
+exports.createEmailVerificationToken = createEmailVerificationToken;
+const verifyEmailToken = async (token) => {
     const verificationToken = await prisma.emailVerificationToken.findUnique({
         where: { token },
         include: { user: true },
@@ -50,9 +44,7 @@ export const verifyEmailToken = async (token) => {
     if (!verificationToken) {
         return null;
     }
-    // Check if token is expired
     if (verificationToken.expiresAt < new Date()) {
-        // Delete expired token
         await prisma.emailVerificationToken.delete({
             where: { id: verificationToken.id },
         });
@@ -60,23 +52,18 @@ export const verifyEmailToken = async (token) => {
     }
     return { userId: verificationToken.userId };
 };
-/**
- * Mark user's email as verified
- */
-export const markEmailAsVerified = async (userId) => {
+exports.verifyEmailToken = verifyEmailToken;
+const markEmailAsVerified = async (userId) => {
     await prisma.user.update({
         where: { id: userId },
         data: { emailVerified: true },
     });
-    // Delete the verification token
     await prisma.emailVerificationToken.deleteMany({
         where: { userId },
     });
 };
-/**
- * Send verification email to user
- */
-export const sendVerificationEmail = async (email, displayName, token) => {
+exports.markEmailAsVerified = markEmailAsVerified;
+const sendVerificationEmail = async (email, displayName, token) => {
     const verificationUrl = `${CLIENT_URL}/verify-email?token=${token}`;
     const msg = {
         to: email,
@@ -177,7 +164,7 @@ export const sendVerificationEmail = async (email, displayName, token) => {
     `,
     };
     try {
-        await sgMail.send(msg);
+        await mail_1.default.send(msg);
         console.log(`Verification email sent to ${email}`);
         return true;
     }
@@ -186,10 +173,8 @@ export const sendVerificationEmail = async (email, displayName, token) => {
         return false;
     }
 };
-/**
- * Send welcome email after successful verification
- */
-export const sendWelcomeEmail = async (email, displayName) => {
+exports.sendVerificationEmail = sendVerificationEmail;
+const sendWelcomeEmail = async (email, displayName) => {
     const msg = {
         to: email,
         from: {
@@ -265,7 +250,7 @@ export const sendWelcomeEmail = async (email, displayName) => {
     `,
     };
     try {
-        await sgMail.send(msg);
+        await mail_1.default.send(msg);
         return true;
     }
     catch (error) {
@@ -273,13 +258,14 @@ export const sendWelcomeEmail = async (email, displayName) => {
         return false;
     }
 };
-export default {
-    generateVerificationToken,
-    generateVerificationCode,
-    createEmailVerificationToken,
-    verifyEmailToken,
-    markEmailAsVerified,
-    sendVerificationEmail,
-    sendWelcomeEmail,
+exports.sendWelcomeEmail = sendWelcomeEmail;
+exports.default = {
+    generateVerificationToken: exports.generateVerificationToken,
+    generateVerificationCode: exports.generateVerificationCode,
+    createEmailVerificationToken: exports.createEmailVerificationToken,
+    verifyEmailToken: exports.verifyEmailToken,
+    markEmailAsVerified: exports.markEmailAsVerified,
+    sendVerificationEmail: exports.sendVerificationEmail,
+    sendWelcomeEmail: exports.sendWelcomeEmail,
 };
 //# sourceMappingURL=emailService.js.map

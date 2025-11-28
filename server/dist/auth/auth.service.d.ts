@@ -12,14 +12,14 @@ export declare class AuthService {
     constructor(prisma: PrismaService, jwtService: JwtService, config: ConfigService);
     register(dto: RegisterDto): Promise<{
         user: {
-            id: string;
-            email: string;
-            role: import(".prisma/client").$Enums.UserRole;
-            emailVerified: boolean;
+            id: any;
+            email: any;
+            role: any;
+            emailVerified: any;
             creatorProfile: {
-                id: string | undefined;
-                displayName: string | undefined;
-                verificationStatus: import(".prisma/client").$Enums.VerificationStatus | undefined;
+                id: any;
+                displayName: any;
+                verificationStatus: any;
             };
         };
         tokens: {
@@ -30,16 +30,11 @@ export declare class AuthService {
     }>;
     login(dto: LoginDto): Promise<{
         user: {
-            id: string;
-            email: string;
-            role: import(".prisma/client").$Enums.UserRole;
-            emailVerified: boolean;
-            creatorProfile: {
-                displayName: string;
-                id: string;
-                profileImage: string | null;
-                verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
-            } | null;
+            id: any;
+            email: any;
+            role: any;
+            emailVerified: any;
+            creatorProfile: any;
         };
         tokens: {
             accessToken: string;
@@ -56,34 +51,11 @@ export declare class AuthService {
         message: string;
     }>;
     getProfile(userId: string): Promise<{
-        id: string;
-        email: string;
-        role: import(".prisma/client").$Enums.UserRole;
-        emailVerified: boolean;
-        creatorProfile: {
-            displayName: string;
-            firstName: string | null;
-            lastName: string | null;
-            country: string | null;
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            bio: string | null;
-            profileImage: string | null;
-            coverImage: string | null;
-            verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
-            veriffSessionId: string | null;
-            veriffDecisionId: string | null;
-            verifiedAt: Date | null;
-            verificationNotes: string | null;
-            dateOfBirth: Date | null;
-            paypalEmail: string | null;
-            stripeAccountId: string | null;
-            totalEarnings: number;
-            totalViews: number;
-            totalPurchases: number;
-            userId: string;
-        } | null;
+        id: any;
+        email: any;
+        role: any;
+        emailVerified: any;
+        creatorProfile: any;
     }>;
     private hashPassword;
     private generateTokenPair;

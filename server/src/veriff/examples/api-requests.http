@@ -1,0 +1,155 @@
+###
+# Veriff KYC API - Example HTTP Requests
+# Use with REST Client extension in VS Code or import to Postman
+###
+
+### Variables
+@baseUrl = http://localhost:3000
+@sessionId = your-session-id-here
+
+###
+# 1. Health Check
+GET {{baseUrl}}/veriff/health
+Content-Type: application/json
+
+###
+# 2. Create Verification Session - Minimal
+POST {{baseUrl}}/veriff/sessions
+Content-Type: application/json
+
+{
+  "verification": {
+    "callback": "https://your-domain.com/veriff/webhooks/decision",
+    "person": {
+      "firstName": "John",
+      "lastName": "Doe"
+    },
+    "vendorData": "user-123"
+  }
+}
+
+###
+# 3. Create Verification Session - Complete
+POST {{baseUrl}}/veriff/sessions
+Content-Type: application/json
+
+{
+  "verification": {
+    "callback": "https://your-domain.com/veriff/webhooks/decision",
+    "person": {
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "idNumber": "AB123456",
+      "dateOfBirth": "1990-01-15"
+    },
+    "document": {
+      "number": "P123456789",
+      "type": "PASSPORT",
+      "country": "US"
+    },
+    "vendorData": "{\"userId\":\"user-456\",\"email\":\"jane@example.com\"}"
+  }
+}
+
+###
+# 4. Get Verification Status
+GET {{baseUrl}}/veriff/sessions/{{sessionId}}/decision
+Content-Type: application/json
+
+###
+# 5. Get Session Media
+GET {{baseUrl}}/veriff/sessions/{{sessionId}}/media
+Content-Type: application/json
+
+###
+# 6. Resubmit Session
+PATCH {{baseUrl}}/veriff/sessions/{{sessionId}}
+Content-Type: application/json
+
+{
+  "verification": {
+    "person": {
+      "firstName": "John",
+      "lastName": "Doe Updated"
+    }
+  }
+}
+
+###
+# 7. Cancel Session
+DELETE {{baseUrl}}/veriff/sessions/{{sessionId}}
+Content-Type: application/json
+
+###
+# 8. Webhook Endpoint (Simulated)
+# This would be called by Veriff, not by you
+POST {{baseUrl}}/veriff/webhooks/decision
+Content-Type: application/json
+x-hmac-signature: signature-here
+x-signature-timestamp: 2024-01-01T00:00:00.000Z
+
+{
+  "status": "success",
+  "verification": {
+    "id": "session-id-123",
+    "code": 9001,
+    "status": "approved",
+    "person": {
+      "firstName": "John",
+      "lastName": "Doe",
+      "dateOfBirth": "1990-01-15",
+      "nationality": "US",
+      "gender": "M"
+    },
+    "document": {
+      "number": "P123456789",
+      "type": "PASSPORT",
+      "country": "US",
+      "validFrom": "2020-01-01",
+      "validUntil": "2030-01-01"
+    },
+    "decisionTime": "2024-01-01T12:00:00.000Z",
+    "acceptanceTime": "2024-01-01T11:55:00.000Z",
+    "vendorData": "user-123"
+  }
+}
+
+###
+# 9. Webhook - Declined Example
+POST {{baseUrl}}/veriff/webhooks/decision
+Content-Type: application/json
+x-hmac-signature: signature-here
+x-signature-timestamp: 2024-01-01T00:00:00.000Z
+
+{
+  "status": "success",
+  "verification": {
+    "id": "session-id-456",
+    "code": 9103,
+    "status": "declined",
+    "reason": "Document expired",
+    "reasonCode": 102,
+    "decisionTime": "2024-01-01T12:00:00.000Z",
+    "vendorData": "user-456"
+  }
+}
+
+###
+# 10. Webhook - Resubmission Required
+POST {{baseUrl}}/veriff/webhooks/decision
+Content-Type: application/json
+x-hmac-signature: signature-here
+x-signature-timestamp: 2024-01-01T00:00:00.000Z
+
+{
+  "status": "success",
+  "verification": {
+    "id": "session-id-789",
+    "code": 9102,
+    "status": "resubmission_requested",
+    "reason": "Document not clear",
+    "reasonCode": 101,
+    "decisionTime": "2024-01-01T12:00:00.000Z",
+    "vendorData": "user-789"
+  }
+}

@@ -4,6 +4,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { BuyerModule } from './buyer/buyer.module';
 import { VerificationModule } from './verification/verification.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -15,5 +17,7 @@ import { VerificationModule } from './verification/verification.module';
     BuyerModule,
     VerificationModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

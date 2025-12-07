@@ -4,6 +4,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { BuyerModule } from './buyer/buyer.module';
 import { VerificationModule } from './verification/verification.module';
+import { SuperadminModule } from './superadmin/superadmin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -16,6 +17,7 @@ import { AppService } from './app.service';
     AuthModule,
     BuyerModule,
     VerificationModule,
+    SuperadminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

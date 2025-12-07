@@ -1,10 +1,36 @@
 'use client';
 
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useLogoutUserMutation } from '@/state/api';
+import { useDispatch, useSelector } from 'react-redux';
+import { clearAuth } from '@/state/authSlice';
+import LogoutModal from '@/components/LogoutModal';
+import { RootState } from '@/app/redux';
 
 export default function SuperAdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const [logoutUser] = useLogoutUserMutation();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const refreshToken = useSelector((state: RootState) => state.auth.tokens?.refreshToken);
+
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        await logoutUser(refreshToken).unwrap();
+      }
+    } catch (error) {
+      // Silently handle API errors - we'll clear state anyway
+    } finally {
+      // Always clear local state and redirect
+      dispatch(clearAuth());
+      router.push('/login');
+      setShowLogoutModal(false);
+    }
+  };
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/superadmin/dashboard' },
@@ -16,7 +42,7 @@ export default function SuperAdminSidebar() {
   ];
 
   const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
-    const icons: Record<string, JSX.Element> = {
+    const icons: Record<string, React.ReactElement> = {
       dashboard: (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -109,15 +135,19 @@ export default function SuperAdminSidebar() {
       <div className="p-4 border-t border-gray-200">
         <button
           className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors w-full"
-          onClick={() => {
-            // TODO: Implement logout
-            console.log('Logout');
-          }}
+          onClick={() => setShowLogoutModal(true)}
         >
           {renderIcon('logout')}
           <span>Logout</span>
         </button>
       </div>
+
+      {/* Logout Modal */}
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+      />
     </aside>
   );
 }

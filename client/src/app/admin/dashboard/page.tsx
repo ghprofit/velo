@@ -2,14 +2,36 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useDispatch, useSelector } from 'react-redux';
+import { useLogoutUserMutation } from '@/state/api';
+import { clearAuth } from '@/state/authSlice';
+import { RootState } from '@/app/redux';
 import AdminSidebar from '@/components/AdminSidebar';
 import LogoutModal from '@/components/LogoutModal';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const [logoutUser] = useLogoutUserMutation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [timePeriod, setTimePeriod] = useState('30 days');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const refreshToken = useSelector((state: RootState) => state.auth.tokens?.refreshToken);
+
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        await logoutUser(refreshToken).unwrap();
+      }
+    } catch (error) {
+      // Silently handle API errors - we'll clear state anyway
+    } finally {
+      // Always clear local state and redirect
+      dispatch(clearAuth());
+      router.push('/login');
+      setShowLogoutModal(false);
+    }
+  };
 
   const recentActivity = [
     { creator: 'Alex Moore', activity: 'Purchased "Creator Pack"', date: '2025-10-12 14:22', status: 'Active', statusColor: 'bg-green-100 text-green-700' },
@@ -248,10 +270,7 @@ export default function AdminDashboard() {
       <LogoutModal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
-          setShowLogoutModal(false);
-          router.push('/login');
-        }}
+        onConfirm={handleLogout}
       />
     </div>
   );

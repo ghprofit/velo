@@ -3,7 +3,7 @@ import { clsx } from 'clsx';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'default';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
   isLoading?: boolean;
@@ -22,6 +22,7 @@ export default function Button({
   const baseStyles = 'font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-2';
 
   const variants = {
+    default: 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm disabled:bg-indigo-400',
     primary: 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm disabled:bg-indigo-400',
     secondary: 'bg-gray-700 hover:bg-gray-800 active:bg-gray-900 text-white shadow-sm disabled:bg-gray-400',
     outline: 'border-2 border-gray-300 hover:border-gray-400 text-gray-700 hover:bg-gray-50 disabled:border-gray-200 disabled:text-gray-400',

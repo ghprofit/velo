@@ -56,6 +56,28 @@ model User {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
+  // 2FA Fields
+  twoFactorEnabled    Boolean   @default(false)
+  twoFactorSecret     String?
+  backupCodes         String[]  @default([])
+  twoFactorVerifiedAt DateTime?
+
+  // Security Fields
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  // Profile Fields
+  displayName       String?
+  firstName         String?
+  lastName          String?
+  profilePicture    String?
+
+  // Notification Preferences
+  notifyPayoutUpdates      Boolean @default(true)
+  notifyContentEngagement  Boolean @default(true)
+  notifyPlatformAnnouncements Boolean @default(true)
+  notifyMarketingEmails    Boolean @default(false)
+
   // Relations
   creatorProfile    CreatorProfile?
   refreshTokens     RefreshToken[]
@@ -63,6 +85,7 @@ model User {
   supportTickets    SupportTicket[]
   notifications     Notification[]
   emailVerificationToken EmailVerificationToken?
+  passwordResetTokens PasswordResetToken[]
 
   @@index([email])
   @@map("users")
@@ -81,6 +104,23 @@ model EmailVerificationToken {
 
   @@index([token])
   @@map("email_verification_tokens")
+}
+
+// Password Reset
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model CreatorProfile {
@@ -104,9 +144,16 @@ model CreatorProfile {
   dateOfBirth           DateTime?
   country               String?
 
-  // Payout Info
-  paypalEmail           String?
-  stripeAccountId       String?
+  // Payout Info - Bank Account
+  bankAccountName       String?
+  bankName              String?
+  bankAccountNumber     String?
+  bankRoutingNumber     String?             // For US banks (ABA routing number)
+  bankSwiftCode         String?             // For international transfers
+  bankIban              String?             // For European banks
+  bankCountry           String?
+  bankCurrency          String?             @default("USD")
+  payoutSetupCompleted  Boolean             @default(false)
 
   // Stats
   totalEarnings         Float               @default(0)
@@ -165,6 +212,7 @@ model Content {
   complianceLogs        ComplianceLog[]
   purchases             Purchase[]
   contentItems          ContentItem[]       // For galleries with multiple items
+  contentViews          ContentView[]       // View tracking with demographics
 
   @@index([creatorId])
   @@index([status])
@@ -270,6 +318,12 @@ model RefreshToken {
   expiresAt             DateTime
   createdAt             DateTime            @default(now())
 
+  // Session Metadata
+  deviceName            String?
+  ipAddress             String?
+  userAgent             String?
+  lastUsedAt            DateTime            @default(now())
+
   // Relations
   user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -335,10 +389,36 @@ model SupportTicket {
 
   // Relations
   user                  User?               @relation(fields: [userId], references: [id])
+  attachments           SupportAttachment[]
 
   @@index([userId])
   @@index([status])
   @@map("support_tickets")
+}
+
+// Support Ticket Attachments
+model SupportAttachment {
+  id                    String              @id @default(cuid())
+  ticketId              String
+
+  // AWS S3 Storage
+  s3Key                 String              @unique
+  s3Bucket              String
+
+  // File Metadata
+  fileName              String
+  fileSize              Int
+  contentType           String
+
+  // Tracking
+  order                 Int                 @default(0)
+  createdAt             DateTime            @default(now())
+
+  // Relations
+  ticket                SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("support_attachments")
 }
 
 // Notifications
@@ -358,4 +438,36 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@map("notifications")
+}
+
+// Content Views - Track view events with geographic data
+model ContentView {
+  id                    String              @id @default(cuid())
+  contentId             String
+
+  // Geographic Data (from IP lookup)
+  country               String?
+  countryCode           String?
+  region                String?
+  city                  String?
+
+  // Device Info
+  deviceType            String?             // desktop, mobile, tablet
+  browser               String?
+  os                    String?
+
+  // Session Info
+  ipAddress             String?
+  userAgent             String?
+  referrer              String?
+
+  createdAt             DateTime            @default(now())
+
+  // Relations
+  content               Content             @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@index([country])
+  @@index([createdAt])
+  @@map("content_views")
 }

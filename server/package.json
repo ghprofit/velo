@@ -15,10 +15,18 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@nestjs/cache-manager": "^3.0.1",
+    "@nestjs/throttler": "^6.5.0",
+    "@types/cache-manager-redis-store": "^2.0.4",
     "@types/node": "^24.10.0",
     "@types/passport-jwt": "^4.0.1",
+    "@types/qrcode": "^1.5.6",
+    "@types/speakeasy": "^2.0.10",
+    "cache-manager": "^7.2.5",
+    "cache-manager-redis-store": "^3.0.1",
     "concurrently": "^9.2.1",
     "nodemon": "^3.1.10",
+    "redis": "^5.10.0",
     "rimraf": "^6.1.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
@@ -26,6 +34,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.943.0",
+    "@aws-sdk/lib-storage": "^3.943.0",
     "@nestjs/common": "^11.1.9",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.9",
@@ -44,11 +54,14 @@
     "dotenv": "^17.2.3",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "nanoid": "^5.1.6",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "prisma": "^6.19.0",
+    "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "speakeasy": "^2.0.0",
     "uuid": "^13.0.0",
     "zod": "^4.1.12"
   }

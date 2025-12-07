@@ -13,6 +13,8 @@ import {
   Headers,
 } from '@nestjs/common';
 import { VeriffService } from './veriff.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { VerificationStatus } from '@prisma/client';
 import {
   CreateSessionDto,
   SessionResponseDto,
@@ -24,7 +26,10 @@ import {
 export class VeriffController {
   private readonly logger = new Logger(VeriffController.name);
 
-  constructor(private readonly veriffService: VeriffService) {}
+  constructor(
+    private readonly veriffService: VeriffService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   /**
    * Create a new verification session
@@ -166,19 +171,55 @@ export class VeriffController {
         `Verification code: ${webhookData.verification.code}`,
       );
 
+      // Update creator profile based on verification result
+      const sessionId = webhookData.verification.id;
+      const status = webhookData.verification.status;
+      const code = webhookData.verification.code;
+
+      // Find creator profile by session ID
+      const creatorProfile = await this.prisma.creatorProfile.findUnique({
+        where: { veriffSessionId: sessionId },
+      });
+
+      if (!creatorProfile) {
+        this.logger.warn(`No creator profile found for session: ${sessionId}`);
+        return { received: true };
+      }
+
+      let verificationStatus: VerificationStatus;
+      let verifiedAt: Date | null = null;
+
       // Handle different verification statuses
-      if (webhookData.verification.status === 'approved') {
+      if (status === 'approved' && code === 9001) {
         this.logger.log('Verification approved');
-        // Add your business logic here (e.g., update database, send notification)
-      } else if (webhookData.verification.status === 'declined') {
+        verificationStatus = VerificationStatus.VERIFIED;
+        verifiedAt = new Date();
+      } else if (status === 'declined' && code === 9103) {
         this.logger.log(
           `Verification declined: ${webhookData.verification.reason}`,
         );
-        // Add your business logic here
-      } else if (webhookData.verification.code === 9102) {
+        verificationStatus = VerificationStatus.REJECTED;
+      } else if (code === 9102) {
         this.logger.log('Verification requires resubmission');
-        // Add your business logic here
+        verificationStatus = VerificationStatus.IN_PROGRESS;
+      } else {
+        this.logger.log(`Unknown status/code: ${status}/${code}`);
+        return { received: true };
       }
+
+      // Update creator profile
+      await this.prisma.creatorProfile.update({
+        where: { id: creatorProfile.id },
+        data: {
+          verificationStatus,
+          verifiedAt,
+          veriffDecisionId: sessionId,
+        },
+      });
+
+      this.logger.log(
+        `Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`,
+      );
 
       return { received: true };
     } catch (error) {

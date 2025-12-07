@@ -38,7 +38,7 @@ export class TwofactorController {
 
     try {
       const { secret, qrCodeUrl, manualEntryKey } =
-        this.twofactorService.generateSecret(setupDto.userId);
+        await this.twofactorService.generateSecret(setupDto.userId);
 
       // Generate QR code data URL
       const qrCodeDataUrl = await this.twofactorService.generateQRCode(qrCodeUrl);
@@ -92,7 +92,7 @@ export class TwofactorController {
     this.logger.log(`Verifying 2FA token for user: ${verifyDto.userId}`);
 
     try {
-      const verified = this.twofactorService.verifyToken(
+      const verified = await this.twofactorService.verifyToken(
         verifyDto.userId,
         verifyDto.token,
       );
@@ -117,7 +117,7 @@ export class TwofactorController {
     this.logger.log(`Disabling 2FA for user: ${disableDto.userId}`);
 
     try {
-      const disabled = this.twofactorService.disable2FA(
+      const disabled = await this.twofactorService.disable2FA(
         disableDto.userId,
         disableDto.token,
       );
@@ -163,7 +163,7 @@ export class TwofactorController {
     this.logger.log(`Verifying backup code for user: ${body.userId}`);
 
     try {
-      const verified = this.twofactorService.verifyBackupCode(
+      const verified = await this.twofactorService.verifyBackupCode(
         body.userId,
         body.backupCode,
       );
@@ -192,7 +192,7 @@ export class TwofactorController {
     this.logger.log(`Regenerating backup codes for user: ${body.userId}`);
 
     try {
-      const backupCodes = this.twofactorService.regenerateBackupCodes(
+      const backupCodes = await this.twofactorService.regenerateBackupCodes(
         body.userId,
         body.token,
       );

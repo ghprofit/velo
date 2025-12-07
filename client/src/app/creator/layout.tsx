@@ -1,6 +1,7 @@
 'use client';
 
 import AuthGuard from '@/components/auth/AuthGuard';
+import CreatorSidebar from '@/components/CreatorSidebar';
 
 export default function CreatorLayout({
   children,
@@ -9,7 +10,12 @@ export default function CreatorLayout({
 }) {
   return (
     <AuthGuard allowedRoles={['CREATOR']}>
-      {children}
+      <div className="h-screen bg-gray-50 flex overflow-hidden">
+        <CreatorSidebar />
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
     </AuthGuard>
   );
 }

@@ -165,7 +165,7 @@ export default function RegisterPage() {
           <div className="flex items-center justify-center mb-6">
             <div className="flex items-center gap-3">
               {/* Step 1 */}
-              <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-semibold text-lg">
+              <div className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold text-lg">
                 1
               </div>
 
@@ -184,11 +184,19 @@ export default function RegisterPage() {
               <div className="w-12 h-12 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-lg">
                 3
               </div>
+
+              {/* Line */}
+              <div className="w-20 h-0.5 bg-gray-300"></div>
+
+              {/* Step 4 */}
+              <div className="w-12 h-12 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-lg">
+                4
+              </div>
             </div>
           </div>
 
           <p className="text-center text-sm text-gray-600 mb-10">
-            Step 1 of 3: Account Details
+            Step 1 of 4: Account Details
           </p>
 
           {/* Server Error Display */}

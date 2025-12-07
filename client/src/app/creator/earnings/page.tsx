@@ -1,262 +1,176 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import RequestPayoutModal from '@/components/RequestPayoutModal';
-import LogoutModal from '@/components/LogoutModal';
+import { earningsApi } from '@/lib/api-client';
 
 export default function EarningsPage() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState('earnings');
   const [timePeriod, setTimePeriod] = useState('Last 30 Days');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All Types');
   const [contentFilter, setContentFilter] = useState('All Content');
   const [currentPage, setCurrentPage] = useState(1);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/creator' },
-    { id: 'upload', label: 'Upload Content', icon: 'upload', href: '/creator/upload' },
-    { id: 'analytics', label: 'Analytics', icon: 'analytics', href: '/creator/analytics' },
-    { id: 'earnings', label: 'Earnings', icon: 'earnings', href: '/creator/earnings' },
-    { id: 'notifications', label: 'Notifications', icon: 'notifications', href: '/creator/notifications' },
-    { id: 'settings', label: 'Settings', icon: 'settings', href: '/creator/settings' },
-    { id: 'support', label: 'Support', icon: 'support', href: '/creator/support' },
-  ];
+  // Data state
+  const [balance, setBalance] = useState<any>(null);
+  const [payouts, setPayouts] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const payoutActivity = [
-    {
-      title: 'Payout to Bank Account',
-      date: 'Dec 15, 2024',
-      time: '10:42 AM',
-      amount: '$1,500.00',
-      status: 'Completed',
-      statusColor: 'text-green-600',
-      iconBg: 'bg-green-100',
-    },
-    {
-      title: 'Payout to Bank Account',
-      date: 'Dec 8, 2024',
-      time: '3:15 PM',
-      amount: '$980.00',
-      status: 'Processing',
-      statusColor: 'text-yellow-600',
-      iconBg: 'bg-yellow-100',
-    },
-    {
-      title: 'Payout to Bank Account',
-      date: 'Dec 1, 2024',
-      time: '9:20 AM',
-      amount: '$2,200.00',
-      status: 'Completed',
-      statusColor: 'text-green-600',
-      iconBg: 'bg-green-100',
-    },
-  ];
-
-  const transactions = [
-    {
-      date: 'Dec 18, 2024',
-      time: '2:45 PM',
-      type: 'Purchase',
-      typeColor: 'text-green-600',
-      typeBg: 'bg-green-50',
-      content: 'Premium UI Design Course',
-      buyer: 'buyer***47',
-      method: 'Stripe Card',
-      amount: '+$149.00',
-      amountColor: 'text-green-600',
-    },
-    {
-      date: 'Dec 17, 2024',
-      time: '11:20 AM',
-      type: 'Purchase',
-      typeColor: 'text-green-600',
-      typeBg: 'bg-green-50',
-      content: 'Design Template Bundle',
-      buyer: 'buyer***92',
-      method: 'Apple Pay',
-      amount: '+$79.99',
-      amountColor: 'text-green-600',
-    },
-    {
-      date: 'Dec 15, 2024',
-      time: '10:42 AM',
-      type: 'Payout',
-      typeColor: 'text-indigo-600',
-      typeBg: 'bg-indigo-50',
-      content: 'N/A',
-      buyer: 'Bank Payout',
-      method: 'Bank Transfer',
-      amount: '-$1,500.00',
-      amountColor: 'text-gray-900',
-    },
-    {
-      date: 'Dec 14, 2024',
-      time: '4:15 PM',
-      type: 'Purchase',
-      typeColor: 'text-green-600',
-      typeBg: 'bg-green-50',
-      content: 'Workshop Series Access',
-      buyer: 'buyer***23',
-      method: 'Google Pay',
-      amount: '+$199.00',
-      amountColor: 'text-green-600',
-    },
-    {
-      date: 'Dec 13, 2024',
-      time: '9:30 AM',
-      type: 'Fee',
-      typeColor: 'text-gray-600',
-      typeBg: 'bg-gray-50',
-      content: 'Platform Fee',
-      buyer: 'VELO Platform',
-      method: 'Auto-deduct',
-      amount: '-$14.90',
-      amountColor: 'text-gray-900',
-    },
-    {
-      date: 'Dec 12, 2024',
-      time: '3:55 PM',
-      type: 'Purchase',
-      typeColor: 'text-green-600',
-      typeBg: 'bg-green-50',
-      content: 'Premium UI Design Course',
-      buyer: 'buyer***88',
-      method: 'Stripe Card',
-      amount: '+$149.00',
-      amountColor: 'text-green-600',
-    },
-    {
-      date: 'Dec 10, 2024',
-      time: '1:20 PM',
-      type: 'Refund',
-      typeColor: 'text-red-600',
-      typeBg: 'bg-red-50',
-      content: 'Design Template Bundle',
-      buyer: 'buyer***34',
-      method: 'Stripe Card',
-      amount: '-$79.99',
-      amountColor: 'text-red-600',
-    },
-    {
-      date: 'Dec 8, 2024',
-      time: '5:10 PM',
-      type: 'Purchase',
-      typeColor: 'text-green-600',
-      typeBg: 'bg-green-50',
-      content: 'Workshop Series Access',
-      buyer: 'buyer***61',
-      method: 'PayPal',
-      amount: '+$199.00',
-      amountColor: 'text-green-600',
-    },
-  ];
-
-  const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
-    const icons: Record<string, JSX.Element> = {
-      dashboard: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
-      upload: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-        </svg>
-      ),
-      analytics: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
-      earnings: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      notifications: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-      ),
-      settings: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-      support: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ),
-      logout: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-      ),
+  // Fetch balance data
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const response = await earningsApi.getBalance();
+        setBalance(response.data.data);
+      } catch (err: any) {
+        console.error('Error fetching balance:', err);
+        setError(err.response?.data?.message || 'Failed to load balance data');
+      }
     };
-    return icons[iconName] || null;
+
+    fetchBalance();
+  }, []);
+
+  // Fetch payouts data
+  useEffect(() => {
+    const fetchPayouts = async () => {
+      try {
+        const response = await earningsApi.getPayouts(1, 3);
+        setPayouts(response.data.data);
+      } catch (err: any) {
+        console.error('Error fetching payouts:', err);
+      }
+    };
+
+    fetchPayouts();
+  }, []);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [typeFilter, searchQuery]);
+
+  // Fetch transactions data with debouncing
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setLoading(true);
+        const type = typeFilter === 'All Types' ? undefined : typeFilter.toUpperCase();
+        const search = searchQuery.trim() || undefined;
+
+        const response = await earningsApi.getTransactions(
+          currentPage,
+          10,
+          type,
+          search
+        );
+        setTransactions(response.data.data);
+      } catch (err: any) {
+        console.error('Error fetching transactions:', err);
+        setError(err.response?.data?.message || 'Failed to load transactions');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Debounce search for better UX
+    const timeoutId = setTimeout(() => {
+      fetchTransactions();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentPage, typeFilter, searchQuery]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const getTransactionTypeStyles = (type: string) => {
+    switch (type) {
+      case 'PURCHASE':
+        return {
+          typeColor: 'text-green-600',
+          typeBg: 'bg-green-50',
+          amountColor: 'text-green-600',
+        };
+      case 'PAYOUT':
+        return {
+          typeColor: 'text-indigo-600',
+          typeBg: 'bg-indigo-50',
+          amountColor: 'text-gray-900',
+        };
+      case 'REFUND':
+        return {
+          typeColor: 'text-red-600',
+          typeBg: 'bg-red-50',
+          amountColor: 'text-red-600',
+        };
+      default:
+        return {
+          typeColor: 'text-gray-600',
+          typeBg: 'bg-gray-50',
+          amountColor: 'text-gray-900',
+        };
+    }
+  };
+
+  const getPayoutStatusStyles = (status: string) => {
+    switch (status) {
+      case 'COMPLETED':
+        return {
+          statusColor: 'text-green-600',
+          iconBg: 'bg-green-100',
+        };
+      case 'PROCESSING':
+        return {
+          statusColor: 'text-yellow-600',
+          iconBg: 'bg-yellow-100',
+        };
+      case 'PENDING':
+        return {
+          statusColor: 'text-blue-600',
+          iconBg: 'bg-blue-100',
+        };
+      case 'FAILED':
+        return {
+          statusColor: 'text-red-600',
+          iconBg: 'bg-red-100',
+        };
+      default:
+        return {
+          statusColor: 'text-gray-600',
+          iconBg: 'bg-gray-100',
+        };
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        {/* Logo */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
-              <rect x="8" y="14" width="16" height="12" rx="2" fill="black"/>
-              <path d="M11 14V10C11 7.23858 13.2386 5 16 5C18.7614 5 21 7.23858 21 10V14" stroke="black" strokeWidth="2" fill="none"/>
-              <circle cx="16" cy="20" r="1.5" fill="white"/>
-            </svg>
-            <div className="border-l-2 border-gray-900 pl-3">
-              <div className="text-xl">
-                <span className="font-bold text-gray-900">Velo</span>
-                <span className="font-light text-gray-900">Link</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-4 space-y-1">
-          {menuItems.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === item.id
-                  ? 'bg-gray-100 text-gray-900 font-medium'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              onClick={() => setActiveTab(item.id)}
-            >
-              {renderIcon(item.icon)}
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        {/* Logout Button */}
-        <div className="p-4 border-t border-gray-200">
-          <button
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors w-full"
-            onClick={() => setShowLogoutModal(true)}
-          >
-            {renderIcon('logout')}
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+    <>
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-8 py-6">
           <div className="flex items-center justify-between">
@@ -285,7 +199,9 @@ export default function EarningsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-green-100 text-sm mb-2">Available Balance</p>
-                  <p className="text-4xl font-bold">$2,847.50</p>
+                  <p className="text-4xl font-bold">
+                    {balance ? formatCurrency(balance.availableBalance) : '$0.00'}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -309,7 +225,9 @@ export default function EarningsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-gray-600 text-sm mb-2">Pending Balance</p>
-                  <p className="text-3xl font-bold text-gray-900">$1,234.80</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {balance ? formatCurrency(balance.pendingBalance) : '$0.00'}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,7 +251,9 @@ export default function EarningsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-gray-600 text-sm mb-2">Total Lifetime Earnings</p>
-                  <p className="text-3xl font-bold text-gray-900">$18,562.30</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {balance ? formatCurrency(balance.lifetimeEarnings) : '$0.00'}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -343,7 +263,9 @@ export default function EarningsPage() {
               </div>
               <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                 <span className="text-sm text-gray-600">Total Payouts</span>
-                <span className="text-sm font-semibold text-gray-900">$14,480.00</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {balance ? formatCurrency(balance.totalPayouts) : '$0.00'}
+                </span>
               </div>
             </div>
           </div>
@@ -361,31 +283,46 @@ export default function EarningsPage() {
             </div>
 
             <div className="space-y-4">
-              {payoutActivity.map((payout, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 ${payout.iconBg} rounded-full flex items-center justify-center`}>
-                      {payout.status === 'Completed' ? (
-                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{payout.title}</p>
-                      <p className="text-sm text-gray-500">{payout.date} • {payout.time}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-semibold text-gray-900">{payout.amount}</p>
-                    <p className={`text-sm ${payout.statusColor} font-medium`}>{payout.status}</p>
-                  </div>
+              {!payouts || payouts.payouts.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No payout activity yet</p>
                 </div>
-              ))}
+              ) : (
+                payouts.payouts.map((payout: any) => {
+                  const styles = getPayoutStatusStyles(payout.status);
+                  return (
+                    <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 ${styles.iconBg} rounded-full flex items-center justify-center`}>
+                          {payout.status === 'COMPLETED' ? (
+                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ) : payout.status === 'PROCESSING' ? (
+                            <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">Payout to {payout.paymentMethod || 'Bank Account'}</p>
+                          <p className="text-sm text-gray-500">{formatDate(payout.createdAt)} • {formatTime(payout.createdAt)}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold text-gray-900">{formatCurrency(payout.amount)}</p>
+                        <p className={`text-sm ${styles.statusColor} font-medium`}>
+                          {payout.status.charAt(0) + payout.status.slice(1).toLowerCase()}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -458,82 +395,120 @@ export default function EarningsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {transactions.map((transaction, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{transaction.date}</p>
-                          <p className="text-xs text-gray-500">{transaction.time}</p>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                        <div className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Loading transactions...
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${transaction.typeBg} ${transaction.typeColor}`}>
-                          {transaction.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-900">{transaction.content}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600">{transaction.buyer}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600">{transaction.method}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <span className={`text-sm font-semibold ${transaction.amountColor}`}>
-                          {transaction.amount}
-                        </span>
+                    </tr>
+                  ) : !transactions || transactions.transactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                        No transactions found
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    transactions.transactions.map((transaction: any) => {
+                      const styles = getTransactionTypeStyles(transaction.type);
+                      return (
+                        <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{formatDate(transaction.date)}</p>
+                              <p className="text-xs text-gray-500">{formatTime(transaction.date)}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${styles.typeBg} ${styles.typeColor}`}>
+                              {transaction.type.charAt(0) + transaction.type.slice(1).toLowerCase()}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm text-gray-900">
+                              {transaction.contentTitle || transaction.description || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-600">
+                              {transaction.buyerEmail || transaction.recipient || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-600">
+                              {transaction.paymentMethod || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <span className={`text-sm font-semibold ${styles.amountColor}`}>
+                              {transaction.type === 'PAYOUT' || transaction.type === 'REFUND' ? '-' : '+'}
+                              {formatCurrency(Math.abs(transaction.amount))}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
 
             {/* Pagination */}
-            <div className="p-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">Showing 1 to 8 of 247 transactions</p>
-                <div className="flex items-center gap-2">
-                  <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    Previous
-                  </button>
-                  <button className="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-600 text-white font-medium text-sm">
-                    1
-                  </button>
-                  <button className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 font-medium text-sm">
-                    2
-                  </button>
-                  <button className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 font-medium text-sm">
-                    3
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                    Next
-                  </button>
+            {transactions && transactions.total > 0 && (
+              <div className="p-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-600">
+                    Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, transactions.total)} of {transactions.total} transactions
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    {Array.from({ length: Math.min(3, transactions.totalPages) }, (_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-10 h-10 flex items-center justify-center rounded-lg font-medium text-sm ${
+                            currentPage === pageNum
+                              ? 'bg-indigo-600 text-white'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage >= transactions.totalPages}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
-      </main>
 
       {/* Request Payout Modal */}
       <RequestPayoutModal
         isOpen={isPayoutModalOpen}
         onClose={() => setIsPayoutModalOpen(false)}
-        availableBalance={2847.50}
+        availableBalance={balance?.availableBalance || 0}
       />
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
-          setShowLogoutModal(false);
-          router.push('/login');
-        }}
-      />
-    </div>
+    </>
   );
 }

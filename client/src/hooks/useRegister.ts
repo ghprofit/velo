@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRegisterUserMutation } from '@/state/api';
+import { authApi } from '@/lib/api-client';
 import { useAppDispatch } from '@/app/redux';
 import { setCredentials, setError as setAuthError } from '@/state/authSlice';
 
@@ -22,38 +22,53 @@ interface UseRegisterReturn {
 export const useRegister = (): UseRegisterReturn => {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [registerUser, { isLoading }] = useRegisterUserMutation();
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const register = async (data: RegisterData): Promise<void> => {
     setError(null);
+    setIsLoading(true);
 
     try {
-      const response = await registerUser({
+      const response = await authApi.register({
         email: data.email.toLowerCase(),
         password: data.password,
         displayName: data.displayName.trim(),
         firstName: data.firstName?.trim() || undefined,
         lastName: data.lastName?.trim() || undefined,
-      }).unwrap();
+      });
+
+      const { user, tokens } = response.data.data;
+
+      // Store tokens in localStorage
+      localStorage.setItem('accessToken', tokens.accessToken);
+      localStorage.setItem('refreshToken', tokens.refreshToken);
+      localStorage.setItem('user', JSON.stringify(user));
 
       // Store credentials in Redux
       dispatch(
         setCredentials({
-          user: response.data.user,
-          tokens: response.data.tokens,
+          user,
+          tokens,
         })
       );
 
-      // Navigate to verification step
+      // Navigate to email verification step
       router.push('/register/verify');
-    } catch (err: unknown) {
-      const apiError = err as { data?: { message?: string }; status?: number };
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      console.error('Error response:', err.response);
+
       const errorMessage =
-        apiError.data?.message || 'Registration failed. Please try again.';
+        err.response?.data?.message ||
+        err.message ||
+        'Registration failed. Please try again.';
+
       setError(errorMessage);
       dispatch(setAuthError(errorMessage));
       throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 

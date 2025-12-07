@@ -126,7 +126,7 @@ export class EmailService {
       this.logger.error('Failed to send email:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send email',
+        error: (error as any)?.message || 'Failed to send email',
       };
     }
   }
@@ -241,7 +241,7 @@ export class EmailService {
         batch.forEach((recipient) => {
           result.failures.push({
             email: recipient.email,
-            error: error.message || 'Batch send failed',
+            error: (error as any)?.message || 'Batch send failed',
           });
         });
       }

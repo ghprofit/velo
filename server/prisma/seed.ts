@@ -7,8 +7,38 @@ import * as bcrypt from 'bcryptjs';
 // Load environment variables
 config();
 
+// Parse and rebuild DATABASE_URL with proper encoding if needed
+function getEncodedDatabaseUrl(): string {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error('DATABASE_URL is not defined in environment variables');
+  }
+
+  try {
+    // Try parsing as URL - if it fails, it has unencoded characters
+    new URL(dbUrl);
+    return dbUrl; // Already properly encoded
+  } catch (error) {
+    // Manual parsing for postgresql://user:password@host:port/database
+    const match = dbUrl.match(/^postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)$/);
+    if (!match) {
+      // Return as-is and let it fail with original error
+      return dbUrl;
+    }
+
+    const [, user, password, host, port, database] = match;
+
+    // Encode username and password
+    const encodedUser = encodeURIComponent(user!);
+    const encodedPassword = encodeURIComponent(password!);
+
+    return `postgresql://${encodedUser}:${encodedPassword}@${host}:${port}/${database}`;
+  }
+}
+
+const databaseUrl = getEncodedDatabaseUrl();
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });

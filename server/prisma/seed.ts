@@ -14,25 +14,63 @@ function getEncodedDatabaseUrl(): string {
     throw new Error('DATABASE_URL is not defined in environment variables');
   }
 
+  console.log('Processing DATABASE_URL...');
+
   try {
     // Try parsing as URL - if it fails, it has unencoded characters
     new URL(dbUrl);
+    console.log('DATABASE_URL is already properly formatted');
     return dbUrl; // Already properly encoded
   } catch (error) {
-    // Manual parsing for postgresql://user:password@host:port/database
-    const match = dbUrl.match(/^postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)$/);
-    if (!match) {
-      // Return as-is and let it fail with original error
+    console.log('DATABASE_URL has encoding issues, attempting to fix...');
+
+    // More robust parsing: postgresql://user:password@host:port/database
+    // We need to handle passwords that might contain @ or other special chars
+    const protocolMatch = dbUrl.match(/^(postgresql:\/\/)/);
+    if (!protocolMatch) {
+      console.error('Invalid DATABASE_URL format: missing postgresql:// protocol');
       return dbUrl;
     }
 
-    const [, user, password, host, port, database] = match;
+    // Remove protocol
+    const withoutProtocol = dbUrl.substring(protocolMatch[0].length);
+
+    // Split by the LAST @ to separate auth from host
+    const lastAtIndex = withoutProtocol.lastIndexOf('@');
+    if (lastAtIndex === -1) {
+      console.error('Invalid DATABASE_URL format: missing @ separator');
+      return dbUrl;
+    }
+
+    const authPart = withoutProtocol.substring(0, lastAtIndex);
+    const hostPart = withoutProtocol.substring(lastAtIndex + 1);
+
+    // Split auth into user:password (only split on FIRST colon)
+    const firstColonIndex = authPart.indexOf(':');
+    if (firstColonIndex === -1) {
+      console.error('Invalid DATABASE_URL format: missing password');
+      return dbUrl;
+    }
+
+    const user = authPart.substring(0, firstColonIndex);
+    const password = authPart.substring(firstColonIndex + 1);
+
+    // Parse host:port/database
+    const hostMatch = hostPart.match(/^([^:]+):(\d+)\/(.+)$/);
+    if (!hostMatch) {
+      console.error('Invalid DATABASE_URL format: invalid host/port/database format');
+      return dbUrl;
+    }
+
+    const [, host, port, database] = hostMatch;
 
     // Encode username and password
-    const encodedUser = encodeURIComponent(user!);
-    const encodedPassword = encodeURIComponent(password!);
+    const encodedUser = encodeURIComponent(user);
+    const encodedPassword = encodeURIComponent(password);
 
-    return `postgresql://${encodedUser}:${encodedPassword}@${host}:${port}/${database}`;
+    const newUrl = `postgresql://${encodedUser}:${encodedPassword}@${host}:${port}/${database}`;
+    console.log('DATABASE_URL encoding complete');
+    return newUrl;
   }
 }
 

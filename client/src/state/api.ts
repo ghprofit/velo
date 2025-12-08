@@ -425,6 +425,158 @@ interface RemoveContentRequest {
     notifyCreator?: boolean;
 }
 
+// Admin Dashboard Types
+interface DashboardStats {
+    totalCreators: number;
+    activeCreators: number;
+    inactiveCreators: number;
+    totalEarnings: number;
+    transactionsToday: number;
+}
+
+interface RevenueDataPoint {
+    date: string;
+    amount: number;
+}
+
+interface RevenueData {
+    data: RevenueDataPoint[];
+    period: string;
+}
+
+interface RecentActivity {
+    id: string;
+    creator: string;
+    activity: string;
+    date: string;
+    status: string;
+    statusColor: string;
+}
+
+interface RecentActivityResponse {
+    data: RecentActivity[];
+}
+
+// Admin Creators Types
+interface AdminCreator {
+    id: string;
+    name: string;
+    email: string;
+    kycStatus: string;
+    accountStatus: string;
+    joinDate: string;
+    lastLogin: string | null;
+    isActive: boolean;
+    totalEarnings: number;
+    totalViews: number;
+    totalPurchases: number;
+}
+
+interface AdminCreatorListResponse {
+    success: boolean;
+    data: AdminCreator[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+interface AdminCreatorStatsResponse {
+    success: boolean;
+    data: {
+        totalCreators: number;
+        activeCreators: number;
+        suspendedCreators: number;
+        kycPending: number;
+        kycVerified: number;
+        kycFailed: number;
+    };
+}
+
+interface AdminCreatorDetailsResponse {
+    success: boolean;
+    data: AdminCreator & {
+        bio?: string;
+        profileImage?: string;
+        coverImage?: string;
+        payoutStatus: string;
+        policyStrikes: number;
+        recentContent: any[];
+        recentPayouts: any[];
+    };
+}
+
+interface QueryAdminCreatorsParams {
+    search?: string;
+    kycStatus?: string;
+    accountStatus?: string;
+    page?: number;
+    limit?: number;
+}
+
+interface AdminContent {
+    id: string;
+    title: string;
+    description?: string;
+    status: string;
+    price: number;
+    mediaType: string;
+    createdAt: string;
+    updatedAt: string;
+    creator: {
+        id: string;
+        name: string;
+        email: string;
+    };
+}
+
+interface AdminContentListResponse {
+    success: boolean;
+    data: AdminContent[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+interface AdminContentStatsResponse {
+    success: boolean;
+    data: {
+        totalContent: number;
+        pendingReview: number;
+        approved: number;
+        rejected: number;
+        flagged: number;
+    };
+}
+
+interface AdminContentDetailsResponse {
+    success: boolean;
+    data: AdminContent & {
+        s3Key?: string;
+        s3Bucket?: string;
+        thumbnailUrl?: string;
+        recentPurchases: any[];
+    };
+}
+
+interface QueryAdminContentParams {
+    search?: string;
+    status?: string;
+    creatorId?: string;
+    page?: number;
+    limit?: number;
+}
+
+interface ReviewContentRequest {
+    status: 'APPROVED' | 'REJECTED';
+    reason?: string;
+}
+
 export const api = createApi({
     baseQuery: fetchBaseQuery({
         baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -438,7 +590,7 @@ export const api = createApi({
         },
     }),
     reducerPath: "api",
-    tagTypes: ["Auth", "User", "Admin", "Creator", "Content", "Settings"],
+    tagTypes: ["Auth", "User", "Admin", "Creator", "Content", "Settings", "Dashboard"],
     endpoints: (build) => ({
         registerUser: build.mutation<AuthResponse, RegisterRequest>({
             query: (data) => ({
@@ -717,6 +869,86 @@ export const api = createApi({
             }),
             invalidatesTags: ['Settings'],
         }),
+
+        // Admin Dashboard endpoints
+        getDashboardStats: build.query<DashboardStats, void>({
+            query: () => '/api/admin/dashboard/stats',
+            providesTags: ['Dashboard'],
+        }),
+        getRevenueOverTime: build.query<RevenueData, { period?: '7' | '30' | '90' }>({
+            query: ({ period = '30' } = {}) => ({
+                url: '/api/admin/dashboard/revenue',
+                params: { period },
+            }),
+            providesTags: ['Dashboard'],
+        }),
+        getRecentActivity: build.query<RecentActivityResponse, void>({
+            query: () => '/api/admin/dashboard/activity',
+            providesTags: ['Dashboard'],
+        }),
+
+        // Admin Creators endpoints
+        getAdminCreators: build.query<AdminCreatorListResponse, QueryAdminCreatorsParams>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.search) searchParams.append('search', params.search);
+                if (params.kycStatus && params.kycStatus !== 'all') searchParams.append('kycStatus', params.kycStatus);
+                if (params.accountStatus && params.accountStatus !== 'all') searchParams.append('accountStatus', params.accountStatus);
+                if (params.page) searchParams.append('page', params.page.toString());
+                if (params.limit) searchParams.append('limit', params.limit.toString());
+                return `/api/admin/creators?${searchParams.toString()}`;
+            },
+            providesTags: ['Creator'],
+        }),
+        getAdminCreatorStats: build.query<AdminCreatorStatsResponse, void>({
+            query: () => '/api/admin/creators/stats',
+            providesTags: ['Creator'],
+        }),
+        getAdminCreatorById: build.query<AdminCreatorDetailsResponse, string>({
+            query: (id) => `/api/admin/creators/${id}`,
+            providesTags: ['Creator'],
+        }),
+
+        // Admin Content endpoints
+        getAdminContent: build.query<AdminContentListResponse, QueryAdminContentParams>({
+            query: (params) => ({
+                url: '/api/admin/content',
+                params,
+            }),
+            providesTags: ['Content'],
+        }),
+        getAdminContentStats: build.query<AdminContentStatsResponse, void>({
+            query: () => '/api/admin/content/stats',
+            providesTags: ['Content'],
+        }),
+        getAdminContentById: build.query<AdminContentDetailsResponse, string>({
+            query: (id) => `/api/admin/content/${id}`,
+            providesTags: ['Content'],
+        }),
+        reviewContent: build.mutation<{ success: boolean; message: string }, { id: string; data: ReviewContentRequest }>({
+            query: ({ id, data }) => ({
+                url: `/api/admin/content/${id}/review`,
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Content'],
+        }),
+        flagContent: build.mutation<{ success: boolean; message: string }, { id: string; reason: string }>({
+            query: ({ id, reason }) => ({
+                url: `/api/admin/content/${id}/flag`,
+                method: 'POST',
+                body: { reason },
+            }),
+            invalidatesTags: ['Content'],
+        }),
+        removeContent: build.mutation<{ success: boolean; message: string }, { id: string; reason: string }>({
+            query: ({ id, reason }) => ({
+                url: `/api/admin/content/${id}/remove`,
+                method: 'POST',
+                body: { reason },
+            }),
+            invalidatesTags: ['Content'],
+        }),
     }),
 });
 
@@ -767,6 +999,21 @@ export const {
     useBulkUpdateSettingsMutation,
     useInitializeSettingsMutation,
     useResetSettingsToDefaultsMutation,
+    // Admin dashboard hooks
+    useGetDashboardStatsQuery,
+    useGetRevenueOverTimeQuery,
+    useGetRecentActivityQuery,
+    // Admin creators hooks
+    useGetAdminCreatorsQuery,
+    useGetAdminCreatorStatsQuery,
+    useGetAdminCreatorByIdQuery,
+    // Admin content hooks
+    useGetAdminContentQuery,
+    useGetAdminContentStatsQuery,
+    useGetAdminContentByIdQuery,
+    useReviewContentMutation,
+    useFlagContentMutation,
+    useRemoveContentMutation,
 } = api;
 
 export default api;

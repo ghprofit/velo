@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { BuyerModule } from './buyer/buyer.module';
 import { VerificationModule } from './verification/verification.module';
 import { SuperadminModule } from './superadmin/superadmin.module';
+import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -18,6 +19,7 @@ import { AppService } from './app.service';
     BuyerModule,
     VerificationModule,
     SuperadminModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -45,6 +45,7 @@ export default function CreatorDashboardPage() {
   // Trend and content data states
   const [trendData, setTrendData] = useState<TrendData[]>([]);
   const [trendPeriod, setTrendPeriod] = useState('Last 7 Days');
+  const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
   const [loadingTrends, setLoadingTrends] = useState(true);
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [loadingContent, setLoadingContent] = useState(true);
@@ -225,25 +226,25 @@ export default function CreatorDashboardPage() {
 
   return (
     <>
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Loading State */}
           {loading && (
-            <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px]">
               <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-                <p className="text-gray-600">Loading dashboard...</p>
+                <div className="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-indigo-600 mb-4"></div>
+                <p className="text-gray-600 text-sm sm:text-base">Loading dashboard...</p>
               </div>
             </div>
           )}
 
           {/* Error State */}
           {error && !loading && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
-              <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p className="text-red-800">{error}</p>
+                <p className="text-red-800 text-sm sm:text-base">{error}</p>
               </div>
             </div>
           )}
@@ -252,11 +253,11 @@ export default function CreatorDashboardPage() {
           {!loading && profile && (
             <>
               {/* Welcome Header */}
-              <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <div className="mb-6 sm:mb-8">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
                   Welcome back, {profile.displayName || 'Creator'}
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-600 text-sm sm:text-base">
                   Here's an overview of your content performance.
                 </p>
               </div>
@@ -265,19 +266,19 @@ export default function CreatorDashboardPage() {
               <VerificationStatusBanner />
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 {stats.map((stat, index) => (
                   <div
                     key={index}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center ${stat.iconColor}`}>
-                        {renderIcon(stat.icon, 'w-6 h-6')}
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 ${stat.bgColor} rounded-lg flex items-center justify-center ${stat.iconColor}`}>
+                        {renderIcon(stat.icon, 'w-5 h-5 sm:w-6 sm:h-6')}
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-                        <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">{stat.label}</p>
+                        <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</p>
                       </div>
                     </div>
                   </div>
@@ -285,23 +286,55 @@ export default function CreatorDashboardPage() {
               </div>
 
               {/* Earnings Trend */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">Earnings Trend</h2>
-                  <select
-                    value={trendPeriod}
-                    onChange={(e) => setTrendPeriod(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  >
-                    <option value="Last 7 Days">This Week</option>
-                    <option value="Last 30 Days">This Month</option>
-                    <option value="Last Year">This Year</option>
-                    <option value="All Time">All Time</option>
-                  </select>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Earnings Trend</h2>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Chart Type Toggle */}
+                    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setChartType('bar')}
+                        className={`p-1.5 sm:p-2 rounded-md transition-colors ${
+                          chartType === 'bar'
+                            ? 'bg-white shadow-sm text-indigo-600'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        title="Bar Chart"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => setChartType('line')}
+                        className={`p-1.5 sm:p-2 rounded-md transition-colors ${
+                          chartType === 'line'
+                            ? 'bg-white shadow-sm text-indigo-600'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        title="Line Chart"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                        </svg>
+                      </button>
+                    </div>
+                    {/* Period Selector */}
+                    <select
+                      value={trendPeriod}
+                      onChange={(e) => setTrendPeriod(e.target.value)}
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    >
+                      <option value="Last 7 Days">This Week</option>
+                      <option value="Last 30 Days">This Month</option>
+                      <option value="Last Year">This Year</option>
+                      <option value="All Time">All Time</option>
+                    </select>
+                  </div>
                 </div>
 
-                {/* Bar Chart Visualization */}
-                <div className="h-64">
+                {/* Chart Visualization */}
+                <div className="h-48 sm:h-64">
                   {loadingTrends ? (
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="text-gray-500">Loading chart...</div>
@@ -310,7 +343,8 @@ export default function CreatorDashboardPage() {
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="text-gray-500">No earnings data for this period</div>
                     </div>
-                  ) : (
+                  ) : chartType === 'bar' ? (
+                    /* Bar Chart */
                     <div className="flex items-end justify-between gap-3 h-full">
                       {chartData.map((data, index) => {
                         const heightPercent = maxRevenue > 0 ? (data.revenue / maxRevenue) * 100 : 0;
@@ -328,25 +362,116 @@ export default function CreatorDashboardPage() {
                         );
                       })}
                     </div>
+                  ) : (
+                    /* Line Chart */
+                    <div className="relative h-full w-full flex">
+                      {/* Y-axis labels */}
+                      <div className="flex flex-col justify-between text-xs text-gray-500 pr-2 pb-6">
+                        <span>{'$'}{maxRevenue.toFixed(0)}</span>
+                        <span>{'$'}{(maxRevenue * 0.5).toFixed(0)}</span>
+                        <span>{'$'}0</span>
+                      </div>
+                      {/* Chart area */}
+                      <div className="flex-1 flex flex-col">
+                        {/* SVG container */}
+                        <div className="flex-1 relative">
+                          {/* Grid lines */}
+                          <div className="absolute inset-0">
+                            {[0, 50, 100].map((percent) => (
+                              <div
+                                key={percent}
+                                className="absolute left-0 right-0 border-t border-gray-100"
+                                style={{ top: `${100 - percent}%` }}
+                              />
+                            ))}
+                          </div>
+                          {/* SVG Line Chart */}
+                          <svg
+                            className="absolute inset-0 w-full h-full overflow-visible"
+                            viewBox="0 0 100 100"
+                            preserveAspectRatio="none"
+                          >
+                            {/* Area fill */}
+                            <defs>
+                              <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="rgb(99, 102, 241)" stopOpacity="0.3" />
+                                <stop offset="100%" stopColor="rgb(99, 102, 241)" stopOpacity="0.05" />
+                              </linearGradient>
+                            </defs>
+                            <path
+                              d={`M 0 100 ${chartData.map((d, i) => {
+                                const x = chartData.length > 1 ? (i / (chartData.length - 1)) * 100 : 50;
+                                const y = 100 - (maxRevenue > 0 ? (d.revenue / maxRevenue) * 100 : 0);
+                                return `L ${x} ${y}`;
+                              }).join(' ')} L 100 100 Z`}
+                              fill="url(#areaGradient)"
+                            />
+                            {/* Line */}
+                            <path
+                              d={chartData.map((d, i) => {
+                                const x = chartData.length > 1 ? (i / (chartData.length - 1)) * 100 : 50;
+                                const y = 100 - (maxRevenue > 0 ? (d.revenue / maxRevenue) * 100 : 0);
+                                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                              }).join(' ')}
+                              fill="none"
+                              stroke="rgb(99, 102, 241)"
+                              strokeWidth="2"
+                              vectorEffect="non-scaling-stroke"
+                            />
+                          </svg>
+                          {/* Data points - rendered as HTML for proper sizing */}
+                          <div className="absolute inset-0">
+                            {chartData.map((d, i) => {
+                              const x = chartData.length > 1 ? (i / (chartData.length - 1)) * 100 : 50;
+                              const y = 100 - (maxRevenue > 0 ? (d.revenue / maxRevenue) * 100 : 0);
+                              return (
+                                <div
+                                  key={i}
+                                  className="absolute w-3 h-3 bg-white border-2 border-indigo-600 rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-125 transition-transform"
+                                  style={{ left: `${x}%`, top: `${y}%` }}
+                                  title={`$${d.revenue.toFixed(2)}`}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {/* X-axis labels */}
+                        <div className="flex justify-between pt-2">
+                          {chartData.length <= 12 ? (
+                            chartData.map((d, i) => (
+                              <span key={i} className="text-xs text-gray-600">
+                                {formatChartDate(d.date)}
+                              </span>
+                            ))
+                          ) : (
+                            chartData.filter((_, i) => i % Math.ceil(chartData.length / 10) === 0 || i === chartData.length - 1).map((d, idx) => (
+                              <span key={idx} className="text-xs text-gray-600">
+                                {formatChartDate(d.date)}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
 
                 {/* Chart Legend */}
                 {!loadingTrends && chartData.length > 0 && (
                   <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                    <span>Total: ${chartData.reduce((sum, d) => sum + d.revenue, 0).toFixed(2)}</span>
+                    <span>Total: {'$'}{chartData.reduce((sum, d) => sum + d.revenue, 0).toFixed(2)}</span>
                     <span>
-                      Avg: ${(chartData.reduce((sum, d) => sum + d.revenue, 0) / chartData.length).toFixed(2)}
+                      Avg: {'$'}{(chartData.reduce((sum, d) => sum + d.revenue, 0) / chartData.length).toFixed(2)}
                       /{trendPeriod === 'Last Year' || trendPeriod === 'All Time' ? 'month' : 'day'}
                     </span>
                   </div>
                 )}
               </div>
 
-              {/* Content Performance Table */}
+              {/* Content Performance */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-gray-900">Content Performance</h2>
+                <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Content Performance</h2>
                   <Link
                     href="/creator/analytics"
                     className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
@@ -355,82 +480,127 @@ export default function CreatorDashboardPage() {
                   </Link>
                 </div>
 
-                <div className="overflow-x-auto">
-                  {loadingContent ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="text-gray-500">Loading content...</div>
-                    </div>
-                  ) : contentItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <div className="text-gray-500 mb-4">No content uploaded yet</div>
-                      <Link
-                        href="/creator/upload"
-                        className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                      >
-                        Upload Your First Content
-                      </Link>
-                    </div>
-                  ) : (
-                    <table className="w-full">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            Content Title
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            Type
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            Views
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            Unlocks
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            Revenue
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {contentItems.map((content) => (
-                          <tr
-                            key={content.id}
-                            onClick={() => router.push(`/creator/content/${content.id}`)}
-                            className="hover:bg-gray-50 transition-colors cursor-pointer"
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center gap-3">
-                                <img
-                                  src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
-                                  alt={content.title}
-                                  className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
-                                  }}
-                                />
-                                <span className="text-sm font-medium text-gray-900">{content.title}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                {loadingContent ? (
+                  <div className="flex items-center justify-center py-8 sm:py-12">
+                    <div className="text-gray-500 text-sm sm:text-base">Loading content...</div>
+                  </div>
+                ) : contentItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+                    <div className="text-gray-500 mb-4 text-sm sm:text-base text-center">No content uploaded yet</div>
+                    <Link
+                      href="/creator/upload"
+                      className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Upload Your First Content
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile Card View */}
+                    <div className="sm:hidden divide-y divide-gray-200">
+                      {contentItems.map((content) => (
+                        <div
+                          key={content.id}
+                          onClick={() => router.push(`/creator/content/${content.id}`)}
+                          className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-start gap-3 mb-3">
+                            <img
+                              src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
+                              alt={content.title}
+                              className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
+                              }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-sm font-medium text-gray-900 truncate">{content.title}</h3>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mt-1">
                                 {content.type}
                               </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm text-gray-600">{content.views.toLocaleString()}</span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm text-gray-600">{content.unlocks.toLocaleString()}</span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm font-medium text-gray-900">${content.revenue.toFixed(2)}</span>
-                            </td>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="bg-gray-50 rounded-lg px-2 py-2">
+                              <p className="text-xs text-gray-500">Views</p>
+                              <p className="text-sm font-semibold text-gray-900">{content.views.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg px-2 py-2">
+                              <p className="text-xs text-gray-500">Unlocks</p>
+                              <p className="text-sm font-semibold text-gray-900">{content.unlocks.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-green-50 rounded-lg px-2 py-2">
+                              <p className="text-xs text-gray-500">Revenue</p>
+                              <p className="text-sm font-semibold text-green-600">${content.revenue.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Content Title
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Type
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Views
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Unlocks
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Revenue
+                            </th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {contentItems.map((content) => (
+                            <tr
+                              key={content.id}
+                              onClick={() => router.push(`/creator/content/${content.id}`)}
+                              className="hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center gap-3">
+                                  <img
+                                    src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
+                                    alt={content.title}
+                                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
+                                    }}
+                                  />
+                                  <span className="text-sm font-medium text-gray-900">{content.title}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  {content.type}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-sm text-gray-600">{content.views.toLocaleString()}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-sm text-gray-600">{content.unlocks.toLocaleString()}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-sm font-medium text-gray-900">${content.revenue.toFixed(2)}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}

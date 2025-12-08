@@ -84,14 +84,37 @@ export class AnalyticsService {
       return { data: [], metric: metric || 'revenue' };
     }
 
-    // For trends, default to last 30 days if no period or "All Time"
+    // Handle "All Time" specially - get date range from actual data
     let dateRange = this.getDateRange(period);
     if (!dateRange) {
-      // Default to last 30 days for trend chart
+      // For "All Time", find the oldest purchase to determine the start date
+      const oldestPurchase = await this.prisma.purchase.findFirst({
+        where: {
+          content: {
+            creatorId: creator.id,
+          },
+          status: 'COMPLETED',
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+        select: {
+          createdAt: true,
+        },
+      });
+
       const now = new Date();
-      const startDate = new Date(now);
-      startDate.setDate(now.getDate() - 30);
-      dateRange = { startDate, endDate: now };
+      if (oldestPurchase) {
+        // Start from oldest purchase date
+        const startDate = new Date(oldestPurchase.createdAt);
+        startDate.setHours(0, 0, 0, 0);
+        dateRange = { startDate, endDate: now };
+      } else {
+        // No purchases, default to last 30 days
+        const startDate = new Date(now);
+        startDate.setDate(now.getDate() - 30);
+        dateRange = { startDate, endDate: now };
+      }
     }
     const days = this.getDaysInRange(dateRange);
 

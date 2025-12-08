@@ -264,6 +264,7 @@ model BuyerSession {
   fingerprint           String?             // Browser fingerprint
   ipAddress             String?
   userAgent             String?
+  email                 String?             // For checkout receipts and access recovery
   lastActive            DateTime            @default(now())
   expiresAt             DateTime
   createdAt             DateTime            @default(now())

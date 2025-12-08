@@ -16,6 +16,7 @@ import { SupportModule } from './support/support.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { EarningsModule } from './earnings/earnings.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { StripeModule } from './stripe/stripe.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -54,6 +55,7 @@ import { AppService } from './app.service';
     RedisModule,
     PrismaModule,
     S3Module,
+    StripeModule,
     AuthModule,
     BuyerModule,
     VerificationModule,

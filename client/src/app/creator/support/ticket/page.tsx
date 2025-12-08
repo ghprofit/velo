@@ -145,18 +145,18 @@ export default function SupportTicketPage() {
 
   return (
     <>
-        <div className="max-w-5xl mx-auto p-8">
+        <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
             <div>
-              <p className="text-sm text-gray-500 mb-1">Step 1 of 2: Details</p>
-              <h1 className="text-3xl font-bold text-gray-900">Submit a Support Ticket</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Submit a Support Ticket</h1>
+              <p className="text-sm text-gray-600 mt-1">Fill out the form below and we'll get back to you within 24 hours</p>
             </div>
             <Link
               href="/creator/support"
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors text-sm sm:text-base"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               <span className="font-medium">Back to Help Center</span>
@@ -165,20 +165,20 @@ export default function SupportTicketPage() {
 
           {/* Error Display */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-              <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 flex items-start gap-2 sm:gap-3">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <div>
-                <h3 className="font-semibold text-red-900 mb-1">Error</h3>
-                <p className="text-sm text-red-800">{error}</p>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-red-900 mb-0.5 sm:mb-1 text-sm sm:text-base">Error</h3>
+                <p className="text-xs sm:text-sm text-red-800">{error}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setError(null)}
-                className="ml-auto text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 flex-shrink-0"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -188,19 +188,19 @@ export default function SupportTicketPage() {
           {/* Form */}
           <form onSubmit={handleSubmit}>
             {/* Core Issue Details */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Core Issue Details</h2>
+            <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Core Issue Details</h2>
 
               {/* Issue Category */}
-              <div className="mb-6">
-                <label htmlFor="category" className="block text-sm font-medium text-gray-900 mb-2">
+              <div className="mb-4 sm:mb-6">
+                <label htmlFor="category" className="block text-xs sm:text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">
                   Issue Category<span className="text-red-600">*</span>
                 </label>
                 <select
                   id="category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                   required
                 >
                   <option value="">Select a category</option>
@@ -214,8 +214,8 @@ export default function SupportTicketPage() {
               </div>
 
               {/* Subject Line */}
-              <div className="mb-6">
-                <label htmlFor="subject" className="block text-sm font-medium text-gray-900 mb-2">
+              <div className="mb-4 sm:mb-6">
+                <label htmlFor="subject" className="block text-xs sm:text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">
                   Subject Line (Brief Summary)<span className="text-red-600">*</span>
                 </label>
                 <input
@@ -224,35 +224,35 @@ export default function SupportTicketPage() {
                   placeholder="Brief summary of your issue"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                   required
                 />
               </div>
 
               {/* Detailed Description */}
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-900 mb-2">
+                <label htmlFor="description" className="block text-xs sm:text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">
                   Detailed Description<span className="text-red-600">*</span>
                 </label>
                 <textarea
                   id="description"
-                  rows={8}
+                  rows={6}
                   placeholder="Please provide as much detail as possible about your issue..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none sm:rows-8"
                   required
                 />
               </div>
             </div>
 
             {/* Context & Attachments */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Context & Attachments</h2>
+            <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Context & Attachments</h2>
 
               {/* Related Content ID */}
-              <div className="mb-6">
-                <label htmlFor="contentId" className="block text-sm font-medium text-gray-900 mb-2">
+              <div className="mb-4 sm:mb-6">
+                <label htmlFor="contentId" className="block text-xs sm:text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">
                   Related Content ID or Link (Optional)
                 </label>
                 <input
@@ -261,21 +261,21 @@ export default function SupportTicketPage() {
                   placeholder="e.g., video ID or content URL"
                   value={contentId}
                   onChange={(e) => setContentId(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                 />
-                <p className="mt-2 text-xs text-gray-500">If this issue is related to a specific upload</p>
+                <p className="mt-1.5 sm:mt-2 text-xs text-gray-500">If this issue is related to a specific upload</p>
               </div>
 
               {/* File Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">
                   Attach Files/Screenshots (Optional)
                 </label>
                 <div
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
+                  className={`border-2 border-dashed rounded-xl p-6 sm:p-8 lg:p-12 text-center transition-colors ${
                     isDragging
                       ? 'border-indigo-500 bg-indigo-50'
                       : 'border-gray-300 bg-gray-50'
@@ -291,33 +291,33 @@ export default function SupportTicketPage() {
                   />
                   <label htmlFor="fileUpload" className="cursor-pointer">
                     <div className="flex flex-col items-center">
-                      <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 mb-3 sm:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      <p className="text-base font-medium text-gray-900 mb-1">Click to upload or drag and drop</p>
-                      <p className="text-sm text-gray-500">JPEG, PNG, MP4 (max 5MB per file, 5 files total)</p>
+                      <p className="text-sm sm:text-base font-medium text-gray-900 mb-1">Click to upload or drag and drop</p>
+                      <p className="text-xs sm:text-sm text-gray-500">JPEG, PNG, MP4 (max 5MB per file, 5 files total)</p>
                     </div>
                   </label>
                 </div>
 
                 {/* Uploaded Files List */}
                 {uploadedFiles.length > 0 && (
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-3 sm:mt-4 space-y-2">
                     {uploadedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div key={index} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 rounded-lg gap-2">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                           </svg>
-                          <span className="text-sm text-gray-900">{file.name}</span>
-                          <span className="text-xs text-gray-500">({Math.round(file.size / 1024)} KB)</span>
+                          <span className="text-xs sm:text-sm text-gray-900 truncate">{file.name}</span>
+                          <span className="text-xs text-gray-500 flex-shrink-0">({Math.round(file.size / 1024)} KB)</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => setUploadedFiles(uploadedFiles.filter((_, i) => i !== index))}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 hover:text-red-700 flex-shrink-0"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
@@ -329,8 +329,8 @@ export default function SupportTicketPage() {
             </div>
 
             {/* Footer */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 flex items-center justify-between">
-              <p className="text-sm text-gray-600">
+            <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <p className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
                 By submitting, you agree to our{' '}
                 <button
                   type="button"
@@ -343,7 +343,7 @@ export default function SupportTicketPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`px-8 py-3 rounded-xl font-semibold transition-colors flex items-center gap-2 ${
+                className={`w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-sm sm:text-base ${
                   isSubmitting
                     ? 'bg-indigo-400 cursor-not-allowed'
                     : 'bg-indigo-600 hover:bg-indigo-700'
@@ -351,7 +351,7 @@ export default function SupportTicketPage() {
               >
                 {isSubmitting ? (
                   <>
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -360,7 +360,7 @@ export default function SupportTicketPage() {
                 ) : (
                   <>
                     Submit Ticket
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                   </>
@@ -370,8 +370,8 @@ export default function SupportTicketPage() {
           </form>
 
           {/* Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-500">© 2025 Velo — Designed to protect creators and their data.</p>
+          <div className="mt-6 sm:mt-8 text-center">
+            <p className="text-xs sm:text-sm text-gray-500">© 2025 Velolink — Designed to protect creators and their data.</p>
           </div>
         </div>
 
@@ -379,7 +379,7 @@ export default function SupportTicketPage() {
         <TermsModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          initialSection={modalSection}
+          section={modalSection}
         />
     </>
   );

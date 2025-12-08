@@ -632,6 +632,19 @@ async function main() {
 
   // Generate views for each content item with realistic patterns
   let totalViewsCreated = 0;
+  const allViewsData: Array<{
+    contentId: string;
+    country: string;
+    countryCode: string;
+    city: string;
+    region: string;
+    deviceType: string;
+    browser: string;
+    os: string;
+    ipAddress: string;
+    userAgent: string;
+    createdAt: Date;
+  }> = [];
 
   for (const content of allContent) {
     // Calculate views based on content age and popularity
@@ -643,6 +656,7 @@ async function main() {
     const baseViews = Math.min(daysSincePublished * (popularityFactor / 10), 500);
     const numViews = Math.floor(baseViews * (0.8 + Math.random() * 0.4));
 
+    let contentViewCount = 0;
     for (let i = 0; i < numViews; i++) {
       const location = selectLocation();
       const selectedDevice = selectByWeight(devices);
@@ -658,30 +672,41 @@ async function main() {
 
       // Only create view if it's after the publish date
       if (viewDate >= publishedDate) {
-        await prisma.contentView.create({
-          data: {
-            contentId: content.id,
-            country: location.country,
-            countryCode: location.countryCode,
-            city: location.city,
-            region: `${location.city} Metro`,
-            deviceType: selectedDevice.deviceType,
-            browser: selectedBrowser.browser,
-            os: selectedOs,
-            ipAddress: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-            userAgent: `Mozilla/5.0 (${selectedOs}) ${selectedBrowser.browser}/${Math.floor(70 + Math.random() * 30)}.0`,
-            createdAt: viewDate,
-          },
+        allViewsData.push({
+          contentId: content.id,
+          country: location.country,
+          countryCode: location.countryCode,
+          city: location.city,
+          region: `${location.city} Metro`,
+          deviceType: selectedDevice.deviceType,
+          browser: selectedBrowser.browser,
+          os: selectedOs,
+          ipAddress: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+          userAgent: `Mozilla/5.0 (${selectedOs}) ${selectedBrowser.browser}/${Math.floor(70 + Math.random() * 30)}.0`,
+          createdAt: viewDate,
         });
-        totalViewsCreated++;
+        contentViewCount++;
       }
     }
 
     // Update content view count
     await prisma.content.update({
       where: { id: content.id },
-      data: { viewCount: numViews },
+      data: { viewCount: contentViewCount },
     });
+  }
+
+  // Batch insert all content views (much faster than individual creates)
+  const BATCH_SIZE = 100;
+  for (let i = 0; i < allViewsData.length; i += BATCH_SIZE) {
+    const batch = allViewsData.slice(i, i + BATCH_SIZE);
+    await prisma.contentView.createMany({
+      data: batch,
+    });
+    totalViewsCreated += batch.length;
+    if ((i / BATCH_SIZE) % 10 === 0) {
+      console.log(`    Progress: ${totalViewsCreated}/${allViewsData.length} views created...`);
+    }
   }
 
   // Update creator profile total views

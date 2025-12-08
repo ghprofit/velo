@@ -36,6 +36,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.943.0",
     "@aws-sdk/lib-storage": "^3.943.0",
+    "@aws-sdk/s3-request-presigner": "^3.946.0",
     "@nestjs/common": "^11.1.9",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.9",
@@ -62,6 +63,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "speakeasy": "^2.0.0",
+    "stripe": "^20.0.0",
     "uuid": "^13.0.0",
     "zod": "^4.1.12"
   }

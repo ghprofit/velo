@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import { nanoid } from 'nanoid';
 
@@ -137,13 +138,65 @@ export class S3Service {
    */
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
     try {
-      // For simple public access, you can return the direct URL
-      // For private files with expiration, you'd use getSignedUrl from @aws-sdk/s3-request-presigner
-      const region = this.configService.get<string>('AWS_REGION') || 'us-east-1';
-      return `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+
+      const signedUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn,
+      });
+
+      return signedUrl;
     } catch (error) {
       console.error('Error generating signed URL:', error);
       throw new InternalServerErrorException('Failed to generate signed URL');
+    }
+  }
+
+  /**
+   * Get signed URLs for multiple files
+   * @param keys - Array of S3 keys
+   * @param expiresIn - Expiration time in seconds (default: 1 hour)
+   * @returns Array of signed URLs
+   */
+  async getSignedUrls(
+    keys: string[],
+    expiresIn: number = 3600,
+  ): Promise<string[]> {
+    const urlPromises = keys.map((key) => this.getSignedUrl(key, expiresIn));
+    return Promise.all(urlPromises);
+  }
+
+  /**
+   * Get a signed URL for uploading a file (presigned PUT)
+   * @param key - S3 key where the file will be uploaded
+   * @param contentType - MIME type of the file
+   * @param expiresIn - Expiration time in seconds (default: 15 minutes)
+   * @returns Signed URL for upload
+   */
+  async getUploadSignedUrl(
+    key: string,
+    contentType: string,
+    expiresIn: number = 900,
+  ): Promise<string> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ContentType: contentType,
+      });
+
+      const signedUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn,
+      });
+
+      return signedUrl;
+    } catch (error) {
+      console.error('Error generating upload signed URL:', error);
+      throw new InternalServerErrorException(
+        'Failed to generate upload signed URL',
+      );
     }
   }
 }

@@ -17,9 +17,13 @@ const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../../prisma/prisma.service");
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(config, prisma) {
+        const secret = config.get('JWT_SECRET');
+        if (!secret) {
+            throw new Error('JWT_SECRET is not defined in environment variables. Please set JWT_SECRET in your .env file.');
+        }
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
-            secretOrKey: config.get('JWT_SECRET') || 'your-super-secret-jwt-key-change-this-in-production',
+            secretOrKey: secret,
         });
         this.config = config;
         this.prisma = prisma;
@@ -32,7 +36,7 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
             throw new common_1.UnauthorizedException('Invalid token or user deactivated');
         }
         return {
-            userId: user.id,
+            id: user.id,
             email: user.email,
             role: user.role,
         };

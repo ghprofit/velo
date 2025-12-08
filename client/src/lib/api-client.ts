@@ -433,4 +433,42 @@ export const notificationsApi = {
     apiClient.delete('/notifications/read'),
 };
 
+// Buyer/Public API (for anonymous buyers)
+export const buyerApi = {
+  // Create or get buyer session
+  createSession: (data: { fingerprint?: string; email?: string }) =>
+    apiClient.post('/buyer/session', data),
+
+  // Get content details (public)
+  getContentDetails: (id: string) =>
+    apiClient.get(`/buyer/content/${id}`),
+
+  // Create a purchase
+  createPurchase: (data: {
+    contentId: string;
+    sessionToken: string;
+    email?: string;
+  }) =>
+    apiClient.post('/buyer/purchase', data),
+
+  // Verify purchase status
+  verifyPurchase: (id: string) =>
+    apiClient.get(`/buyer/purchase/${id}`),
+
+  // Get content access after purchase
+  getContentAccess: (accessToken: string) =>
+    apiClient.post('/buyer/access', { accessToken }),
+
+  // Get all purchases for a session
+  getSessionPurchases: (sessionToken: string) =>
+    apiClient.get(`/buyer/session/${sessionToken}/purchases`),
+};
+
+// Stripe API
+export const stripeApi = {
+  // Get Stripe publishable key
+  getConfig: () =>
+    apiClient.get('/stripe/config'),
+};
+
 export default apiClient;

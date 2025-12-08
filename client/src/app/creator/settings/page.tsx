@@ -350,16 +350,16 @@ export default function SettingsPage() {
   return (
     <>
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-8 py-6">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Account Settings</h1>
           </div>
         </div>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Settings Tabs */}
-          <div className="border-b border-gray-200 mb-8">
-            <div className="flex items-center gap-8 overflow-x-auto">
+          <div className="border-b border-gray-200 mb-6 sm:mb-8 -mx-4 sm:mx-0 px-4 sm:px-0">
+            <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 overflow-x-auto scrollbar-hide pb-px">
               {settingsTabs.map((tab) => (
                 <button
                   key={tab}
@@ -368,7 +368,7 @@ export default function SettingsPage() {
                     setError('');
                     setSuccess('');
                   }}
-                  className={`pb-4 px-1 border-b-2 font-medium transition-colors whitespace-nowrap ${
+                  className={`pb-3 sm:pb-4 px-1 border-b-2 text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${
                     settingsTab === tab
                       ? 'border-indigo-600 text-indigo-600'
                       : tab === 'Danger Zone'
@@ -398,19 +398,19 @@ export default function SettingsPage() {
           {/* Profile Info Tab */}
           {settingsTab === 'Profile Info' && (
             <div className="max-w-4xl">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold text-gray-900">Profile Information</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Profile Information</h2>
                 {!isEditingProfile && (
                   <button
                     onClick={() => setIsEditingProfile(true)}
-                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors text-sm sm:text-base"
                   >
                     Edit Profile
                   </button>
                 )}
               </div>
 
-              <form onSubmit={handleSaveProfile} className="space-y-8">
+              <form onSubmit={handleSaveProfile} className="space-y-6 sm:space-y-8">
                 {/* Profile Picture */}
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -427,7 +427,7 @@ export default function SettingsPage() {
                       />
                       <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="relative w-32 h-32 rounded-full border-2 border-gray-300 overflow-hidden cursor-pointer hover:border-indigo-500 transition-colors group"
+                        className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-gray-300 overflow-hidden cursor-pointer hover:border-indigo-500 transition-colors group"
                       >
                         {profilePicturePreview ? (
                           <img
@@ -437,11 +437,11 @@ export default function SettingsPage() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <span className="text-4xl text-gray-400">👤</span>
+                            <span className="text-3xl sm:text-4xl text-gray-400">👤</span>
                           </div>
                         )}
                         <div className="absolute inset-0 bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center">
-                          <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium">
+                          <span className="text-white opacity-0 group-hover:opacity-100 text-xs sm:text-sm font-medium">
                             Click to upload
                           </span>
                         </div>
@@ -451,7 +451,7 @@ export default function SettingsPage() {
                       </p>
                     </>
                   ) : (
-                    <div className="w-32 h-32 rounded-full border-2 border-gray-200 overflow-hidden">
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-gray-200 overflow-hidden">
                       {profilePicturePreview ? (
                         <img
                           src={profilePicturePreview}
@@ -460,7 +460,7 @@ export default function SettingsPage() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <span className="text-4xl text-gray-400">👤</span>
+                          <span className="text-3xl sm:text-4xl text-gray-400">👤</span>
                         </div>
                       )}
                     </div>
@@ -478,17 +478,17 @@ export default function SettingsPage() {
                       type="text"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                     />
                   ) : (
-                    <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
+                    <div className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-900 text-sm sm:text-base">
                       {displayName || 'Not set'}
                     </div>
                   )}
                 </div>
 
                 {/* First & Last Name */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="firstName" className="block text-sm font-medium text-gray-900 mb-2">
                       First Name
@@ -499,10 +499,10 @@ export default function SettingsPage() {
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                       />
                     ) : (
-                      <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
+                      <div className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-900 text-sm sm:text-base">
                         {firstName || 'Not set'}
                       </div>
                     )}
@@ -517,10 +517,10 @@ export default function SettingsPage() {
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                       />
                     ) : (
-                      <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
+                      <div className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-900 text-sm sm:text-base">
                         {lastName || 'Not set'}
                       </div>
                     )}
@@ -533,11 +533,11 @@ export default function SettingsPage() {
                     Email Address
                   </label>
                   <div className="relative">
-                    <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
+                    <div className="w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-24 sm:pr-28 border border-gray-200 rounded-lg bg-gray-50 text-gray-900 text-sm sm:text-base truncate">
                       {email}
                     </div>
                     {profile?.emailVerified && (
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
+                      <span className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 px-2 sm:px-3 py-0.5 sm:py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
                         Verified
                       </span>
                     )}
@@ -546,11 +546,11 @@ export default function SettingsPage() {
 
                 {/* Action Buttons */}
                 {isEditingProfile && (
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <button
                       type="submit"
                       disabled={saving}
-                      className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
                     >
                       {saving ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -558,7 +558,7 @@ export default function SettingsPage() {
                       type="button"
                       onClick={handleCancelEdit}
                       disabled={saving}
-                      className="px-8 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm sm:text-base"
                     >
                       Cancel
                     </button>
@@ -571,13 +571,13 @@ export default function SettingsPage() {
           {/* Payouts Tab */}
           {settingsTab === 'Payouts' && (
             <div className="max-w-5xl">
-              <div className="flex items-start justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Payouts</h2>
-                  <p className="text-gray-600">Manage your primary payout method and financial details securely.</p>
+                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Payouts</h2>
+                  <p className="text-sm sm:text-base text-gray-600">Manage your primary payout method and financial details securely.</p>
                 </div>
                 {bankAccount?.payoutSetupCompleted && (
-                  <span className="px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-lg">
+                  <span className="self-start px-3 sm:px-4 py-1.5 sm:py-2 bg-green-500 text-white text-xs sm:text-sm font-semibold rounded-lg whitespace-nowrap">
                     Payout Status: Verified
                   </span>
                 )}
@@ -585,36 +585,36 @@ export default function SettingsPage() {
 
               {/* Current Bank Account */}
               {bankAccount && (
-                <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Bank Account</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Current Bank Account</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                     <div>
-                      <p className="text-gray-600">Account Holder</p>
-                      <p className="font-semibold">{bankAccount.bankAccountName}</p>
+                      <p className="text-gray-600 text-xs sm:text-sm">Account Holder</p>
+                      <p className="font-semibold text-sm sm:text-base">{bankAccount.bankAccountName}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600">Bank Name</p>
-                      <p className="font-semibold">{bankAccount.bankName}</p>
+                      <p className="text-gray-600 text-xs sm:text-sm">Bank Name</p>
+                      <p className="font-semibold text-sm sm:text-base">{bankAccount.bankName}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600">Account Number</p>
-                      <p className="font-semibold">{bankAccount.bankAccountNumber}</p>
+                      <p className="text-gray-600 text-xs sm:text-sm">Account Number</p>
+                      <p className="font-semibold text-sm sm:text-base">{bankAccount.bankAccountNumber}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600">Country</p>
-                      <p className="font-semibold">{bankAccount.bankCountry}</p>
+                      <p className="text-gray-600 text-xs sm:text-sm">Country</p>
+                      <p className="font-semibold text-sm sm:text-base">{bankAccount.bankCountry}</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Bank Account Form */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">
                   {bankAccount ? 'Update Bank Account' : 'Add Bank Account'}
                 </h3>
 
-                <form onSubmit={handleSaveBankAccount} className="space-y-6">
+                <form onSubmit={handleSaveBankAccount} className="space-y-4 sm:space-y-6">
                   {/* Country */}
                   <div>
                     <label htmlFor="bankCountry" className="block text-sm font-medium text-gray-900 mb-2">
@@ -625,7 +625,7 @@ export default function SettingsPage() {
                       value={bankFormData.bankCountry}
                       onChange={(e) => setBankFormData({ ...bankFormData, bankCountry: e.target.value })}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                     >
                       <option value="">Select your country</option>
                       <option value="US">United States</option>
@@ -653,7 +653,7 @@ export default function SettingsPage() {
                       onChange={(e) => setBankFormData({ ...bankFormData, bankAccountName: e.target.value })}
                       required
                       placeholder="Must match your KYC verified name"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                     />
                   </div>
 
@@ -669,7 +669,7 @@ export default function SettingsPage() {
                       onChange={(e) => setBankFormData({ ...bankFormData, bankName: e.target.value })}
                       required
                       placeholder="Enter your bank name"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                     />
                   </div>
 
@@ -686,7 +686,7 @@ export default function SettingsPage() {
                         onChange={(e) => setBankFormData({ ...bankFormData, bankRoutingNumber: e.target.value })}
                         required
                         placeholder={bankFormData.bankCountry === 'US' ? '9-digit routing number' : '8-digit sort code'}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                       />
                     </div>
                   )}
@@ -703,7 +703,7 @@ export default function SettingsPage() {
                       onChange={(e) => setBankFormData({ ...bankFormData, bankAccountNumber: e.target.value })}
                       required
                       placeholder="Enter your account number"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                     />
                   </div>
 
@@ -719,7 +719,7 @@ export default function SettingsPage() {
                       onChange={(e) => setConfirmAccountNumber(e.target.value)}
                       required
                       placeholder="Re-enter your account number"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                     />
                   </div>
 
@@ -735,7 +735,7 @@ export default function SettingsPage() {
                         value={bankFormData.bankSwiftCode}
                         onChange={(e) => setBankFormData({ ...bankFormData, bankSwiftCode: e.target.value })}
                         placeholder="Optional for international transfers"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                       />
                     </div>
                   )}
@@ -752,7 +752,7 @@ export default function SettingsPage() {
                         value={bankFormData.bankIban}
                         onChange={(e) => setBankFormData({ ...bankFormData, bankIban: e.target.value })}
                         placeholder="Optional - International Bank Account Number"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                       />
                     </div>
                   )}
@@ -761,7 +761,7 @@ export default function SettingsPage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
                   >
                     {saving ? 'Saving...' : 'Update Payout Details'}
                   </button>
@@ -773,16 +773,16 @@ export default function SettingsPage() {
           {/* Security Tab */}
           {settingsTab === 'Security' && (
             <div className="max-w-5xl">
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Security</h2>
-                <p className="text-gray-600">Protect your account with a strong password and two-factor authentication.</p>
+              <div className="mb-6 sm:mb-8">
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Account Security</h2>
+                <p className="text-sm sm:text-base text-gray-600">Protect your account with a strong password and two-factor authentication.</p>
               </div>
 
               {/* Change Password */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Change Your Password</h3>
-                <form onSubmit={handleChangePassword} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Change Your Password</h3>
+                <form onSubmit={handleChangePassword} className="space-y-4 sm:space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     <div>
                       <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-900 mb-2">
                         Current Password
@@ -794,7 +794,7 @@ export default function SettingsPage() {
                         onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                         required
                         placeholder="Enter current password"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                       />
                     </div>
 
@@ -809,11 +809,11 @@ export default function SettingsPage() {
                         onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                         required
                         placeholder="Enter new password"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                       />
                     </div>
 
-                    <div>
+                    <div className="sm:col-span-2 lg:col-span-1">
                       <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-gray-900 mb-2">
                         Confirm New Password
                       </label>
@@ -824,7 +824,7 @@ export default function SettingsPage() {
                         onChange={(e) => setPasswordData({ ...passwordData, confirmNewPassword: e.target.value })}
                         required
                         placeholder="Confirm new password"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                       />
                     </div>
                   </div>
@@ -832,7 +832,7 @@ export default function SettingsPage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
                   >
                     {saving ? 'Updating...' : 'Update Password'}
                   </button>
@@ -840,18 +840,16 @@ export default function SettingsPage() {
               </div>
 
               {/* 2FA Section */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Two-Factor Authentication (2FA)</h3>
-                    <p className="text-sm text-gray-600">
-                      Add an extra layer of security by requiring a code from your mobile device when logging in.
-                    </p>
-                  </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+                <div className="mb-3 sm:mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">Two-Factor Authentication (2FA)</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    Add an extra layer of security by requiring a code from your mobile device when logging in.
+                  </p>
                 </div>
                 <Link
                   href="/settings/2fa"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors text-sm sm:text-base"
                 >
                   Manage 2FA
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -861,18 +859,16 @@ export default function SettingsPage() {
               </div>
 
               {/* Sessions */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Sessions</h3>
-                    <p className="text-sm text-gray-600">
-                      Review devices and locations that have recently accessed your account.
-                    </p>
-                  </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                <div className="mb-3 sm:mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">Active Sessions</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    Review devices and locations that have recently accessed your account.
+                  </p>
                 </div>
                 <Link
                   href="/settings/sessions"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-900 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-100 text-gray-900 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm sm:text-base"
                 >
                   View All Sessions
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -886,28 +882,28 @@ export default function SettingsPage() {
           {/* Notifications Tab */}
           {settingsTab === 'Notifications' && (
             <div className="max-w-5xl">
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Notifications Preferences</h2>
-                <p className="text-gray-600">Control which emails and in-app alerts you receive from VELO.</p>
+              <div className="mb-6 sm:mb-8">
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Notifications Preferences</h2>
+                <p className="text-sm sm:text-base text-gray-600">Control which emails and in-app alerts you receive from VELO.</p>
               </div>
 
               {/* Earning & Engagement */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Earning & Engagement Updates</h3>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Earning & Engagement Updates</h3>
 
-                <div className="space-y-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-1">Payout updates</h4>
-                      <p className="text-sm text-gray-600">Receive alerts when payouts are processed or there's a payment issue.</p>
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1">Payout updates</h4>
+                      <p className="text-xs sm:text-sm text-gray-600">Receive alerts when payouts are processed or there's a payment issue.</p>
                     </div>
-                    <div className="ml-6">
+                    <div className="flex-shrink-0">
                       <button
                         onClick={() => {
                           setNotifications({ ...notifications, notifyPayoutUpdates: !notifications.notifyPayoutUpdates });
                           handleUpdateNotifications();
                         }}
-                        className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
+                        className={`w-11 sm:w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
                           notifications.notifyPayoutUpdates ? 'bg-green-500' : 'bg-gray-300'
                         }`}
                       >
@@ -920,18 +916,18 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-1">New content engagement</h4>
-                      <p className="text-sm text-gray-600">Receive alerts when your content is unlocked or there is a purchase.</p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1">New content engagement</h4>
+                      <p className="text-xs sm:text-sm text-gray-600">Receive alerts when your content is unlocked or there is a purchase.</p>
                     </div>
-                    <div className="ml-6">
+                    <div className="flex-shrink-0">
                       <button
                         onClick={() => {
                           setNotifications({ ...notifications, notifyContentEngagement: !notifications.notifyContentEngagement });
                           handleUpdateNotifications();
                         }}
-                        className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
+                        className={`w-11 sm:w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
                           notifications.notifyContentEngagement ? 'bg-green-500' : 'bg-gray-300'
                         }`}
                       >
@@ -947,22 +943,22 @@ export default function SettingsPage() {
               </div>
 
               {/* Platform & Marketing */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Platform & Marketing</h3>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Platform & Marketing</h3>
 
-                <div className="space-y-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-1">Platform announcements</h4>
-                      <p className="text-sm text-gray-600">Important information regarding system updates, new features, or terms changes.</p>
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1">Platform announcements</h4>
+                      <p className="text-xs sm:text-sm text-gray-600">Important information regarding system updates, new features, or terms changes.</p>
                     </div>
-                    <div className="ml-6">
+                    <div className="flex-shrink-0">
                       <button
                         onClick={() => {
                           setNotifications({ ...notifications, notifyPlatformAnnouncements: !notifications.notifyPlatformAnnouncements });
                           handleUpdateNotifications();
                         }}
-                        className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
+                        className={`w-11 sm:w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
                           notifications.notifyPlatformAnnouncements ? 'bg-green-500' : 'bg-gray-300'
                         }`}
                       >
@@ -975,18 +971,18 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-1">Marketing emails</h4>
-                      <p className="text-sm text-gray-600">Opt-in to promotional or marketing communications.</p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1">Marketing emails</h4>
+                      <p className="text-xs sm:text-sm text-gray-600">Opt-in to promotional or marketing communications.</p>
                     </div>
-                    <div className="ml-6">
+                    <div className="flex-shrink-0">
                       <button
                         onClick={() => {
                           setNotifications({ ...notifications, notifyMarketingEmails: !notifications.notifyMarketingEmails });
                           handleUpdateNotifications();
                         }}
-                        className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
+                        className={`w-11 sm:w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
                           notifications.notifyMarketingEmails ? 'bg-green-500' : 'bg-gray-300'
                         }`}
                       >
@@ -1002,11 +998,11 @@ export default function SettingsPage() {
               </div>
 
               {/* Auto-save notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-                <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
-                <p className="text-sm text-blue-900">
+                <p className="text-xs sm:text-sm text-blue-900">
                   <strong>Auto-save enabled:</strong> Your notification preferences are automatically saved when you make changes.
                 </p>
               </div>
@@ -1016,15 +1012,15 @@ export default function SettingsPage() {
           {/* Danger Zone Tab */}
           {settingsTab === 'Danger Zone' && (
             <div className="max-w-5xl">
-              <div className="mb-8">
-                <h2 className="text-3xl font-bold text-red-600 mb-4">Danger Zone</h2>
-                <div className="flex items-start gap-3 border-l-4 border-red-600 pl-4 py-2">
-                  <svg className="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mb-6 sm:mb-8">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600 mb-3 sm:mb-4">Danger Zone</h2>
+                <div className="flex items-start gap-2 sm:gap-3 border-l-4 border-red-600 pl-3 sm:pl-4 py-2">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">Proceed with Extreme Caution</h3>
-                    <p className="text-sm text-gray-700">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-0.5 sm:mb-1">Proceed with Extreme Caution</h3>
+                    <p className="text-xs sm:text-sm text-gray-700">
                       These actions are irreversible and may result in the loss of data and access to your account.
                     </p>
                   </div>
@@ -1032,24 +1028,24 @@ export default function SettingsPage() {
               </div>
 
               {/* Deactivate Account */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Deactivate Account (Temporary)</h3>
-                <p className="text-sm text-gray-600 mb-4">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">Deactivate Account (Temporary)</h3>
+                <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                   Temporarily hide your content and profile. You can reactivate by logging in again.
                 </p>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   <input
                     type="password"
                     value={deactivatePassword}
                     onChange={(e) => setDeactivatePassword(e.target.value)}
                     placeholder="Enter your password to confirm"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-sm sm:text-base"
                   />
                   <button
                     onClick={handleDeactivateAccount}
                     disabled={!deactivatePassword || saving}
-                    className="px-5 py-2.5 border-2 border-red-500 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 sm:px-5 py-2 sm:py-2.5 border-2 border-red-500 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors disabled:opacity-50 text-sm sm:text-base"
                   >
                     {saving ? 'Deactivating...' : 'Deactivate Account'}
                   </button>
@@ -1057,37 +1053,37 @@ export default function SettingsPage() {
               </div>
 
               {/* Delete Account */}
-              <div className="bg-white rounded-xl border-2 border-red-500 p-6">
-                <h3 className="text-lg font-bold text-red-600 mb-2">Delete Account Permanently</h3>
-                <p className="text-sm text-gray-700 mb-4">
+              <div className="bg-white rounded-xl border-2 border-red-500 p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-bold text-red-600 mb-1 sm:mb-2">Delete Account Permanently</h3>
+                <p className="text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4">
                   <strong>This action is final and cannot be undone.</strong> All data will be permanently deleted.
                 </p>
 
-                <div className="bg-red-50 border-l-4 border-red-600 p-4 mb-4">
-                  <p className="text-sm text-red-900">
+                <div className="bg-red-50 border-l-4 border-red-600 p-3 sm:p-4 mb-3 sm:mb-4">
+                  <p className="text-xs sm:text-sm text-red-900">
                     Before deleting, ensure your payout balance is empty and all pending transactions are complete.
                   </p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   <input
                     type="password"
                     value={deletePassword}
                     onChange={(e) => setDeletePassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm sm:text-base"
                   />
                   <input
                     type="text"
                     value={deleteConfirmation}
                     onChange={(e) => setDeleteConfirmation(e.target.value)}
                     placeholder='Type "DELETE MY ACCOUNT" to confirm'
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm sm:text-base"
                   />
                   <button
                     onClick={handleDeleteAccount}
                     disabled={!deletePassword || deleteConfirmation !== 'DELETE MY ACCOUNT' || saving}
-                    className="px-5 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
                   >
                     {saving ? 'Deleting...' : 'Delete Account Permanently'}
                   </button>

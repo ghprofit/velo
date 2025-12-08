@@ -5,20 +5,25 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutModal from './LogoutModal';
 
-export default function CreatorSidebar() {
+export default function CreatorSidebar(): JSX.Element {
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
 
-  // Check screen size and auto-collapse on smaller screens
+  // Check screen size and set appropriate state
   useEffect(() => {
     const checkScreenSize = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      // Auto-collapse on smaller screens
-      if (mobile) {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('mobile');
+        setIsMobileMenuOpen(false);
+      } else if (width < 1024) {
+        setScreenSize('tablet');
         setIsCollapsed(true);
+      } else {
+        setScreenSize('desktop');
       }
     };
 
@@ -26,6 +31,11 @@ export default function CreatorSidebar() {
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/creator' },
@@ -35,6 +45,15 @@ export default function CreatorSidebar() {
     { id: 'notifications', label: 'Notifications', icon: 'notifications', href: '/creator/notifications' },
     { id: 'settings', label: 'Settings', icon: 'settings', href: '/creator/settings' },
     { id: 'support', label: 'Support', icon: 'support', href: '/creator/support' },
+  ];
+
+  // Bottom navigation items for mobile (limited set)
+  const bottomNavItems = [
+    { id: 'dashboard', label: 'Home', icon: 'dashboard', href: '/creator' },
+    { id: 'upload', label: 'Upload', icon: 'upload', href: '/creator/upload' },
+    { id: 'analytics', label: 'Analytics', icon: 'analytics', href: '/creator/analytics' },
+    { id: 'earnings', label: 'Earnings', icon: 'earnings', href: '/creator/earnings' },
+    { id: 'more', label: 'More', icon: 'menu', href: '#' },
   ];
 
   const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
@@ -90,6 +109,16 @@ export default function CreatorSidebar() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
         </svg>
       ),
+      menu: (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      ),
+      close: (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      ),
     };
     return icons[iconName] || null;
   };
@@ -101,6 +130,124 @@ export default function CreatorSidebar() {
     return pathname?.startsWith(href);
   };
 
+  // Mobile View: Top header + Bottom navigation + Slide-out drawer
+  if (screenSize === 'mobile') {
+    return (
+      <>
+        {/* Mobile Top Header */}
+        <div className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+          <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+          >
+            {renderIcon('menu', 'w-6 h-6')}
+          </button>
+        </div>
+
+        {/* Mobile Slide-out Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Mobile Slide-out Menu */}
+        <aside
+          className={`fixed top-0 right-0 h-full w-72 bg-white z-50 transform transition-transform duration-300 ease-in-out ${
+            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          {/* Menu Header */}
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <span className="text-lg font-semibold text-gray-900">Menu</span>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+            >
+              {renderIcon('close', 'w-5 h-5')}
+            </button>
+          </div>
+
+          {/* Menu Items */}
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            {menuItems.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive(item.href)
+                    ? 'bg-indigo-50 text-indigo-600 font-medium'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {renderIcon(item.icon)}
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+
+          {/* Logout Button */}
+          <div className="p-3 border-t border-gray-200">
+            <button
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors w-full"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setShowLogoutModal(true);
+              }}
+            >
+              {renderIcon('logout')}
+              <span>Logout</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-2 py-1 safe-area-pb">
+          <div className="flex items-center justify-around">
+            {bottomNavItems.map((item) => (
+              item.id === 'more' ? (
+                <button
+                  key={item.id}
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  className="flex flex-col items-center gap-1 px-3 py-2 text-gray-500"
+                >
+                  {renderIcon(item.icon, 'w-5 h-5')}
+                  <span className="text-xs">{item.label}</span>
+                </button>
+              ) : (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={`flex flex-col items-center gap-1 px-3 py-2 ${
+                    isActive(item.href)
+                      ? 'text-indigo-600'
+                      : 'text-gray-500'
+                  }`}
+                >
+                  {renderIcon(item.icon, 'w-5 h-5')}
+                  <span className="text-xs">{item.label}</span>
+                </Link>
+              )
+            ))}
+          </div>
+        </nav>
+
+        {/* Logout Modal */}
+        <LogoutModal
+          isOpen={showLogoutModal}
+          onClose={() => setShowLogoutModal(false)}
+          onConfirm={() => {
+            setShowLogoutModal(false);
+            window.location.href = '/login';
+          }}
+        />
+      </>
+    );
+  }
+
+  // Tablet & Desktop View: Traditional sidebar
   return (
     <>
       <aside

@@ -5,7 +5,13 @@ import helmet from 'helmet';
 import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true, // Enable raw body for webhook signature verification
+  });
+
+  // Stripe webhook needs raw body for signature verification
+  // Use raw body parser for webhook endpoint
+  app.use('/api/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
 
   // Increase payload size limit for base64 images (30MB for support attachments)
   app.use(bodyParser.json({ limit: '30mb' }));

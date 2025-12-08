@@ -337,16 +337,16 @@ export default function AnalyticsPage() {
   return (
     <>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-8 py-6">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">Performance Analytics</h1>
-            <p className="text-gray-600">Track your content performance and revenue insights</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Performance Analytics</h1>
+            <p className="text-sm sm:text-base text-gray-600">Track your content performance and revenue insights</p>
           </div>
           <select
             value={timePeriod}
             onChange={(e) => setTimePeriod(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+            className="px-3 py-2 sm:px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white w-full sm:w-auto"
           >
             <option>All Time</option>
             <option>Last 7 Days</option>
@@ -357,21 +357,21 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {stats.map((stat, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
             >
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">{stat.label}</p>
-                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">{stat.label}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stat.value}</p>
                 </div>
-                <div className={`w-12 h-12 flex items-center justify-center ${stat.iconColor}`}>
-                  {renderIcon(stat.icon, 'w-8 h-8')}
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center ${stat.iconColor}`}>
+                  {renderIcon(stat.icon, 'w-6 h-6 sm:w-8 sm:h-8')}
                 </div>
               </div>
               {stat.link && (
@@ -387,13 +387,13 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Performance Trends */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Performance Trends</h2>
-            <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Performance Trends</h2>
+            <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 p-1 rounded-lg overflow-x-auto">
               <button
                 onClick={() => setChartTab('revenue')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                   chartTab === 'revenue'
                     ? 'bg-indigo-600 text-white'
                     : 'text-gray-700 hover:text-gray-900'
@@ -403,7 +403,7 @@ export default function AnalyticsPage() {
               </button>
               <button
                 onClick={() => setChartTab('views')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                   chartTab === 'views'
                     ? 'bg-indigo-600 text-white'
                     : 'text-gray-700 hover:text-gray-900'
@@ -413,7 +413,7 @@ export default function AnalyticsPage() {
               </button>
               <button
                 onClick={() => setChartTab('unlocks')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                   chartTab === 'unlocks'
                     ? 'bg-indigo-600 text-white'
                     : 'text-gray-700 hover:text-gray-900'
@@ -425,7 +425,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Chart Area */}
-          <div className="relative h-80">
+          <div className="relative h-56 sm:h-80">
             {loadingTrends ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-gray-500">Loading chart data...</div>
@@ -538,108 +538,151 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Performance By Content Item */}
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Performance By Content Item</h2>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    placeholder="Search content..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1); // Reset to first page on search
-                    }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  />
-                </div>
+            <div className="p-4 sm:p-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Performance By Content Item</h2>
+                <input
+                  type="text"
+                  placeholder="Search content..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                />
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              {loadingContent ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-gray-500">Loading content...</div>
+            {loadingContent ? (
+              <div className="flex items-center justify-center py-8 sm:py-12">
+                <div className="text-gray-500 text-sm sm:text-base">Loading content...</div>
+              </div>
+            ) : contentItems.length === 0 ? (
+              <div className="flex items-center justify-center py-8 sm:py-12">
+                <div className="text-gray-500 text-sm sm:text-base">No content items found</div>
+              </div>
+            ) : (
+              <>
+                {/* Mobile Card View */}
+                <div className="sm:hidden divide-y divide-gray-200">
+                  {contentItems.map((item) => (
+                    <div key={item.id} className="p-4">
+                      <div className="flex items-start gap-3 mb-3">
+                        <img
+                          src={item.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
+                          alt={item.title}
+                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
+                          <p className="text-xs text-gray-500">{item.type} • {item.size}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                        <div className="bg-gray-50 rounded-lg px-2 py-2">
+                          <p className="text-xs text-gray-500">Views</p>
+                          <p className="text-sm font-semibold text-gray-900">{item.views.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg px-2 py-2">
+                          <p className="text-xs text-gray-500">Unlocks</p>
+                          <p className="text-sm font-semibold text-gray-900">{item.unlocks.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-green-50 rounded-lg px-2 py-2">
+                          <p className="text-xs text-gray-500">Revenue</p>
+                          <p className="text-sm font-semibold text-green-600">${item.revenue.toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/creator/content/${item.id}`}
+                        className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        View Details
+                      </Link>
+                    </div>
+                  ))}
                 </div>
-              ) : contentItems.length === 0 ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-gray-500">No content items found</div>
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                        Content Item
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                        Views
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                        Unlocks
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                        Revenue
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {contentItems.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={item.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
-                              alt={item.title}
-                              className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
-                              }}
-                            />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                              <p className="text-xs text-gray-500">
-                                {item.type} • {item.size}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-600">{item.views.toLocaleString()}</span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-600">{item.unlocks.toLocaleString()}</span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-medium text-gray-900">
-                            ${item.revenue.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Link
-                            href={`/creator/content/${item.id}`}
-                            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-                          >
-                            View Details
-                          </Link>
-                        </td>
+
+                {/* Desktop Table View */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Content Item
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Views
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Unlocks
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Revenue
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Action
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {contentItems.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={item.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
+                                alt={item.title}
+                                className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
+                                }}
+                              />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                                <p className="text-xs text-gray-500">
+                                  {item.type} • {item.size}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-600">{item.views.toLocaleString()}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-600">{item.unlocks.toLocaleString()}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-medium text-gray-900">
+                              ${item.revenue.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Link
+                              href={`/creator/content/${item.id}`}
+                              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                            >
+                              View Details
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
 
             {/* Pagination */}
             {!loadingContent && contentItems.length > 0 && (
-              <div className="p-4 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-600">
+              <div className="p-3 sm:p-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
                   Showing {(currentPage - 1) * 10 + 1} to{' '}
                   {Math.min(currentPage * 10, totalItems)} of {totalItems} items
                 </div>
@@ -647,9 +690,9 @@ export default function AnalyticsPage() {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -661,9 +704,9 @@ export default function AnalyticsPage() {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -679,13 +722,13 @@ export default function AnalyticsPage() {
 
           {/* Demographics Distribution */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Audience Demographics</h2>
-                <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+            <div className="p-4 sm:p-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Audience Demographics</h2>
+                <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg overflow-x-auto">
                   <button
                     onClick={() => setDemographicsTab('geographic')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                       demographicsTab === 'geographic'
                         ? 'bg-indigo-600 text-white'
                         : 'text-gray-700 hover:text-gray-900'
@@ -695,7 +738,7 @@ export default function AnalyticsPage() {
                   </button>
                   <button
                     onClick={() => setDemographicsTab('devices')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                       demographicsTab === 'devices'
                         ? 'bg-indigo-600 text-white'
                         : 'text-gray-700 hover:text-gray-900'
@@ -705,7 +748,7 @@ export default function AnalyticsPage() {
                   </button>
                   <button
                     onClick={() => setDemographicsTab('browsers')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                       demographicsTab === 'browsers'
                         ? 'bg-indigo-600 text-white'
                         : 'text-gray-700 hover:text-gray-900'
@@ -717,7 +760,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {loadingDemographics ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-gray-500">Loading demographics...</div>
@@ -785,7 +828,7 @@ export default function AnalyticsPage() {
                           <div className="text-sm text-gray-500 mb-4">
                             Total tracked views: {demographics.devices.totalViews.toLocaleString()}
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 gap-3 sm:gap-4">
                             {demographics.devices.devices.map((device) => (
                               <div
                                 key={device.device}

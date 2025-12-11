@@ -1,154 +1,225 @@
 import type { EmailTemplate } from '../interfaces/email.interface';
 
 /**
- * Predefined email templates
- * In production, these would be managed in SendGrid's dashboard
+ * Single SendGrid template configuration
+ * All emails use this one template with {{{message}}} placeholder
+ * The message will contain the complete HTML structure
  */
+export const SENDGRID_TEMPLATE_ID = process.env.SENDGRID_TEMPLATE_ID || 'd-your-template-id';
 
+/**
+ * Email template metadata
+ * Used for tracking and validation
+ */
 export const EMAIL_TEMPLATES = {
-  // Welcome email template
   WELCOME: {
-    id: 'd-welcome-template-id',
+    id: SENDGRID_TEMPLATE_ID,
     name: 'Welcome Email',
     description: 'Welcome new users to the platform',
-    subject: 'Welcome to {{app_name}}!',
-    requiredVariables: ['user_name', 'app_name'],
+    subject: 'Welcome to Velo!',
+    requiredVariables: ['user_name'],
   } as EmailTemplate,
 
-  // Email verification
   EMAIL_VERIFICATION: {
-    id: 'd-email-verification-id',
+    id: SENDGRID_TEMPLATE_ID,
     name: 'Email Verification',
     description: 'Verify user email address',
     subject: 'Verify your email address',
     requiredVariables: ['user_name', 'verification_link', 'expiry_time'],
   } as EmailTemplate,
 
-  // Password reset
   PASSWORD_RESET: {
-    id: 'd-password-reset-id',
+    id: SENDGRID_TEMPLATE_ID,
     name: 'Password Reset',
     description: 'Send password reset link',
     subject: 'Reset your password',
     requiredVariables: ['user_name', 'reset_link', 'expiry_time'],
   } as EmailTemplate,
 
-  // 2FA enabled notification
   TWO_FACTOR_ENABLED: {
-    id: 'd-2fa-enabled-id',
+    id: SENDGRID_TEMPLATE_ID,
     name: '2FA Enabled',
     description: 'Notify user that 2FA was enabled',
     subject: 'Two-Factor Authentication Enabled',
     requiredVariables: ['user_name', 'enabled_date', 'ip_address'],
   } as EmailTemplate,
 
-  // 2FA disabled notification
   TWO_FACTOR_DISABLED: {
-    id: 'd-2fa-disabled-id',
+    id: SENDGRID_TEMPLATE_ID,
     name: '2FA Disabled',
     description: 'Notify user that 2FA was disabled',
     subject: 'Two-Factor Authentication Disabled',
     requiredVariables: ['user_name', 'disabled_date', 'ip_address'],
   } as EmailTemplate,
 
-  // Account verified
   ACCOUNT_VERIFIED: {
-    id: 'd-account-verified-id',
+    id: SENDGRID_TEMPLATE_ID,
     name: 'Account Verified',
     description: 'Confirmation that account is verified',
     subject: 'Your account has been verified',
     requiredVariables: ['user_name', 'verification_date'],
   } as EmailTemplate,
 
-  // Password changed
   PASSWORD_CHANGED: {
-    id: 'd-password-changed-id',
+    id: SENDGRID_TEMPLATE_ID,
     name: 'Password Changed',
     description: 'Notify user of password change',
     subject: 'Your password was changed',
     requiredVariables: ['user_name', 'change_date', 'ip_address'],
   } as EmailTemplate,
 
-  // Security alert
   SECURITY_ALERT: {
-    id: 'd-security-alert-id',
+    id: SENDGRID_TEMPLATE_ID,
     name: 'Security Alert',
     description: 'Alert user of suspicious activity',
     subject: 'Security Alert: Unusual Activity Detected',
     requiredVariables: ['user_name', 'activity_description', 'activity_date', 'ip_address'],
   } as EmailTemplate,
 
-  // Newsletter
-  NEWSLETTER: {
-    id: 'd-newsletter-id',
-    name: 'Newsletter',
-    description: 'Monthly newsletter',
-    subject: '{{newsletter_title}}',
-    requiredVariables: ['user_name', 'newsletter_title', 'newsletter_content'],
+  PURCHASE_RECEIPT: {
+    id: SENDGRID_TEMPLATE_ID,
+    name: 'Purchase Receipt',
+    description: 'Send purchase receipt',
+    subject: 'Receipt for your purchase',
+    requiredVariables: ['buyer_email', 'content_title', 'amount', 'date', 'access_link'],
   } as EmailTemplate,
 
-  // Transaction receipt
-  TRANSACTION_RECEIPT: {
-    id: 'd-transaction-receipt-id',
-    name: 'Transaction Receipt',
-    description: 'Send transaction receipt',
-    subject: 'Receipt for your transaction',
-    requiredVariables: ['user_name', 'transaction_id', 'amount', 'date', 'items'],
+  CREATOR_SALE_NOTIFICATION: {
+    id: SENDGRID_TEMPLATE_ID,
+    name: 'Creator Sale Notification',
+    description: 'Notify creator of new sale',
+    subject: 'New Sale: Someone purchased your content!',
+    requiredVariables: ['creator_name', 'content_title', 'amount', 'date'],
   } as EmailTemplate,
 
-  // Account deletion
+  PAYOUT_PROCESSED: {
+    id: SENDGRID_TEMPLATE_ID,
+    name: 'Payout Processed',
+    description: 'Notify creator of payout',
+    subject: 'Your payout has been processed',
+    requiredVariables: ['creator_name', 'amount', 'payout_date', 'transaction_id'],
+  } as EmailTemplate,
+
+  CONTENT_APPROVED: {
+    id: SENDGRID_TEMPLATE_ID,
+    name: 'Content Approved',
+    description: 'Notify creator that content was approved',
+    subject: 'Your content has been approved!',
+    requiredVariables: ['creator_name', 'content_title', 'content_link'],
+  } as EmailTemplate,
+
+  CONTENT_REJECTED: {
+    id: SENDGRID_TEMPLATE_ID,
+    name: 'Content Rejected',
+    description: 'Notify creator that content was rejected',
+    subject: 'Content Review Update',
+    requiredVariables: ['creator_name', 'content_title', 'rejection_reason'],
+  } as EmailTemplate,
+
   ACCOUNT_DELETION: {
-    id: 'd-account-deletion-id',
+    id: SENDGRID_TEMPLATE_ID,
     name: 'Account Deletion',
     description: 'Confirm account deletion',
     subject: 'Your account deletion request',
     requiredVariables: ['user_name', 'deletion_date'],
   } as EmailTemplate,
 
-  // Invitation
-  INVITATION: {
-    id: 'd-invitation-id',
-    name: 'Team Invitation',
-    description: 'Invite user to join team',
-    subject: 'You\'ve been invited to {{team_name}}',
-    requiredVariables: ['invited_by', 'team_name', 'invitation_link'],
+  NEWSLETTER: {
+    id: SENDGRID_TEMPLATE_ID,
+    name: 'Newsletter',
+    description: 'Monthly newsletter',
+    subject: 'Velo Newsletter',
+    requiredVariables: ['user_name', 'newsletter_content'],
+  } as EmailTemplate,
+
+  SUPPORT_TICKET_RECEIVED: {
+    id: SENDGRID_TEMPLATE_ID,
+    name: 'Support Ticket Received',
+    description: 'Confirm support ticket submission',
+    subject: 'We received your support request',
+    requiredVariables: ['user_name', 'ticket_id', 'subject'],
+  } as EmailTemplate,
+
+  SUPPORT_TICKET_REPLY: {
+    id: SENDGRID_TEMPLATE_ID,
+    name: 'Support Ticket Reply',
+    description: 'Notify of support ticket reply',
+    subject: 'Update on your support ticket',
+    requiredVariables: ['user_name', 'ticket_id', 'reply_message'],
   } as EmailTemplate,
 };
 
 /**
- * HTML templates (fallback if not using SendGrid dynamic templates)
+ * HTML message generators for all email types
+ * These generate complete HTML strings to be passed to the {{{message}}} placeholder
  */
 
+const baseStyles = `
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background: #f3f4f6; }
+  .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+  .header { background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: white; padding: 40px 30px; text-align: center; }
+  .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+  .content { padding: 40px 30px; }
+  .content p { margin: 0 0 16px 0; color: #4b5563; font-size: 16px; }
+  .button { display: inline-block; padding: 14px 32px; background: #4f46e5; color: white !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 10px 0; }
+  .button:hover { background: #4338ca; }
+  .info-box { background: #f9fafb; border-left: 4px solid #4f46e5; padding: 16px; margin: 20px 0; border-radius: 4px; }
+  .warning-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px; }
+  .success-box { background: #d1fae5; border-left: 4px solid #10b981; padding: 16px; margin: 20px 0; border-radius: 4px; }
+  .danger-box { background: #fee2e2; border-left: 4px solid #ef4444; padding: 16px; margin: 20px 0; border-radius: 4px; }
+  .footer { padding: 30px; text-align: center; font-size: 14px; color: #6b7280; background: #f9fafb; border-top: 1px solid #e5e7eb; }
+  .divider { height: 1px; background: #e5e7eb; margin: 30px 0; }
+  .text-center { text-align: center; }
+  .text-sm { font-size: 14px; }
+  .text-xs { font-size: 12px; }
+  .mt-20 { margin-top: 20px; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+  th { background: #f9fafb; font-weight: 600; color: #1f2937; }
+  .amount { font-size: 24px; font-weight: bold; color: #4f46e5; }
+`;
+
 export const HTML_TEMPLATES = {
-  WELCOME: (data: { user_name: string; app_name: string }) => `
+  WELCOME: (data: { user_name: string }) => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: #4CAF50; color: white; padding: 20px; text-align: center; }
-    .content { padding: 20px; background: #f9f9f9; }
-    .button { display: inline-block; padding: 10px 20px; background: #4CAF50; color: white; text-decoration: none; border-radius: 5px; }
-    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Welcome to ${data.app_name}!</h1>
+      <h1>🎉 Welcome to Velo!</h1>
     </div>
     <div class="content">
-      <p>Hi ${data.user_name},</p>
-      <p>Welcome aboard! We're excited to have you join our community.</p>
-      <p>Get started by exploring our platform and discovering all the amazing features we have to offer.</p>
-      <p style="text-align: center;">
-        <a href="#" class="button">Get Started</a>
-      </p>
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Welcome to Velo! We're thrilled to have you join our community of creators and content enthusiasts.</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>✨ Your journey starts here!</strong></p>
+      </div>
+
+      <p>Velo is the premier platform for sharing and monetizing digital content. Whether you're a creator looking to share your work or a buyer seeking exclusive content, you're in the right place.</p>
+
+      <h3>What you can do:</h3>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li>Browse and purchase exclusive content</li>
+        <li>Become a creator and monetize your digital content</li>
+        <li>Secure transactions with instant access</li>
+        <li>Track your purchases and manage your account</li>
+      </ul>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL || 'https://velo.com'}" class="button">Explore Velo</a>
+      </div>
+
+      <p class="text-sm" style="margin-top: 30px;">If you have any questions, our support team is always here to help!</p>
     </div>
     <div class="footer">
-      <p>© 2024 ${data.app_name}. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">Secure content marketplace for creators and buyers</p>
     </div>
   </div>
 </body>
@@ -160,34 +231,36 @@ export const HTML_TEMPLATES = {
 <html>
 <head>
   <meta charset="utf-8">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: #2196F3; color: white; padding: 20px; text-align: center; }
-    .content { padding: 20px; background: #f9f9f9; }
-    .button { display: inline-block; padding: 12px 30px; background: #2196F3; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
-    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
-    .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin: 20px 0; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Verify Your Email</h1>
+      <h1>📧 Verify Your Email</h1>
     </div>
     <div class="content">
-      <p>Hi ${data.user_name},</p>
-      <p>Thank you for signing up! Please verify your email address by clicking the button below:</p>
-      <p style="text-align: center;">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Thank you for signing up with Velo! To complete your registration and start using your account, please verify your email address.</p>
+
+      <div class="text-center mt-20">
         <a href="${data.verification_link}" class="button">Verify Email Address</a>
-      </p>
-      <div class="warning">
-        <strong>⚠️ This link expires in ${data.expiry_time}</strong>
       </div>
-      <p>If you didn't create an account, please ignore this email.</p>
+
+      <div class="warning-box">
+        <p style="margin: 0;"><strong>⏱ Important:</strong> This verification link expires in ${data.expiry_time}.</p>
+      </div>
+
+      <p class="text-sm">If the button doesn't work, copy and paste this link into your browser:</p>
+      <p class="text-xs" style="color: #6b7280; word-break: break-all;">${data.verification_link}</p>
+
+      <div class="divider"></div>
+
+      <p class="text-sm" style="color: #6b7280;">If you didn't create a Velo account, you can safely ignore this email.</p>
     </div>
     <div class="footer">
-      <p>This is an automated message, please do not reply.</p>
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">This is an automated message, please do not reply.</p>
     </div>
   </div>
 </body>
@@ -199,34 +272,660 @@ export const HTML_TEMPLATES = {
 <html>
 <head>
   <meta charset="utf-8">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: #FF9800; color: white; padding: 20px; text-align: center; }
-    .content { padding: 20px; background: #f9f9f9; }
-    .button { display: inline-block; padding: 12px 30px; background: #FF9800; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
-    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
-    .warning { background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 20px 0; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Reset Your Password</h1>
+      <h1>🔐 Reset Your Password</h1>
     </div>
     <div class="content">
-      <p>Hi ${data.user_name},</p>
-      <p>We received a request to reset your password. Click the button below to create a new password:</p>
-      <p style="text-align: center;">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>We received a request to reset your password for your Velo account. Click the button below to create a new password:</p>
+
+      <div class="text-center mt-20">
         <a href="${data.reset_link}" class="button">Reset Password</a>
-      </p>
-      <div class="warning">
-        <strong>⏱ This link expires in ${data.expiry_time}</strong>
       </div>
-      <p>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
+
+      <div class="warning-box">
+        <p style="margin: 0;"><strong>⏱ Expires in:</strong> ${data.expiry_time}</p>
+      </div>
+
+      <p class="text-sm">If the button doesn't work, copy and paste this link into your browser:</p>
+      <p class="text-xs" style="color: #6b7280; word-break: break-all;">${data.reset_link}</p>
+
+      <div class="danger-box">
+        <p style="margin: 0;"><strong>⚠️ Security Notice:</strong> If you didn't request a password reset, please ignore this email or contact support if you have concerns about your account security.</p>
+      </div>
     </div>
     <div class="footer">
-      <p>This is an automated message, please do not reply.</p>
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">This is an automated message, please do not reply.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  TWO_FACTOR_ENABLED: (data: { user_name: string; enabled_date: string; ip_address: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔒 2FA Enabled</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Two-factor authentication has been successfully enabled on your Velo account.</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>✅ Your account is now more secure!</strong></p>
+      </div>
+
+      <div class="info-box">
+        <p style="margin: 0 0 8px 0;"><strong>Activity Details:</strong></p>
+        <p style="margin: 0; font-size: 14px;">Date: ${data.enabled_date}</p>
+        <p style="margin: 0; font-size: 14px;">IP Address: ${data.ip_address}</p>
+      </div>
+
+      <p>From now on, you'll need to enter a verification code from your authenticator app when logging in.</p>
+
+      <div class="warning-box">
+        <p style="margin: 0;"><strong>⚠️ Important:</strong> If you didn't enable 2FA, please contact support immediately and change your password.</p>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  TWO_FACTOR_DISABLED: (data: { user_name: string; disabled_date: string; ip_address: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔓 2FA Disabled</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Two-factor authentication has been disabled on your Velo account.</p>
+
+      <div class="info-box">
+        <p style="margin: 0 0 8px 0;"><strong>Activity Details:</strong></p>
+        <p style="margin: 0; font-size: 14px;">Date: ${data.disabled_date}</p>
+        <p style="margin: 0; font-size: 14px;">IP Address: ${data.ip_address}</p>
+      </div>
+
+      <p>Your account is now less secure without 2FA. We recommend enabling it again for better protection.</p>
+
+      <div class="danger-box">
+        <p style="margin: 0;"><strong>⚠️ Security Alert:</strong> If you didn't disable 2FA, please secure your account immediately by resetting your password and re-enabling 2FA.</p>
+      </div>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/settings/security" class="button">Security Settings</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  ACCOUNT_VERIFIED: (data: { user_name: string; verification_date: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✅ Account Verified!</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Great news! Your Velo account has been successfully verified on ${data.verification_date}.</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>🎊 You're all set to start using Velo!</strong></p>
+      </div>
+
+      <p>You can now:</p>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li>Browse and purchase exclusive content</li>
+        <li>Apply to become a creator</li>
+        <li>Access all platform features</li>
+        <li>Manage your account settings</li>
+      </ul>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}" class="button">Start Exploring</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  PASSWORD_CHANGED: (data: { user_name: string; change_date: string; ip_address: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔐 Password Changed</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Your Velo account password was successfully changed.</p>
+
+      <div class="info-box">
+        <p style="margin: 0 0 8px 0;"><strong>Activity Details:</strong></p>
+        <p style="margin: 0; font-size: 14px;">Date: ${data.change_date}</p>
+        <p style="margin: 0; font-size: 14px;">IP Address: ${data.ip_address}</p>
+      </div>
+
+      <p>If you made this change, no further action is needed.</p>
+
+      <div class="danger-box">
+        <p style="margin: 0;"><strong>⚠️ Didn't change your password?</strong> Contact support immediately and secure your account.</p>
+      </div>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/support" class="button">Contact Support</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  SECURITY_ALERT: (data: { user_name: string; activity_description: string; activity_date: string; ip_address: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+      <h1>⚠️ Security Alert</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>We detected unusual activity on your Velo account that requires your attention.</p>
+
+      <div class="danger-box">
+        <p style="margin: 0 0 8px 0;"><strong>Suspicious Activity:</strong></p>
+        <p style="margin: 0;">${data.activity_description}</p>
+      </div>
+
+      <div class="info-box">
+        <p style="margin: 0 0 8px 0;"><strong>Activity Details:</strong></p>
+        <p style="margin: 0; font-size: 14px;">Date: ${data.activity_date}</p>
+        <p style="margin: 0; font-size: 14px;">IP Address: ${data.ip_address}</p>
+      </div>
+
+      <p><strong>Recommended actions:</strong></p>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li>Change your password immediately</li>
+        <li>Enable two-factor authentication</li>
+        <li>Review recent account activity</li>
+        <li>Contact support if you don't recognize this activity</li>
+      </ul>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/settings/security" class="button">Secure My Account</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  PURCHASE_RECEIPT: (data: { buyer_email: string; content_title: string; amount: string; date: string; access_link: string; transaction_id?: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <h1>🎉 Purchase Successful!</h1>
+    </div>
+    <div class="content">
+      <p>Thank you for your purchase on Velo!</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>✅ Payment confirmed - Your content is ready!</strong></p>
+      </div>
+
+      <h3 style="color: #1f2937; margin-top: 30px;">Purchase Details</h3>
+      <table>
+        <tr>
+          <th>Content</th>
+          <td>${data.content_title}</td>
+        </tr>
+        <tr>
+          <th>Amount</th>
+          <td class="amount">$${data.amount}</td>
+        </tr>
+        <tr>
+          <th>Date</th>
+          <td>${data.date}</td>
+        </tr>
+        <tr>
+          <th>Email</th>
+          <td>${data.buyer_email}</td>
+        </tr>
+        ${data.transaction_id ? `<tr><th>Transaction ID</th><td>${data.transaction_id}</td></tr>` : ''}
+      </table>
+
+      <div class="text-center mt-20">
+        <a href="${data.access_link}" class="button">Access Your Content</a>
+      </div>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>💡 Tip:</strong> Bookmark your access link for future viewing. You'll always have access to your purchased content.</p>
+      </div>
+
+      <p class="text-sm" style="margin-top: 30px;">Questions about your purchase? Contact our support team anytime.</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">Receipt ID: ${data.transaction_id || 'N/A'}</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  CREATOR_SALE_NOTIFICATION: (data: { creator_name: string; content_title: string; amount: string; date: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <h1>💰 New Sale!</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.creator_name}</strong>,</p>
+      <p>Great news! Someone just purchased your content on Velo!</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>🎊 Congratulations on your sale!</strong></p>
+      </div>
+
+      <h3 style="color: #1f2937; margin-top: 30px;">Sale Details</h3>
+      <table>
+        <tr>
+          <th>Content</th>
+          <td>${data.content_title}</td>
+        </tr>
+        <tr>
+          <th>Sale Amount</th>
+          <td class="amount">$${data.amount}</td>
+        </tr>
+        <tr>
+          <th>Your Earnings (85%)</th>
+          <td class="amount" style="color: #10b981;">$${(parseFloat(data.amount) * 0.85).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <th>Date</th>
+          <td>${data.date}</td>
+        </tr>
+      </table>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>💡 Earnings:</strong> Your earnings will be added to your balance and available for payout once they reach the minimum threshold.</p>
+      </div>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/creator/earnings" class="button">View Earnings</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  PAYOUT_PROCESSED: (data: { creator_name: string; amount: string; payout_date: string; transaction_id: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <h1>💸 Payout Processed</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.creator_name}</strong>,</p>
+      <p>Your payout has been successfully processed!</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>✅ Funds are on the way to your bank account</strong></p>
+      </div>
+
+      <h3 style="color: #1f2937; margin-top: 30px;">Payout Details</h3>
+      <table>
+        <tr>
+          <th>Amount</th>
+          <td class="amount">$${data.amount}</td>
+        </tr>
+        <tr>
+          <th>Date</th>
+          <td>${data.payout_date}</td>
+        </tr>
+        <tr>
+          <th>Transaction ID</th>
+          <td>${data.transaction_id}</td>
+        </tr>
+      </table>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>⏱ Processing Time:</strong> Payouts typically arrive in your bank account within 3-5 business days.</p>
+      </div>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/creator/payouts" class="button">View Payout History</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">Transaction ID: ${data.transaction_id}</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  CONTENT_APPROVED: (data: { creator_name: string; content_title: string; content_link: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <h1>✅ Content Approved!</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.creator_name}</strong>,</p>
+      <p>Great news! Your content has been approved and is now live on Velo!</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>🎉 "${data.content_title}" is now available for purchase!</strong></p>
+      </div>
+
+      <p>Your content has been reviewed and meets our quality standards. It's now visible to potential buyers on the platform.</p>
+
+      <h3 style="color: #1f2937; margin-top: 30px;">Next Steps:</h3>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li>Share your content link on social media</li>
+        <li>Track your content's performance in analytics</li>
+        <li>Respond to buyer questions promptly</li>
+        <li>Keep creating amazing content!</li>
+      </ul>
+
+      <div class="text-center mt-20">
+        <a href="${data.content_link}" class="button">View Your Content</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  CONTENT_REJECTED: (data: { creator_name: string; content_title: string; rejection_reason: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+      <h1>📋 Content Review Update</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.creator_name}</strong>,</p>
+      <p>Thank you for submitting "${data.content_title}" to Velo. After reviewing your content, we're unable to approve it at this time.</p>
+
+      <div class="warning-box">
+        <p style="margin: 0 0 8px 0;"><strong>Reason for rejection:</strong></p>
+        <p style="margin: 0;">${data.rejection_reason}</p>
+      </div>
+
+      <h3 style="color: #1f2937; margin-top: 30px;">What you can do:</h3>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li>Review our content guidelines</li>
+        <li>Make the necessary changes</li>
+        <li>Resubmit your content for review</li>
+        <li>Contact support if you have questions</li>
+      </ul>
+
+      <p>We encourage you to address the issues and resubmit. Our team is here to help creators succeed!</p>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/creator/content" class="button">Manage Content</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  ACCOUNT_DELETION: (data: { user_name: string; deletion_date: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Account Deletion Confirmation</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Your Velo account has been scheduled for deletion on ${data.deletion_date}.</p>
+
+      <div class="warning-box">
+        <p style="margin: 0;"><strong>⚠️ This action will permanently delete:</strong></p>
+        <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+          <li>Your account information</li>
+          <li>Your purchase history</li>
+          <li>Your content (if you're a creator)</li>
+          <li>All associated data</li>
+        </ul>
+      </div>
+
+      <p>If you change your mind, you can cancel this request by logging into your account before the deletion date.</p>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/login" class="button">Cancel Deletion</a>
+      </div>
+
+      <p class="text-sm" style="margin-top: 30px; color: #6b7280;">We're sorry to see you go. If there's anything we can do to improve your experience, please let us know.</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  NEWSLETTER: (data: { user_name: string; newsletter_content: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📰 Velo Newsletter</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      ${data.newsletter_content}
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs"><a href="${process.env.CLIENT_URL}/unsubscribe" style="color: #6b7280;">Unsubscribe from newsletter</a></p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  SUPPORT_TICKET_RECEIVED: (data: { user_name: string; ticket_id: string; subject: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎫 Support Ticket Received</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>We've received your support request and our team is reviewing it.</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>✅ Ticket Created Successfully</strong></p>
+      </div>
+
+      <h3 style="color: #1f2937; margin-top: 30px;">Ticket Details</h3>
+      <table>
+        <tr>
+          <th>Ticket ID</th>
+          <td><strong>${data.ticket_id}</strong></td>
+        </tr>
+        <tr>
+          <th>Subject</th>
+          <td>${data.subject}</td>
+        </tr>
+      </table>
+
+      <p>Our support team typically responds within 24-48 hours. We'll email you as soon as we have an update.</p>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/support/tickets/${data.ticket_id}" class="button">View Ticket</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">Ticket ID: ${data.ticket_id}</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  SUPPORT_TICKET_REPLY: (data: { user_name: string; ticket_id: string; reply_message: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>💬 Support Team Reply</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Our support team has replied to your ticket <strong>#${data.ticket_id}</strong>.</p>
+
+      <div class="info-box">
+        <p style="margin: 0 0 10px 0;"><strong>Support Team Reply:</strong></p>
+        <p style="margin: 0;">${data.reply_message}</p>
+      </div>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/support/tickets/${data.ticket_id}" class="button">View Full Conversation</a>
+      </div>
+
+      <p class="text-sm" style="margin-top: 30px;">If you have additional questions, you can reply directly to the ticket.</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">Ticket ID: ${data.ticket_id}</p>
     </div>
   </div>
 </body>

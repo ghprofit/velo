@@ -107,6 +107,12 @@ export class StripeController {
       return;
     }
 
+    // Check if already completed (to avoid double-processing)
+    if (purchase.status === 'COMPLETED') {
+      this.logger.log(`Purchase ${purchase.id} already completed, skipping webhook processing`);
+      return;
+    }
+
     // Update purchase status to COMPLETED
     await this.prisma.purchase.update({
       where: { id: purchase.id },

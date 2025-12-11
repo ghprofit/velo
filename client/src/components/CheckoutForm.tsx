@@ -4,12 +4,13 @@ import { useState, FormEvent } from 'react';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 
 interface CheckoutFormProps {
-  onSuccess: (purchaseId: string, accessToken: string) => void;
+  onSuccess: (purchaseId: string, accessToken: string, paymentIntentId: string) => void;
   onError: (error: string) => void;
   amount: number;
+  paymentElementOptions?: any;
 }
 
-export default function CheckoutForm({ onSuccess, onError, amount }: CheckoutFormProps) {
+export default function CheckoutForm({ onSuccess, onError, amount, paymentElementOptions }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,7 +40,7 @@ export default function CheckoutForm({ onSuccess, onError, amount }: CheckoutFor
         // Payment successful
         const purchaseId = paymentIntent.metadata?.purchaseId || '';
         const accessToken = paymentIntent.metadata?.accessToken || '';
-        onSuccess(purchaseId, accessToken);
+        onSuccess(purchaseId, accessToken, paymentIntent.id);
       }
     } catch (err: any) {
       console.error('Payment error:', err);
@@ -52,9 +53,7 @@ export default function CheckoutForm({ onSuccess, onError, amount }: CheckoutFor
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <PaymentElement
-          options={{
-            layout: 'tabs',
-          }}
+          options={paymentElementOptions}
         />
       </div>
 

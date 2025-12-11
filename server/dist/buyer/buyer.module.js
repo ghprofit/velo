@@ -10,13 +10,17 @@ exports.BuyerModule = void 0;
 const common_1 = require("@nestjs/common");
 const buyer_controller_1 = require("./buyer.controller");
 const buyer_service_1 = require("./buyer.service");
+const prisma_module_1 = require("../prisma/prisma.module");
+const stripe_module_1 = require("../stripe/stripe.module");
 let BuyerModule = class BuyerModule {
 };
 exports.BuyerModule = BuyerModule;
 exports.BuyerModule = BuyerModule = __decorate([
     (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule, stripe_module_1.StripeModule],
         controllers: [buyer_controller_1.BuyerController],
         providers: [buyer_service_1.BuyerService],
+        exports: [buyer_service_1.BuyerService],
     })
 ], BuyerModule);
 //# sourceMappingURL=buyer.module.js.map

@@ -133,6 +133,7 @@ export class EmailService {
 
   /**
    * Send email using a predefined template
+   * Uses single SendGrid template with {{{message}}} placeholder
    */
   async sendTemplateEmail(
     to: string,
@@ -157,11 +158,22 @@ export class EmailService {
       );
     }
 
+    // Generate HTML message from template
+    const htmlGenerator = HTML_TEMPLATES[templateKey];
+    if (!htmlGenerator) {
+      throw new BadRequestException(`HTML template ${templateKey} not found`);
+    }
+
+    const htmlMessage = htmlGenerator(templateData as any);
+
+    // Send email with single template ID and message as HTML
     return this.sendEmail({
       to,
       subject: template.subject || '',
       templateId: template.id,
-      templateData,
+      templateData: {
+        message: htmlMessage,
+      },
       ...options,
     });
   }
@@ -255,7 +267,7 @@ export class EmailService {
   }
 
   /**
-   * Send email with HTML template (fallback)
+   * Send email with HTML template using single SendGrid template
    */
   async sendHTMLTemplateEmail(
     to: string,
@@ -269,12 +281,18 @@ export class EmailService {
       throw new BadRequestException(`HTML template ${templateKey} not found`);
     }
 
-    const html = htmlGenerator(templateData as any);
+    const htmlMessage = htmlGenerator(templateData as any);
+
+    // Use single SendGrid template with message placeholder
+    const template = EMAIL_TEMPLATES[templateKey];
 
     return this.sendEmail({
       to,
-      subject: subject || 'Notification',
-      html,
+      subject: subject || template?.subject || 'Notification',
+      templateId: template?.id || process.env.SENDGRID_TEMPLATE_ID,
+      templateData: {
+        message: htmlMessage,
+      },
     });
   }
 
@@ -381,5 +399,285 @@ export class EmailService {
       html: '<h1>Test Email</h1><p>If you received this, your SendGrid configuration is working!</p>',
       text: 'Test Email - If you received this, your SendGrid configuration is working!',
     });
+  }
+
+  /**
+   * Send purchase receipt email to buyer
+   */
+  async sendPurchaseReceipt(
+    to: string,
+    data: {
+      buyer_email: string;
+      content_title: string;
+      amount: string;
+      date: string;
+      access_link: string;
+      transaction_id?: string;
+    },
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'PURCHASE_RECEIPT',
+      data,
+      'Receipt for your purchase on Velo',
+    );
+  }
+
+  /**
+   * Send sale notification email to creator
+   */
+  async sendCreatorSaleNotification(
+    to: string,
+    data: {
+      creator_name: string;
+      content_title: string;
+      amount: string;
+      date: string;
+    },
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'CREATOR_SALE_NOTIFICATION',
+      data,
+      'New Sale: Someone purchased your content!',
+    );
+  }
+
+  /**
+   * Send payout processed email to creator
+   */
+  async sendPayoutProcessed(
+    to: string,
+    data: {
+      creator_name: string;
+      amount: string;
+      payout_date: string;
+      transaction_id: string;
+    },
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'PAYOUT_PROCESSED',
+      data,
+      'Your payout has been processed',
+    );
+  }
+
+  /**
+   * Send content approved notification to creator
+   */
+  async sendContentApproved(
+    to: string,
+    data: {
+      creator_name: string;
+      content_title: string;
+      content_link: string;
+    },
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'CONTENT_APPROVED',
+      data,
+      'Your content has been approved!',
+    );
+  }
+
+  /**
+   * Send content rejected notification to creator
+   */
+  async sendContentRejected(
+    to: string,
+    data: {
+      creator_name: string;
+      content_title: string;
+      rejection_reason: string;
+    },
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'CONTENT_REJECTED',
+      data,
+      'Content Review Update',
+    );
+  }
+
+  /**
+   * Send 2FA enabled notification
+   */
+  async send2FAEnabled(
+    to: string,
+    userName: string,
+    ipAddress: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'TWO_FACTOR_ENABLED',
+      {
+        user_name: userName,
+        enabled_date: new Date().toLocaleString(),
+        ip_address: ipAddress,
+      },
+      'Two-Factor Authentication Enabled',
+    );
+  }
+
+  /**
+   * Send 2FA disabled notification
+   */
+  async send2FADisabled(
+    to: string,
+    userName: string,
+    ipAddress: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'TWO_FACTOR_DISABLED',
+      {
+        user_name: userName,
+        disabled_date: new Date().toLocaleString(),
+        ip_address: ipAddress,
+      },
+      'Two-Factor Authentication Disabled',
+    );
+  }
+
+  /**
+   * Send account verified notification
+   */
+  async sendAccountVerified(
+    to: string,
+    userName: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'ACCOUNT_VERIFIED',
+      {
+        user_name: userName,
+        verification_date: new Date().toLocaleString(),
+      },
+      'Your account has been verified',
+    );
+  }
+
+  /**
+   * Send password changed notification
+   */
+  async sendPasswordChanged(
+    to: string,
+    userName: string,
+    ipAddress: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'PASSWORD_CHANGED',
+      {
+        user_name: userName,
+        change_date: new Date().toLocaleString(),
+        ip_address: ipAddress,
+      },
+      'Your password was changed',
+    );
+  }
+
+  /**
+   * Send security alert
+   */
+  async sendSecurityAlert(
+    to: string,
+    userName: string,
+    activityDescription: string,
+    ipAddress: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'SECURITY_ALERT',
+      {
+        user_name: userName,
+        activity_description: activityDescription,
+        activity_date: new Date().toLocaleString(),
+        ip_address: ipAddress,
+      },
+      'Security Alert: Unusual Activity Detected',
+    );
+  }
+
+  /**
+   * Send support ticket received confirmation
+   */
+  async sendSupportTicketReceived(
+    to: string,
+    userName: string,
+    ticketId: string,
+    subject: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'SUPPORT_TICKET_RECEIVED',
+      {
+        user_name: userName,
+        ticket_id: ticketId,
+        subject: subject,
+      },
+      'We received your support request',
+    );
+  }
+
+  /**
+   * Send support ticket reply notification
+   */
+  async sendSupportTicketReply(
+    to: string,
+    userName: string,
+    ticketId: string,
+    replyMessage: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'SUPPORT_TICKET_REPLY',
+      {
+        user_name: userName,
+        ticket_id: ticketId,
+        reply_message: replyMessage,
+      },
+      'Update on your support ticket',
+    );
+  }
+
+  /**
+   * Send account deletion confirmation
+   */
+  async sendAccountDeletion(
+    to: string,
+    userName: string,
+    deletionDate: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'ACCOUNT_DELETION',
+      {
+        user_name: userName,
+        deletion_date: deletionDate,
+      },
+      'Your account deletion request',
+    );
+  }
+
+  /**
+   * Send newsletter
+   */
+  async sendNewsletter(
+    to: string,
+    userName: string,
+    newsletterContent: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'NEWSLETTER',
+      {
+        user_name: userName,
+        newsletter_content: newsletterContent,
+      },
+      'Velo Newsletter',
+    );
   }
 }

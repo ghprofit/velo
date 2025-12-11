@@ -36,10 +36,10 @@ async function main() {
       role: 'CREATOR',
       creatorProfile: {
         create: {
-          bio: 'Professional content creator specializing in educational videos and tutorials. Former software engineer at Google.',
           profileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
           displayName: 'Emma Wilson',
           verificationStatus: 'VERIFIED',
+          allowBuyerProfileView: true,
         },
       },
     },
@@ -56,10 +56,10 @@ async function main() {
       role: 'CREATOR',
       creatorProfile: {
         create: {
-          bio: 'Certified fitness trainer and wellness coach. 10+ years of experience helping people achieve their health goals.',
           profileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
           displayName: 'Alex Martinez',
           verificationStatus: 'PENDING',
+          allowBuyerProfileView: false,
         },
       },
     },

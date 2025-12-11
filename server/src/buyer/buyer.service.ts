@@ -84,8 +84,8 @@ export class BuyerService {
             id: true,
             displayName: true,
             profileImage: true,
-            bio: true,
             verificationStatus: true,
+            allowBuyerProfileView: true,
           },
         },
       },
@@ -99,6 +99,21 @@ export class BuyerService {
       throw new NotFoundException('Content not available');
     }
 
+    // Filter creator info based on privacy settings
+    const creatorInfo = content.creator.allowBuyerProfileView
+      ? {
+          id: content.creator.id,
+          displayName: content.creator.displayName,
+          profileImage: content.creator.profileImage,
+          verificationStatus: content.creator.verificationStatus,
+        }
+      : {
+          id: content.creator.id,
+          displayName: content.creator.displayName,
+          profileImage: null, // Hide profile image if privacy is disabled
+          verificationStatus: content.creator.verificationStatus,
+        };
+
     // Return public content info (without S3 keys)
     return {
       id: content.id,
@@ -110,7 +125,7 @@ export class BuyerService {
       duration: content.duration,
       viewCount: content.viewCount,
       purchaseCount: content.purchaseCount,
-      creator: content.creator,
+      creator: creatorInfo,
     };
   }
 
@@ -200,6 +215,18 @@ export class BuyerService {
       },
     });
 
+    // Update payment intent metadata with purchase details
+    await this.stripeService.getStripeInstance().paymentIntents.update(
+      paymentIntent.id,
+      {
+        metadata: {
+          ...paymentIntent.metadata,
+          purchaseId: purchase.id,
+          accessToken: purchase.accessToken,
+        },
+      },
+    );
+
     return {
       purchaseId: purchase.id,
       clientSecret: paymentIntent.client_secret,
@@ -250,6 +277,7 @@ export class BuyerService {
               select: {
                 displayName: true,
                 profileImage: true,
+                allowBuyerProfileView: true,
               },
             },
             contentItems: true,
@@ -288,6 +316,17 @@ export class BuyerService {
       },
     });
 
+    // Filter creator info based on privacy settings
+    const creatorInfo = purchase.content.creator.allowBuyerProfileView
+      ? {
+          displayName: purchase.content.creator.displayName,
+          profileImage: purchase.content.creator.profileImage,
+        }
+      : {
+          displayName: purchase.content.creator.displayName,
+          profileImage: null, // Hide profile image even after purchase if privacy is disabled
+        };
+
     // Return content info (S3 service will generate signed URLs separately)
     return {
       content: {
@@ -299,7 +338,7 @@ export class BuyerService {
         s3Bucket: purchase.content.s3Bucket,
         thumbnailUrl: purchase.content.thumbnailUrl,
         duration: purchase.content.duration,
-        creator: purchase.content.creator,
+        creator: creatorInfo,
         contentItems: purchase.content.contentItems.map((item) => ({
           id: item.id,
           s3Key: item.s3Key,
@@ -353,5 +392,86 @@ export class BuyerService {
       viewCount: p.viewCount,
       content: p.content,
     }));
+  }
+
+  /**
+   * Confirm purchase after successful payment (client-side confirmation)
+   * This provides immediate feedback while the webhook serves as backup
+   */
+  async confirmPurchase(purchaseId: string, paymentIntentId: string) {
+    // Find the purchase
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: purchaseId },
+      include: {
+        content: {
+          include: {
+            creator: true,
+          },
+        },
+      },
+    });
+
+    if (!purchase) {
+      throw new NotFoundException('Purchase not found');
+    }
+
+    // Verify payment intent matches
+    if (purchase.paymentIntentId !== paymentIntentId) {
+      throw new BadRequestException('Payment intent mismatch');
+    }
+
+    // Verify payment intent with Stripe
+    const paymentIntent = await this.stripeService.retrievePaymentIntent(
+      paymentIntentId,
+    );
+
+    if (paymentIntent.status !== 'succeeded') {
+      throw new BadRequestException('Payment not completed');
+    }
+
+    // If already completed, just return the data
+    if (purchase.status === 'COMPLETED') {
+      return {
+        purchaseId: purchase.id,
+        accessToken: purchase.accessToken,
+        status: purchase.status,
+      };
+    }
+
+    // Update purchase status to COMPLETED
+    await this.prisma.purchase.update({
+      where: { id: purchase.id },
+      data: {
+        status: 'COMPLETED',
+        transactionId: paymentIntentId,
+      },
+    });
+
+    // Update content stats
+    await this.prisma.content.update({
+      where: { id: purchase.contentId },
+      data: {
+        purchaseCount: { increment: 1 },
+        totalRevenue: { increment: purchase.amount },
+      },
+    });
+
+    // Update creator earnings
+    const creatorEarnings = purchase.amount * 0.85; // 85% to creator, 15% platform fee
+    await this.prisma.creatorProfile.update({
+      where: { id: purchase.content.creatorId },
+      data: {
+        totalEarnings: { increment: creatorEarnings },
+        totalPurchases: { increment: 1 },
+      },
+    });
+
+    this.logger.log(`Purchase ${purchase.id} confirmed by client`);
+
+    return {
+      purchaseId: purchase.id,
+      accessToken: purchase.accessToken,
+      status: 'COMPLETED',
+    };
   }
 }

@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { buyerApi } from '@/lib/api-client';
-import { getBuyerSession, getPurchaseToken } from '@/lib/buyer-session';
+import { getBuyerSession, saveBuyerSession, getBrowserFingerprint, getPurchaseToken } from '@/lib/buyer-session';
 
 interface ContentData {
   id: string;
@@ -28,13 +28,30 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
     // Check if already purchased
     const accessToken = getPurchaseToken(id);
     if (accessToken) {
-      router.push(`/view/${id}?token=${accessToken}`);
+      router.push(`/c/${id}?token=${accessToken}`);
       return;
     }
 
-    const fetchContent = async () => {
+    const initializeCheckout = async () => {
       try {
         setLoading(true);
+
+        // Ensure session exists
+        let session = getBuyerSession();
+        if (!session) {
+          try {
+            const fingerprint = await getBrowserFingerprint();
+            const response = await buyerApi.createSession({ fingerprint });
+            session = response.data;
+            if (session) {
+              saveBuyerSession(session);
+            }
+          } catch (err) {
+            console.error('Failed to create session:', err);
+          }
+        }
+
+        // Fetch content details
         const response = await buyerApi.getContentDetails(id);
         setContent(response.data);
         setError(null);
@@ -46,7 +63,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
       }
     };
 
-    fetchContent();
+    initializeCheckout();
   }, [id, router]);
 
   const handleContinue = async (e: React.FormEvent) => {
@@ -58,9 +75,23 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
     setError(null);
 
     try {
-      const session = getBuyerSession();
+      // Get or create session
+      let session = getBuyerSession();
       if (!session) {
-        throw new Error('No session found');
+        // Try to create a new session
+        try {
+          const fingerprint = await getBrowserFingerprint();
+          const response = await buyerApi.createSession({ fingerprint, email });
+          session = response.data;
+          if (session) {
+            saveBuyerSession(session);
+          } else {
+            throw new Error('Failed to create session. Please refresh the page and try again.');
+          }
+        } catch (err) {
+          console.error('Failed to create session:', err);
+          throw new Error('Failed to create session. Please refresh the page and try again.');
+        }
       }
 
       // Redirect to payment page with email
@@ -106,109 +137,136 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
   if (!content) return null;
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 py-4 px-4 sm:px-6">
+      <header className="bg-white border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center">
             <img
               src="/assets/logo_svgs/Primary_Logo(black).svg"
-              alt="Welo Link"
-              className="h-8 w-auto"
+              alt="Velo Link"
+              className="h-7 sm:h-8 w-auto"
             />
           </Link>
-          <span className="text-sm text-gray-500">Secure Checkout</span>
+          <div className="flex items-center gap-2 text-gray-600">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span className="text-xs sm:text-sm font-medium hidden sm:inline">Secure Checkout</span>
+            <span className="hidden md:inline text-gray-400">•</span>
+            <span className="text-xs sm:text-sm text-gray-500 hidden md:inline">End-to-end encrypted</span>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="bg-gray-50 min-h-screen py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your Purchase</h1>
-            <p className="text-gray-600">Enter your email to receive purchase confirmation and access details</p>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            {/* Order Summary */}
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
-              <div className="flex items-center gap-4">
+      <main className="py-4 sm:py-8 lg:py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
+            {/* Left Column - Content Preview */}
+            <div className="space-y-6">
+              <div className="relative bg-white rounded-xl lg:rounded-2xl overflow-hidden shadow-sm aspect-video">
                 <img
-                  src={content.thumbnailUrl || 'https://via.placeholder.com/120x80'}
+                  src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
                   alt={content.title}
-                  className="w-24 h-16 rounded-lg object-cover"
+                  className="w-full h-full object-cover blur-sm"
                 />
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">{content.title}</h3>
-                  <p className="text-sm text-gray-500">{content.contentType}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-gray-900">${content.price.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Email Form */}
-            <form onSubmit={handleContinue} className="p-6">
-              <div className="mb-6">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  placeholder="your@email.com"
-                />
-                <p className="mt-2 text-sm text-gray-500">
-                  We'll send your purchase receipt and access link to this email
-                </p>
-              </div>
-
-              {error && (
-                <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="text-red-800 text-sm">{error}</p>
+                <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center">
+                  <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-xl">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src="/assets/logo_svgs/Brand_Icon(black).svg"
+                        alt="Lock"
+                        className="w-6 h-6"
+                      />
+                      <span className="text-gray-900 font-semibold text-lg">Locked Content</span>
+                    </div>
                   </div>
                 </div>
-              )}
-
-              <div className="flex gap-4">
-                <Link
-                  href={`/c/${id}`}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-center"
-                >
-                  Go Back
-                </Link>
-                <button
-                  type="submit"
-                  disabled={isProcessing || !email}
-                  className="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isProcessing ? 'Processing...' : 'Continue to Payment'}
-                </button>
-              </div>
-            </form>
-
-            {/* Security Notice */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-              <div className="flex items-center gap-3 text-sm text-gray-600">
-                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <span>Secure checkout powered by Stripe</span>
               </div>
             </div>
+
+            {/* Right Column - Checkout Form */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm p-6 sm:p-8">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">{content.title}</h1>
+
+                {/* Price */}
+                <div className="mb-6">
+                  <div className="text-3xl sm:text-4xl font-bold text-gray-900">${content.price.toFixed(2)}</div>
+                </div>
+
+                {content.description && (
+                  <p className="text-gray-600 mb-6 leading-relaxed text-sm sm:text-base">{content.description}</p>
+                )}
+
+                {/* Email Form */}
+                <form onSubmit={handleContinue} className="space-y-6">
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-base"
+                      placeholder="your@email.com"
+                    />
+                    <p className="mt-2 text-xs sm:text-sm text-gray-500">
+                      We'll send your purchase receipt and access link to this email
+                    </p>
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-red-800 text-sm">{error}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isProcessing || !email}
+                    className="w-full px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessing ? 'Processing...' : 'Continue to Payment →'}
+                  </button>
+
+                  {/* Payment Info */}
+                  <div className="space-y-2">
+                    <p className="text-center text-xs sm:text-sm text-gray-500">
+                      Secure payment • Instant access
+                    </p>
+                    <div className="flex items-center justify-center gap-1 text-xs text-gray-400">
+                      <span>Your payment is encrypted and secure.</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-3 pt-2">
+                      <span className="text-xs font-medium text-gray-500">Stripe</span>
+                      <span className="text-xs font-medium text-gray-500">VISA</span>
+                      <span className="text-xs font-medium text-gray-500">Mastercard</span>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 sm:mt-12 flex items-center justify-between text-sm text-gray-500">
+            <span>Questions? Contact support</span>
+            <Link href={`/c/${id}`} className="text-indigo-600 hover:text-indigo-700 font-medium">
+              ← Back to content
+            </Link>
           </div>
         </div>
       </main>
-    </>
+    </div>
   );
 }

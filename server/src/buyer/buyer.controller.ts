@@ -12,6 +12,7 @@ import { BuyerService } from './buyer.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { VerifyAccessDto } from './dto/verify-access.dto';
+import { ConfirmPurchaseDto } from './dto/confirm-purchase.dto';
 
 @Controller('buyer')
 export class BuyerController {
@@ -68,5 +69,13 @@ export class BuyerController {
   @Get('session/:sessionToken/purchases')
   async getSessionPurchases(@Param('sessionToken') sessionToken: string) {
     return this.buyerService.getSessionPurchases(sessionToken);
+  }
+
+  /**
+   * Confirm purchase after payment success
+   */
+  @Post('purchase/confirm')
+  async confirmPurchase(@Body() dto: ConfirmPurchaseDto) {
+    return this.buyerService.confirmPurchase(dto.purchaseId, dto.paymentIntentId);
   }
 }

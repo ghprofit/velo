@@ -127,9 +127,11 @@ model CreatorProfile {
   id                    String              @id @default(cuid())
   userId                String              @unique
   displayName           String
-  bio                   String?
   profileImage          String?
   coverImage            String?
+
+  // Profile Visibility
+  allowBuyerProfileView Boolean             @default(false) // Whether buyers can view creator profile
 
   // Verification
   verificationStatus    VerificationStatus  @default(PENDING)

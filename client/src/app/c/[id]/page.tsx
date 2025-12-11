@@ -20,7 +20,6 @@ interface ContentData {
     id: string;
     displayName: string;
     profileImage?: string;
-    bio?: string;
     verificationStatus: string;
   };
 }
@@ -46,7 +45,6 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
   const [purchasedContent, setPurchasedContent] = useState<PurchasedContentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sessionToken, setSessionToken] = useState<string>('');
   const [isPurchased, setIsPurchased] = useState(false);
 
   useEffect(() => {
@@ -58,14 +56,12 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
           const fingerprint = await getBrowserFingerprint();
           const response = await buyerApi.createSession({ fingerprint });
           session = response.data;
-          saveBuyerSession(session);
+          if (session) {
+            saveBuyerSession(session);
+          }
         } catch (err) {
           console.error('Failed to create session:', err);
         }
-      }
-
-      if (session) {
-        setSessionToken(session.sessionToken);
       }
     };
 
@@ -248,41 +244,50 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
   // Render preview/purchase view
   if (!isPurchased && content) {
     return (
-      <>
+      <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 py-4 px-4 sm:px-6">
+        <header className="bg-white border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <Link href="/" className="flex items-center">
               <img
                 src="/assets/logo_svgs/Primary_Logo(black).svg"
-                alt="Welo Link"
-                className="h-8 w-auto"
+                alt="Velo Link"
+                className="h-7 sm:h-8 w-auto"
               />
             </Link>
+            <div className="flex items-center gap-2 text-gray-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">Secure Checkout</span>
+              <span className="hidden md:inline text-gray-400">•</span>
+              <span className="text-xs sm:text-sm text-gray-500 hidden md:inline">End-to-end encrypted</span>
+            </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="bg-gray-50 min-h-screen py-8">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <main className="py-4 sm:py-8 lg:py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
               {/* Left Column - Preview */}
-              <div>
-                <div className="relative bg-black rounded-2xl overflow-hidden shadow-xl aspect-video">
+              <div className="space-y-6">
+                <div className="relative bg-white rounded-xl lg:rounded-2xl overflow-hidden shadow-sm aspect-video">
                   <img
                     src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
                     alt={content.title}
-                    className="w-full h-full object-cover opacity-90"
+                    className="w-full h-full object-cover blur-sm"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4">
-                        <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M5 3l14 9-14 9V3z" />
-                        </svg>
+                  <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center">
+                    <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-xl">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src="/assets/logo_svgs/Brand_Icon(black).svg"
+                          alt="Lock"
+                          className="w-6 h-6"
+                        />
+                        <span className="text-gray-900 font-semibold text-lg">Locked Content</span>
                       </div>
-                      <p className="text-white text-lg font-semibold">Preview Only</p>
-                      <p className="text-white/80 text-sm">Purchase to unlock full content</p>
                     </div>
                   </div>
                   {content.duration && (
@@ -292,9 +297,9 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
                   )}
                 </div>
 
-                {/* Creator Info */}
-                <div className="mt-6 flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden">
+                {/* Creator Info - Desktop Only */}
+                <div className="hidden lg:flex items-center gap-4 bg-white rounded-xl p-4 shadow-sm">
+                  <div className="w-14 h-14 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                     {content.creator.profileImage ? (
                       <img
                         src={content.creator.profileImage}
@@ -307,101 +312,109 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{content.creator.displayName}</h3>
+                      <h3 className="text-base font-semibold text-gray-900 truncate">{content.creator.displayName}</h3>
                       {content.creator.verificationStatus === 'VERIFIED' && (
-                        <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       )}
                     </div>
-                    {content.creator.bio && (
-                      <p className="text-sm text-gray-600 mt-1">{content.creator.bio}</p>
-                    )}
+                    <p className="text-sm text-gray-500">Content Creator</p>
                   </div>
                 </div>
               </div>
 
               {/* Right Column - Details & Purchase */}
-              <div>
-                <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-4">{content.title}</h1>
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm p-6 sm:p-8">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">{content.title}</h1>
+
+                  {/* Price */}
+                  <div className="mb-6">
+                    <div className="text-3xl sm:text-4xl font-bold text-gray-900">${content.price.toFixed(2)}</div>
+                  </div>
 
                   {content.description && (
-                    <p className="text-gray-600 mb-6 leading-relaxed">{content.description}</p>
+                    <p className="text-gray-600 mb-6 leading-relaxed text-sm sm:text-base">{content.description}</p>
                   )}
 
-                  {/* Stats */}
-                  <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-200">
-                    <div>
-                      <div className="text-2xl font-bold text-gray-900">{content.viewCount.toLocaleString()}</div>
-                      <div className="text-sm text-gray-500">Views</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-gray-900">{content.purchaseCount.toLocaleString()}</div>
-                      <div className="text-sm text-gray-500">Purchases</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-500 uppercase">{content.contentType}</div>
-                    </div>
-                  </div>
+                  {/* Purchase Button */}
+                  <button
+                    onClick={handlePurchase}
+                    className="w-full px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                    </svg>
+                    Unlock Now
+                  </button>
 
-                  {/* Price & Purchase */}
-                  <div className="mb-6">
-                    <div className="flex items-baseline gap-2 mb-6">
-                      <span className="text-4xl font-bold text-gray-900">${content.price.toFixed(2)}</span>
-                      <span className="text-gray-500">one-time purchase</span>
-                    </div>
-
-                    <button
-                      onClick={handlePurchase}
-                      className="w-full px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-semibold rounded-xl transition-colors shadow-lg shadow-indigo-600/30"
-                    >
-                      Purchase Now
-                    </button>
-
-                    <p className="text-center text-sm text-gray-500 mt-4">
-                      Secure payment • Instant access • Lifetime ownership
+                  {/* Payment Info */}
+                  <div className="mt-4 space-y-2">
+                    <p className="text-center text-xs sm:text-sm text-gray-500">
+                      Secure payment • Instant access
                     </p>
+                    <div className="flex items-center justify-center gap-1 text-xs text-gray-400">
+                      <span>Your payment is encrypted and secure.</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-3 pt-2">
+                      <span className="text-xs font-medium text-gray-500">Stripe</span>
+                      <span className="text-xs font-medium text-gray-500">VISA</span>
+                      <span className="text-xs font-medium text-gray-500">Mastercard</span>
+                    </div>
                   </div>
+                </div>
 
-                  {/* What's Included */}
-                  <div className="pt-6 border-t border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">What's Included</h3>
-                    <ul className="space-y-3">
-                      <li className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-gray-700">Instant access to full content</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-gray-700">High-quality streaming</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-gray-700">Lifetime access</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-gray-700">Secure & protected content</span>
-                      </li>
-                    </ul>
+                {/* Additional Info - Mobile */}
+                <div className="lg:hidden bg-white rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                      {content.creator.profileImage ? (
+                        <img
+                          src={content.creator.profileImage}
+                          alt={content.creator.displayName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500 text-lg font-bold">
+                          {content.creator.displayName[0]}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">{content.creator.displayName}</h3>
+                        {content.creator.verificationStatus === 'VERIFIED' && (
+                          <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">Content Creator</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Type - Desktop */}
+                <div className="hidden lg:block bg-white rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-center">
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-3 py-1 bg-gray-100 rounded-full">
+                      {content.contentType}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Footer */}
+            <div className="mt-8 sm:mt-12 text-center text-sm text-gray-500">
+              <span>Questions? Contact support</span>
+            </div>
           </div>
         </main>
-      </>
+      </div>
     );
   }
 

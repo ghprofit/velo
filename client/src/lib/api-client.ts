@@ -462,6 +462,10 @@ export const buyerApi = {
   // Get all purchases for a session
   getSessionPurchases: (sessionToken: string) =>
     apiClient.get(`/buyer/session/${sessionToken}/purchases`),
+
+  // Confirm purchase after payment success
+  confirmPurchase: (data: { purchaseId: string; paymentIntentId: string }) =>
+    apiClient.post('/buyer/purchase/confirm', data),
 };
 
 // Stripe API

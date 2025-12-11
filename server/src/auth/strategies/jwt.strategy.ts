@@ -10,9 +10,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private config: ConfigService,
     private prisma: PrismaService,
   ) {
+    const secret = config.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error(
+        'JWT_SECRET is not defined in environment variables. Please set JWT_SECRET in your .env file.',
+      );
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: config.get('JWT_SECRET') || 'your-super-secret-jwt-key-change-this-in-production',
+      secretOrKey: secret,
     });
   }
 
@@ -28,7 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Return user data to be attached to request
     return {
-      userId: user.id,
+      id: user.id,
       email: user.email,
       role: user.role,
     };

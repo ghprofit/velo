@@ -1,108 +1,192 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import VerificationStatusBanner from '@/components/VerificationStatusBanner';
+import { authApi, analyticsApi } from '@/lib/api-client';
+
+interface CreatorProfile {
+  totalViews: number;
+  totalEarnings: number;
+  totalPurchases: number;
+}
+
+interface UserProfile {
+  displayName: string;
+  email: string;
+  creatorProfile?: CreatorProfile;
+}
+
+interface TrendData {
+  date: string;
+  revenue: number;
+  unlocks: number;
+  views: number;
+}
+
+interface ContentItem {
+  id: string;
+  title: string;
+  type: string;
+  thumbnailUrl: string;
+  views: number;
+  unlocks: number;
+  revenue: number;
+}
 
 export default function CreatorDashboardPage() {
+  const router = useRouter();
   const [showCookieBanner, setShowCookieBanner] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample data for stats
+  // Trend and content data states
+  const [trendData, setTrendData] = useState<TrendData[]>([]);
+  const [trendPeriod, setTrendPeriod] = useState('Last 7 Days');
+  const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+  const [loadingTrends, setLoadingTrends] = useState(true);
+  const [contentItems, setContentItems] = useState<ContentItem[]>([]);
+  const [loadingContent, setLoadingContent] = useState(true);
+
+  // Fetch profile data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await authApi.getProfile();
+        setProfile(response.data.data);
+        setError(null);
+      } catch (err: any) {
+        console.error('Failed to fetch profile:', err);
+        setError(err.response?.data?.message || 'Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  // Fetch trend data
+  useEffect(() => {
+    const fetchTrends = async () => {
+      try {
+        setLoadingTrends(true);
+        const response = await analyticsApi.getTrends(trendPeriod, 'revenue');
+        const data = response.data?.data || response.data;
+        setTrendData(Array.isArray(data) ? data : data?.data || []);
+      } catch (error) {
+        console.error('Failed to fetch trends:', error);
+        setTrendData([]);
+      } finally {
+        setLoadingTrends(false);
+      }
+    };
+
+    fetchTrends();
+  }, [trendPeriod]);
+
+  // Fetch content performance
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        setLoadingContent(true);
+        const response = await analyticsApi.getContentPerformance(1, 5);
+        const data = response.data?.data || response.data;
+        setContentItems(data?.items || []);
+      } catch (error) {
+        console.error('Failed to fetch content:', error);
+        setContentItems([]);
+      } finally {
+        setLoadingContent(false);
+      }
+    };
+
+    fetchContent();
+  }, []);
+
+  // Stats data from backend
   const stats = [
-    { label: 'Total Views', value: '2,687', icon: 'eye', bgColor: 'bg-blue-100', iconColor: 'text-blue-600' },
-    { label: 'Total Earnings', value: '$2,540.00', icon: 'dollar', bgColor: 'bg-green-100', iconColor: 'text-green-600' },
-    { label: 'Unlocks/Purchases', value: '268', icon: 'unlock', bgColor: 'bg-purple-100', iconColor: 'text-purple-600' },
-  ];
-
-  // Sample data for content performance
-  const contentData = [
     {
-      title: 'Premium Tutorial Series',
-      views: 523,
-      unlocks: 87,
-      earnings: '$870.00',
-      date: '2025-01-15',
-      status: 'Active',
+      label: 'Total Views',
+      value: profile?.creatorProfile?.totalViews?.toLocaleString() || '0',
+      icon: 'eye',
+      bgColor: 'bg-blue-100',
+      iconColor: 'text-blue-600'
     },
     {
-      title: 'Exclusive Webinar Recording',
-      views: 412,
-      unlocks: 65,
-      earnings: '$650.00',
-      date: '2025-01-10',
-      status: 'Active',
+      label: 'Total Earnings',
+      value: `$${profile?.creatorProfile?.totalEarnings?.toFixed(2) || '0.00'}`,
+      icon: 'dollar',
+      bgColor: 'bg-green-100',
+      iconColor: 'text-green-600'
     },
     {
-      title: 'Advanced Guide Package',
-      views: 289,
-      unlocks: 43,
-      earnings: '$430.00',
-      date: '2025-01-05',
-      status: 'Active',
-    },
-    {
-      title: 'Behind the Scenes Content',
-      views: 156,
-      unlocks: 28,
-      earnings: '$280.00',
-      date: '2024-12-28',
-      status: 'Active',
+      label: 'Unlocks/Purchases',
+      value: profile?.creatorProfile?.totalPurchases?.toLocaleString() || '0',
+      icon: 'unlock',
+      bgColor: 'bg-purple-100',
+      iconColor: 'text-purple-600'
     },
   ];
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/creator' },
-    { id: 'upload', label: 'Upload Content', icon: 'upload', href: '/creator/upload' },
-    { id: 'analytics', label: 'Analytics', icon: 'analytics', href: '/creator/analytics' },
-    { id: 'earnings', label: 'Earnings', icon: 'earnings', href: '/creator/earnings' },
-    { id: 'notifications', label: 'Notifications', icon: 'notifications', href: '/creator/notifications' },
-    { id: 'settings', label: 'Settings', icon: 'settings', href: '/creator/settings' },
-    { id: 'support', label: 'Support', icon: 'support', href: '/creator/support' },
-  ];
+  // Process chart data based on selected period
+  const getChartData = () => {
+    if (trendData.length === 0) return [];
+
+    switch (trendPeriod) {
+      case 'Last 7 Days':
+        // Show daily data for the week
+        return trendData.slice(-7);
+
+      case 'Last 30 Days':
+        // Show daily data but limit to reasonable display (show every day)
+        return trendData.slice(-30);
+
+      case 'Last Year':
+        // Aggregate by month
+        const monthlyData: Record<string, { date: string; revenue: number; unlocks: number; views: number }> = {};
+        trendData.forEach((d) => {
+          const date = new Date(d.date);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = { date: monthKey + '-01', revenue: 0, unlocks: 0, views: 0 };
+          }
+          monthlyData[monthKey].revenue += d.revenue;
+          monthlyData[monthKey].unlocks += d.unlocks;
+          monthlyData[monthKey].views += d.views;
+        });
+        return Object.values(monthlyData).slice(-12);
+
+      case 'All Time':
+        // Aggregate by month for all time
+        const allTimeMonthly: Record<string, { date: string; revenue: number; unlocks: number; views: number }> = {};
+        trendData.forEach((d) => {
+          const date = new Date(d.date);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          if (!allTimeMonthly[monthKey]) {
+            allTimeMonthly[monthKey] = { date: monthKey + '-01', revenue: 0, unlocks: 0, views: 0 };
+          }
+          allTimeMonthly[monthKey].revenue += d.revenue;
+          allTimeMonthly[monthKey].unlocks += d.unlocks;
+          allTimeMonthly[monthKey].views += d.views;
+        });
+        return Object.values(allTimeMonthly);
+
+      default:
+        return trendData.slice(-7);
+    }
+  };
+
+  const chartData = getChartData();
+
+  // Calculate max revenue for chart scaling
+  const maxRevenue = Math.max(...chartData.map(d => d.revenue), 1);
 
   const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
     const icons: Record<string, JSX.Element> = {
-      dashboard: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
-      upload: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-        </svg>
-      ),
-      analytics: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
-      earnings: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      notifications: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-      ),
-      settings: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-      support: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ),
-      logout: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-      ),
       eye: (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -123,175 +207,408 @@ export default function CreatorDashboardPage() {
     return icons[iconName] || null;
   };
 
+  // Format date for chart labels based on period
+  const formatChartDate = (dateString: string) => {
+    const date = new Date(dateString);
+
+    switch (trendPeriod) {
+      case 'Last 7 Days':
+        return date.toLocaleDateString('en-US', { weekday: 'short' });
+      case 'Last 30 Days':
+        return date.toLocaleDateString('en-US', { day: 'numeric' });
+      case 'Last Year':
+      case 'All Time':
+        return date.toLocaleDateString('en-US', { month: 'short' });
+      default:
+        return date.toLocaleDateString('en-US', { weekday: 'short' });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        {/* Logo */}
-        <div className="p-6 border-b border-gray-200">
-          <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
-        </div>
+    <>
+        <div className="p-4 sm:p-6 lg:p-8">
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px]">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-indigo-600 mb-4"></div>
+                <p className="text-gray-600 text-sm sm:text-base">Loading dashboard...</p>
+              </div>
+            </div>
+          )}
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-4 space-y-1">
-          {menuItems.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === item.id
-                  ? 'bg-indigo-50 text-indigo-600 font-medium'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              onClick={() => setActiveTab(item.id)}
-            >
-              {renderIcon(item.icon)}
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+          {/* Error State */}
+          {error && !loading && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-red-800 text-sm sm:text-base">{error}</p>
+              </div>
+            </div>
+          )}
 
-        {/* Logout Button */}
-        <div className="p-4 border-t border-gray-200">
-          <button
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors w-full"
-            onClick={() => console.log('Logout')}
-          >
-            {renderIcon('logout')}
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
+          {/* Dashboard Content */}
+          {!loading && profile && (
+            <>
+              {/* Welcome Header */}
+              <div className="mb-6 sm:mb-8">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
+                  Welcome back, {profile.displayName || 'Creator'}
+                </h1>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Here's an overview of your content performance.
+                </p>
+              </div>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          {/* Welcome Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Welcome back, Velo_User
-            </h1>
-            <p className="text-gray-600">
-              Here's an overview of your content performance.
-            </p>
-          </div>
+              {/* Verification Status Banner */}
+              <VerificationStatusBanner />
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {stats.map((stat, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center ${stat.iconColor}`}>
-                    {renderIcon(stat.icon, 'w-6 h-6')}
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                {stats.map((stat, index) => (
+                  <div
+                    key={index}
+                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
+                  >
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 ${stat.bgColor} rounded-lg flex items-center justify-center ${stat.iconColor}`}>
+                        {renderIcon(stat.icon, 'w-5 h-5 sm:w-6 sm:h-6')}
+                      </div>
+                      <div>
+                        <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">{stat.label}</p>
+                        <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                ))}
+              </div>
+
+              {/* Earnings Trend */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Earnings Trend</h2>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Chart Type Toggle */}
+                    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setChartType('bar')}
+                        className={`p-1.5 sm:p-2 rounded-md transition-colors ${
+                          chartType === 'bar'
+                            ? 'bg-white shadow-sm text-indigo-600'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        title="Bar Chart"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => setChartType('line')}
+                        className={`p-1.5 sm:p-2 rounded-md transition-colors ${
+                          chartType === 'line'
+                            ? 'bg-white shadow-sm text-indigo-600'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        title="Line Chart"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                        </svg>
+                      </button>
+                    </div>
+                    {/* Period Selector */}
+                    <select
+                      value={trendPeriod}
+                      onChange={(e) => setTrendPeriod(e.target.value)}
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    >
+                      <option value="Last 7 Days">This Week</option>
+                      <option value="Last 30 Days">This Month</option>
+                      <option value="Last Year">This Year</option>
+                      <option value="All Time">All Time</option>
+                    </select>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
 
-          {/* Earnings Trend */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Earnings Trend</h2>
-              <select className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
-                <option>This Week</option>
-                <option>This Month</option>
-                <option>This Year</option>
-              </select>
-            </div>
-
-            {/* Simple Bar Chart Visualization */}
-            <div className="flex items-end justify-between gap-4 h-64">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => {
-                const heights = [45, 60, 35, 70, 55, 80, 65];
-                return (
-                  <div key={day} className="flex-1 flex flex-col items-center gap-2">
-                    <div className="w-full bg-gray-100 rounded-t-lg relative" style={{ height: '100%' }}>
-                      <div
-                        className="w-full bg-indigo-600 rounded-t-lg absolute bottom-0 transition-all hover:bg-indigo-700 cursor-pointer"
-                        style={{ height: `${heights[index]}%` }}
-                        title={`$${(heights[index] * 5).toFixed(2)}`}
-                      ></div>
+                {/* Chart Visualization */}
+                <div className="h-48 sm:h-64">
+                  {loadingTrends ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-gray-500">Loading chart...</div>
                     </div>
-                    <span className="text-xs text-gray-600">{day}</span>
+                  ) : chartData.length === 0 ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-gray-500">No earnings data for this period</div>
+                    </div>
+                  ) : chartType === 'bar' ? (
+                    /* Bar Chart */
+                    <div className="flex items-end justify-between gap-3 h-full">
+                      {chartData.map((data, index) => {
+                        const heightPercent = maxRevenue > 0 ? (data.revenue / maxRevenue) * 100 : 0;
+                        return (
+                          <div key={index} className="flex-1 flex flex-col items-center h-full">
+                            <div className="flex-1 w-full flex items-end">
+                              <div
+                                className="w-full bg-indigo-600 rounded-t-lg transition-all hover:bg-indigo-700 cursor-pointer"
+                                style={{ height: `${Math.max(heightPercent, 5)}%` }}
+                                title={`$${data.revenue.toFixed(2)}`}
+                              ></div>
+                            </div>
+                            <span className="text-xs text-gray-600 mt-2">{formatChartDate(data.date)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Line Chart */
+                    <div className="relative h-full w-full flex">
+                      {/* Y-axis labels */}
+                      <div className="flex flex-col justify-between text-xs text-gray-500 pr-2 pb-6">
+                        <span>{'$'}{maxRevenue.toFixed(0)}</span>
+                        <span>{'$'}{(maxRevenue * 0.5).toFixed(0)}</span>
+                        <span>{'$'}0</span>
+                      </div>
+                      {/* Chart area */}
+                      <div className="flex-1 flex flex-col">
+                        {/* SVG container */}
+                        <div className="flex-1 relative">
+                          {/* Grid lines */}
+                          <div className="absolute inset-0">
+                            {[0, 50, 100].map((percent) => (
+                              <div
+                                key={percent}
+                                className="absolute left-0 right-0 border-t border-gray-100"
+                                style={{ top: `${100 - percent}%` }}
+                              />
+                            ))}
+                          </div>
+                          {/* SVG Line Chart */}
+                          <svg
+                            className="absolute inset-0 w-full h-full overflow-visible"
+                            viewBox="0 0 100 100"
+                            preserveAspectRatio="none"
+                          >
+                            {/* Area fill */}
+                            <defs>
+                              <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="rgb(99, 102, 241)" stopOpacity="0.3" />
+                                <stop offset="100%" stopColor="rgb(99, 102, 241)" stopOpacity="0.05" />
+                              </linearGradient>
+                            </defs>
+                            <path
+                              d={`M 0 100 ${chartData.map((d, i) => {
+                                const x = chartData.length > 1 ? (i / (chartData.length - 1)) * 100 : 50;
+                                const y = 100 - (maxRevenue > 0 ? (d.revenue / maxRevenue) * 100 : 0);
+                                return `L ${x} ${y}`;
+                              }).join(' ')} L 100 100 Z`}
+                              fill="url(#areaGradient)"
+                            />
+                            {/* Line */}
+                            <path
+                              d={chartData.map((d, i) => {
+                                const x = chartData.length > 1 ? (i / (chartData.length - 1)) * 100 : 50;
+                                const y = 100 - (maxRevenue > 0 ? (d.revenue / maxRevenue) * 100 : 0);
+                                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                              }).join(' ')}
+                              fill="none"
+                              stroke="rgb(99, 102, 241)"
+                              strokeWidth="2"
+                              vectorEffect="non-scaling-stroke"
+                            />
+                          </svg>
+                          {/* Data points - rendered as HTML for proper sizing */}
+                          <div className="absolute inset-0">
+                            {chartData.map((d, i) => {
+                              const x = chartData.length > 1 ? (i / (chartData.length - 1)) * 100 : 50;
+                              const y = 100 - (maxRevenue > 0 ? (d.revenue / maxRevenue) * 100 : 0);
+                              return (
+                                <div
+                                  key={i}
+                                  className="absolute w-3 h-3 bg-white border-2 border-indigo-600 rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-125 transition-transform"
+                                  style={{ left: `${x}%`, top: `${y}%` }}
+                                  title={`$${d.revenue.toFixed(2)}`}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {/* X-axis labels */}
+                        <div className="flex justify-between pt-2">
+                          {chartData.length <= 12 ? (
+                            chartData.map((d, i) => (
+                              <span key={i} className="text-xs text-gray-600">
+                                {formatChartDate(d.date)}
+                              </span>
+                            ))
+                          ) : (
+                            chartData.filter((_, i) => i % Math.ceil(chartData.length / 10) === 0 || i === chartData.length - 1).map((d, idx) => (
+                              <span key={idx} className="text-xs text-gray-600">
+                                {formatChartDate(d.date)}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Chart Legend */}
+                {!loadingTrends && chartData.length > 0 && (
+                  <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+                    <span>Total: {'$'}{chartData.reduce((sum, d) => sum + d.revenue, 0).toFixed(2)}</span>
+                    <span>
+                      Avg: {'$'}{(chartData.reduce((sum, d) => sum + d.revenue, 0) / chartData.length).toFixed(2)}
+                      /{trendPeriod === 'Last Year' || trendPeriod === 'All Time' ? 'month' : 'day'}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                )}
+              </div>
 
-          {/* Content Performance Table */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Content Performance</h2>
-            </div>
+              {/* Content Performance */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Content Performance</h2>
+                  <Link
+                    href="/creator/analytics"
+                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                  >
+                    View All
+                  </Link>
+                </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Content Title
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Views
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Unlocks
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Earnings
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Date Uploaded
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {contentData.map((content, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-gray-900">{content.title}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600">{content.views.toLocaleString()}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600">{content.unlocks}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-gray-900">{content.earnings}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600">{content.date}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {content.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                {loadingContent ? (
+                  <div className="flex items-center justify-center py-8 sm:py-12">
+                    <div className="text-gray-500 text-sm sm:text-base">Loading content...</div>
+                  </div>
+                ) : contentItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+                    <div className="text-gray-500 mb-4 text-sm sm:text-base text-center">No content uploaded yet</div>
+                    <Link
+                      href="/creator/upload"
+                      className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Upload Your First Content
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile Card View */}
+                    <div className="sm:hidden divide-y divide-gray-200">
+                      {contentItems.map((content) => (
+                        <div
+                          key={content.id}
+                          onClick={() => router.push(`/creator/content/${content.id}`)}
+                          className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-start gap-3 mb-3">
+                            <img
+                              src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
+                              alt={content.title}
+                              className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
+                              }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-sm font-medium text-gray-900 truncate">{content.title}</h3>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mt-1">
+                                {content.type}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="bg-gray-50 rounded-lg px-2 py-2">
+                              <p className="text-xs text-gray-500">Views</p>
+                              <p className="text-sm font-semibold text-gray-900">{content.views.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg px-2 py-2">
+                              <p className="text-xs text-gray-500">Unlocks</p>
+                              <p className="text-sm font-semibold text-gray-900">{content.unlocks.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-green-50 rounded-lg px-2 py-2">
+                              <p className="text-xs text-gray-500">Revenue</p>
+                              <p className="text-sm font-semibold text-green-600">${content.revenue.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Content Title
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Type
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Views
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Unlocks
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Revenue
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {contentItems.map((content) => (
+                            <tr
+                              key={content.id}
+                              onClick={() => router.push(`/creator/content/${content.id}`)}
+                              className="hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center gap-3">
+                                  <img
+                                    src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
+                                    alt={content.title}
+                                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
+                                    }}
+                                  />
+                                  <span className="text-sm font-medium text-gray-900">{content.title}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  {content.type}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-sm text-gray-600">{content.views.toLocaleString()}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-sm text-gray-600">{content.unlocks.toLocaleString()}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-sm font-medium text-gray-900">${content.revenue.toFixed(2)}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
-      </main>
 
       {/* Cookie Consent Banner */}
       {showCookieBanner && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+        <div className="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-3 flex-1">
@@ -324,6 +641,6 @@ export default function CreatorDashboardPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

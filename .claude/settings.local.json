@@ -9,6 +9,7 @@
       "Bash(npm run build:*)",
       "Bash(timeout /t 3)",
       "Bash(rm:*)",
+      "Bash(npm run seed:*)"
       "Bash(npx prisma:*)",
       "Bash(npm run start:dev:*)",
       "Bash(ping:*)",

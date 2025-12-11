@@ -2,6 +2,7 @@ import { Module, DynamicModule, Provider } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { VeriffService } from './veriff.service';
 import { VeriffController } from './veriff.controller';
+import { PrismaModule } from '../prisma/prisma.module';
 import {
   VERIFF_MODULE_OPTIONS,
 } from './constants/veriff.constants';
@@ -57,7 +58,7 @@ export class VeriffModule {
   static forRoot(): DynamicModule {
     return {
       module: VeriffModule,
-      imports: [ConfigModule],
+      imports: [ConfigModule, PrismaModule],
       controllers: [VeriffController],
       providers: [
         {

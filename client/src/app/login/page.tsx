@@ -6,11 +6,12 @@ import { Button } from '@/components/ui';
 import { useLogin } from '@/hooks/useLogin';
 
 export default function LoginPage() {
-  const { login, isLoading, error: serverError } = useLogin();
+  const { login, isLoading, error: serverError, requiresTwoFactor, verify2FA } = useLogin();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,6 +23,119 @@ export default function LoginPage() {
     }
   };
 
+  const handle2FASubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    try {
+      await verify2FA(twoFactorCode);
+    } catch {
+      // Error is already handled in the hook
+    }
+  };
+
+  // If 2FA is required, show 2FA form
+  if (requiresTwoFactor) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          {/* Left Side - Branding */}
+          <div className="space-y-8">
+            {/* Logo */}
+            <div className="flex items-center gap-6">
+              <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
+            </div>
+
+            {/* Tagline */}
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-gray-900">
+                Manage your platform with confidence.
+              </h2>
+              <p className="text-lg text-gray-600">
+                Simple, secure access to your admin dashboard.
+              </p>
+            </div>
+          </div>
+
+          {/* Right Side - 2FA Form */}
+          <div className="w-full max-w-md mx-auto lg:mx-0">
+            <div className="space-y-8">
+              {/* 2FA Header */}
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  Two-Factor Authentication
+                </h2>
+                <p className="text-base text-gray-600">
+                  Enter the 6-digit code from your authenticator app
+                </p>
+              </div>
+
+              {/* Server Error Display */}
+              {serverError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600 font-medium">{serverError}</p>
+                </div>
+              )}
+
+              {/* 2FA Form */}
+              <form onSubmit={handle2FASubmit} className="space-y-6">
+                {/* 2FA Code Input */}
+                <div>
+                  <label htmlFor="twoFactorCode" className="block text-sm font-medium text-gray-900 mb-2">
+                    Authentication Code
+                  </label>
+                  <input
+                    id="twoFactorCode"
+                    type="text"
+                    placeholder="000000"
+                    value={twoFactorCode}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setTwoFactorCode(e.target.value)}
+                    maxLength={6}
+                    pattern="[0-9]{6}"
+                    autoComplete="off"
+                    autoFocus
+                    className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-base text-center text-2xl tracking-widest font-mono"
+                    required
+                  />
+                </div>
+
+                {/* Verify Button */}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  isLoading={isLoading}
+                  disabled={isLoading || twoFactorCode.length !== 6}
+                  className="text-base py-4 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-semibold"
+                >
+                  {isLoading ? 'Verifying...' : 'Verify'}
+                </Button>
+
+                {/* Back to Login */}
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  >
+                    ← Back to login
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="absolute bottom-8 left-0 right-0">
+          <p className="text-sm text-gray-500 text-center">
+            © 2025 Velo. All rights reserved.
+          </p>
+        </footer>
+      </main>
+    );
+  }
+
+  // Regular login form
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">

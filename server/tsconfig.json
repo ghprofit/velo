@@ -51,12 +51,13 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*", "prisma/**/*"],
+  "include": ["src/**/*"],
   "exclude": [
     "node_modules",
     "dist",
     "test",
     "**/*spec.ts",
+    "prisma/**/*",
     "src/controllers/auth/*.ts",
     "src/controllers/buyer/*.ts",
     "src/controllers/verification/*.ts",

@@ -17,6 +17,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { EarningsModule } from './earnings/earnings.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { StripeModule } from './stripe/stripe.module';
+import { SuperadminModule } from './superadmin/superadmin.module';
+import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -66,6 +68,8 @@ import { AppService } from './app.service';
     AnalyticsModule,
     EarningsModule,
     NotificationsModule,
+    SuperadminModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

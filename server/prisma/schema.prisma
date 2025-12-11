@@ -10,7 +10,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // Enums
@@ -42,6 +41,25 @@ enum ComplianceCheckStatus {
   PASSED
   FAILED
   MANUAL_REVIEW
+}
+
+enum AdminRole {
+  FINANCIAL_ADMIN
+  CONTENT_ADMIN
+  SUPPORT_SPECIALIST
+  ANALYTICS_ADMIN
+}
+
+enum AdminStatus {
+  ACTIVE
+  SUSPENDED
+  INVITED
+}
+
+enum PayoutStatus {
+  ACTIVE
+  ON_HOLD
+  SUSPENDED
 }
 
 // User Models
@@ -80,6 +98,7 @@ model User {
 
   // Relations
   creatorProfile    CreatorProfile?
+  adminProfile      AdminProfile?
   refreshTokens     RefreshToken[]
   adminActions      AdminAction[]
   supportTickets    SupportTicket[]
@@ -89,6 +108,39 @@ model User {
 
   @@index([email])
   @@map("users")
+}
+
+// Admin Profile for staff members
+model AdminProfile {
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+  fullName              String
+  adminRole             AdminRole
+  status                AdminStatus         @default(INVITED)
+
+  // Permissions
+  permDashboard         Boolean             @default(true)
+  permCreatorManagement Boolean             @default(false)
+  permContentReview     Boolean             @default(false)
+  permFinancialReports  Boolean             @default(false)
+  permSystemSettings    Boolean             @default(false)
+  permSupportTickets    Boolean             @default(false)
+
+  // Security
+  twoFactorEnabled      Boolean             @default(false)
+  lastPasswordReset     DateTime?
+  mustChangePassword    Boolean             @default(true)
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  // Relations
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([adminRole])
+  @@index([status])
+  @@map("admin_profiles")
 }
 
 // Email Verification
@@ -156,6 +208,13 @@ model CreatorProfile {
   bankCountry           String?
   bankCurrency          String?             @default("USD")
   payoutSetupCompleted  Boolean             @default(false)
+  // Payout Info
+  paypalEmail           String?
+  stripeAccountId       String?
+  payoutStatus          PayoutStatus        @default(ACTIVE)
+
+  // Policy
+  policyStrikes         Int                 @default(0)
 
   // Stats
   totalEarnings         Float               @default(0)
@@ -172,6 +231,7 @@ model CreatorProfile {
 
   @@index([userId])
   @@index([verificationStatus])
+  @@index([payoutStatus])
   @@map("creator_profiles")
 }
 
@@ -473,4 +533,20 @@ model ContentView {
   @@index([country])
   @@index([createdAt])
   @@map("content_views")
+}
+// Platform Settings
+model PlatformSettings {
+  id                    String              @id @default(cuid())
+  key                   String              @unique
+  value                 String
+  description           String?
+  category              String              @default("general") // general, payments, content, security
+  isPublic              Boolean             @default(false)
+  updatedBy             String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([category])
+  @@index([key])
+  @@map("platform_settings")
 }

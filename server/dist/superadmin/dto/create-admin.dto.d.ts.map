@@ -1,0 +1,1 @@
+{"version":3,"file":"create-admin.dto.d.ts","sourceRoot":"","sources":["../../../src/superadmin/dto/create-admin.dto.ts"],"names":[],"mappings":"AAEA,oBAAY,YAAY;IACtB,eAAe,oBAAoB;IACnC,aAAa,kBAAkB;IAC/B,kBAAkB,uBAAuB;IACzC,eAAe,oBAAoB;CACpC;AAED,qBAAa,cAAc;IAGzB,QAAQ,EAAE,MAAM,CAAC;IAGjB,KAAK,EAAE,MAAM,CAAC;IAId,QAAQ,EAAE,MAAM,CAAC;IAGjB,IAAI,EAAE,YAAY,CAAC;CACpB"}

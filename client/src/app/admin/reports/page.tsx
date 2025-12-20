@@ -1,29 +1,59 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LogoutModal from '@/components/LogoutModal';
 import AdminSidebar from '@/components/AdminSidebar';
+import {
+  useGetDashboardStatsQuery,
+  useGetRevenueOverTimeQuery,
+  useGetRecentActivityQuery,
+  useGetPaymentStatsQuery,
+  useGetAdminCreatorStatsQuery,
+  useGetAdminContentStatsQuery,
+} from '@/state/api';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function ReportsAnalyticsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('reports');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [timeRange, setTimeRange] = useState('This Month');
-  const [metricsFilter, setMetricsFilter] = useState('All Metrics');
-  const [revenueTrend, setRevenueTrend] = useState('Monthly');
-  const [userGrowthView, setUserGrowthView] = useState('Creators');
-  const [reportFilter, setReportFilter] = useState('All');
+  const [revenuePeriod, setRevenuePeriod] = useState<'7' | '30' | '90'>('30');
 
+  // Fetch real data
+  const { data: dashboardStats, isLoading: statsLoading } = useGetDashboardStatsQuery();
+  const { data: revenueData } = useGetRevenueOverTimeQuery({ period: revenuePeriod });
+  const { data: recentActivity } = useGetRecentActivityQuery();
+  const { data: paymentStats } = useGetPaymentStatsQuery();
+  const { data: creatorStats } = useGetAdminCreatorStatsQuery();
+  const { data: contentStats } = useGetAdminContentStatsQuery();
 
-  const reportData = [
-    { id: 1, creator: 'Afedi Designs', views: '1.2M', revenue: '$24,320', engagement: '7.8%', category: 'Video' },
-    { id: 2, creator: 'Tired', views: '980k', revenue: '$19,850', engagement: '6.9%', category: 'Music' },
-    { id: 3, creator: 'Echo Studio', views: '865k', revenue: '$17,120', engagement: '6.1%', category: 'Podcast' },
-    { id: 4, creator: 'CloudWizz', views: '712k', revenue: '$14,440', engagement: '5.4%', category: 'Images' },
-  ];
+  // Export report as CSV
+  const exportReportAsCSV = () => {
+    const headers = ['Metric', 'Value'];
+    const rows = [
+      ['Total Revenue', `$${paymentStats?.totalRevenue.toFixed(2) || 0}`],
+      ['Active Creators', creatorStats?.data?.totalCreators || 0],
+      ['Total Content', contentStats?.data?.totalContent || 0],
+      ['Avg Transaction', `$${dashboardStats?.avgTransactionValue?.toFixed(2) || 0}`],
+      ['Total Transactions', dashboardStats?.totalTransactions || 0],
+      ['Pending Review', contentStats?.data?.pendingReview || 0],
+      ['Approved Content', contentStats?.data?.approved || 0],
+    ];
 
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+    ].join('\\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -37,44 +67,32 @@ export default function ReportsAnalyticsPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 ml-12 lg:ml-0">Reports & Analytics</h1>
             <div className="hidden lg:flex items-center gap-4">
-              {/* Time Range Dropdown */}
+              {/* Revenue Period Selector */}
               <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white flex items-center gap-2"
-              >
-                <option>This Month</option>
-                <option>Last Month</option>
-                <option>Last 3 Months</option>
-                <option>This Year</option>
-              </select>
-
-              {/* Metrics Filter */}
-              <select
-                value={metricsFilter}
-                onChange={(e) => setMetricsFilter(e.target.value)}
+                value={revenuePeriod}
+                onChange={(e) => setRevenuePeriod(e.target.value as '7' | '30' | '90')}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
               >
-                <option>All Metrics</option>
-                <option>Revenue Only</option>
-                <option>User Growth</option>
-                <option>Content Performance</option>
+                <option value="7">Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
               </select>
 
               {/* Download Report Button */}
-              <button className="px-6 py-2 border-2 border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2">
+              <button
+                onClick={exportReportAsCSV}
+                className="px-6 py-2 border-2 border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 Download Report
               </button>
 
-              {/* Notification Bell */}
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-              </button>
+              {/* Profile Icon */}
+              <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white font-semibold">
+                A
+              </div>
             </div>
           </div>
         </header>
@@ -89,33 +107,33 @@ export default function ReportsAnalyticsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
                 <span className="text-sm text-gray-600">Total Revenue</span>
-                <span className="ml-auto px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  </svg>
-                  8%
-                </span>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">$142,980</p>
-              <p className="text-sm text-gray-500">up this month</p>
+              {statsLoading ? (
+                <div className="h-8 bg-gray-200 rounded animate-pulse mb-1"></div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900 mb-1">
+                  ${paymentStats?.totalRevenue.toFixed(2) || '0.00'}
+                </p>
+              )}
+              <p className="text-sm text-gray-500">all time</p>
             </div>
 
-            {/* Active Creator */}
+            {/* Active Creators */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                <span className="text-sm text-gray-600">Active Creator</span>
-                <span className="ml-auto px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  </svg>
-                  15%
-                </span>
+                <span className="text-sm text-gray-600">Active Creators</span>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">4,892</p>
-              <p className="text-sm text-gray-500">growth vs last month</p>
+              {statsLoading ? (
+                <div className="h-8 bg-gray-200 rounded animate-pulse mb-1"></div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900 mb-1">
+                  {creatorStats?.data?.totalCreators || 0}
+                </p>
+              )}
+              <p className="text-sm text-gray-500">total creators</p>
             </div>
 
             {/* Content Uploaded */}
@@ -124,16 +142,16 @@ export default function ReportsAnalyticsPage() {
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <span className="text-sm text-gray-600">Content Uploaded</span>
-                <span className="ml-auto px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  </svg>
-                  5%
-                </span>
+                <span className="text-sm text-gray-600">Total Content</span>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">1,245</p>
-              <p className="text-sm text-gray-500">this period</p>
+              {statsLoading ? (
+                <div className="h-8 bg-gray-200 rounded animate-pulse mb-1"></div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900 mb-1">
+                  {contentStats?.data?.totalContent || 0}
+                </p>
+              )}
+              <p className="text-sm text-gray-500">all content items</p>
             </div>
 
             {/* Avg. Transaction Value */}
@@ -142,10 +160,58 @@ export default function ReportsAnalyticsPage() {
                 <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-sm text-gray-600">Avg. Transaction Value</span>
+                <span className="text-sm text-gray-600">Avg. Transaction</span>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">$42.50</p>
-              <p className="text-sm text-gray-500">last 30 days</p>
+              {statsLoading ? (
+                <div className="h-8 bg-gray-200 rounded animate-pulse mb-1"></div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900 mb-1">
+                  ${dashboardStats?.avgTransactionValue?.toFixed(2) || '0.00'}
+                </p>
+              )}
+              <p className="text-sm text-gray-500">per transaction</p>
+            </div>
+          </div>
+
+          {/* Additional Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
+            {/* Total Transactions */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm text-gray-600">Total Transactions</span>
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{dashboardStats?.totalTransactions || 0}</p>
+            </div>
+
+            {/* Pending Review */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm text-gray-600">Pending Review</span>
+                <div className="p-2 bg-yellow-50 rounded-lg">
+                  <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{contentStats?.data?.pendingReview || 0}</p>
+            </div>
+
+            {/* Approved Content */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm text-gray-600">Approved Content</span>
+                <div className="p-2 bg-green-50 rounded-lg">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{contentStats?.data?.approved || 0}</p>
             </div>
           </div>
 
@@ -156,263 +222,201 @@ export default function ReportsAnalyticsPage() {
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Revenue Trends</h2>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setRevenueTrend('Weekly')}
+                    onClick={() => setRevenuePeriod('7')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      revenueTrend === 'Weekly'
+                      revenuePeriod === '7'
                         ? 'bg-indigo-600 text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    Weekly
+                    7 Days
                   </button>
                   <button
-                    onClick={() => setRevenueTrend('Monthly')}
+                    onClick={() => setRevenuePeriod('30')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      revenueTrend === 'Monthly'
+                      revenuePeriod === '30'
                         ? 'bg-indigo-600 text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    Monthly
+                    30 Days
                   </button>
                   <button
-                    onClick={() => setRevenueTrend('Yearly')}
+                    onClick={() => setRevenuePeriod('90')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      revenueTrend === 'Yearly'
+                      revenuePeriod === '90'
                         ? 'bg-indigo-600 text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    Yearly
+                    90 Days
                   </button>
                 </div>
               </div>
 
-              {/* Chart Area */}
-              <div className="h-64 relative">
-                <svg className="w-full h-full" viewBox="0 0 700 250">
-                  {/* Grid lines */}
-                  <line x1="0" y1="200" x2="700" y2="200" stroke="#e5e7eb" strokeWidth="1" />
-
-                  {/* Purple line */}
-                  <polyline
-                    points="60,180 120,170 180,160 240,155 300,145 360,140 420,135 480,125 540,120 600,115 660,110"
-                    fill="none"
-                    stroke="#6366f1"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-
-                  {/* Data points */}
-                  {[60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660].map((x, i) => {
-                    const y = 180 - i * 7;
-                    return <circle key={i} cx={x} cy={y} r="5" fill="#6366f1" />;
-                  })}
-                </svg>
-
-                <div className="absolute bottom-2 left-4 text-xs text-gray-500">
-                  X: Time • Y: USD
-                </div>
+              {/* Revenue Chart */}
+              <div className="h-80">
+                {!revenueData?.dataPoints || revenueData.dataPoints.length === 0 ? (
+                  <div className="h-full border border-gray-200 rounded-lg bg-gray-50 flex items-center justify-center">
+                    <p className="text-gray-500">No revenue data available for this period</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={revenueData.dataPoints} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#6b7280"
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return `${date.getMonth() + 1}/${date.getDate()}`;
+                        }}
+                      />
+                      <YAxis
+                        stroke="#6b7280"
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => `$${value.toFixed(0)}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          padding: '12px'
+                        }}
+                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                        labelFormatter={(label) => {
+                          const date = new Date(label);
+                          return date.toLocaleDateString();
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#4f46e5"
+                        strokeWidth={3}
+                        dot={{ fill: '#4f46e5', r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
-            {/* Top Countries */}
+            {/* Platform Metrics */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Top Countries</h2>
-                <span className="text-sm text-gray-500">Key buyer regions</span>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Platform Metrics</h2>
               </div>
 
-              {/* Map Placeholder */}
-              <div className="mb-6 h-48 bg-gray-100 rounded-lg overflow-hidden relative">
-                <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                  <svg className="w-full h-full opacity-20" viewBox="0 0 200 150">
-                    <rect x="20" y="30" width="160" height="90" fill="#cbd5e1" rx="4"/>
-                    <circle cx="50" cy="60" r="3" fill="#6366f1"/>
-                    <circle cx="120" cy="80" r="3" fill="#6366f1"/>
-                    <circle cx="90" cy="70" r="3" fill="#6366f1"/>
-                  </svg>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">Total Payouts</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      ${paymentStats?.totalPayouts.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-600 h-2 rounded-full"
+                      style={{
+                        width: `${((paymentStats?.totalPayouts || 0) / (paymentStats?.totalRevenue || 1)) * 100}%`,
+                      }}
+                    ></div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Country List */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
-                    <span className="text-sm text-gray-900">USA</span>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">Pending Payouts</span>
+                    <span className="text-sm font-semibold text-yellow-600">
+                      ${paymentStats?.pendingPayouts.toFixed(2) || '0.00'}
+                    </span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900">48%</span>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '15%' }}></div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
-                    <span className="text-sm text-gray-900">UK</span>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">Failed Transactions</span>
+                    <span className="text-sm font-semibold text-red-600">
+                      {paymentStats?.failedTransactions || 0}
+                    </span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900">22%</span>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-red-600 h-2 rounded-full" style={{ width: '5%' }}></div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full"></div>
-                    <span className="text-sm text-gray-900">Canada</span>
+
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-900">Platform Revenue</span>
+                    <span className="text-lg font-bold text-indigo-600">
+                      ${((paymentStats?.totalRevenue || 0) - (paymentStats?.totalPayouts || 0)).toFixed(2)}
+                    </span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900">14%</span>
+                  <p className="text-xs text-gray-500 mt-1">Revenue minus payouts</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-6 lg:mb-8">
-            {/* User Growth */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">User Growth</h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setUserGrowthView('Creators')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      userGrowthView === 'Creators'
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Creators
-                  </button>
-                  <button
-                    onClick={() => setUserGrowthView('Buyers')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      userGrowthView === 'Buyers'
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Buyers
-                  </button>
-                </div>
-              </div>
-
-              {/* Bar Chart */}
-              <div className="h-64">
-                <svg className="w-full h-full" viewBox="0 0 600 250">
-                  {/* Bars */}
-                  {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map((month, i) => {
-                    const height = 80 + i * 10;
-                    const x = 40 + i * 45;
-                    return (
-                      <g key={i}>
-                        <rect x={x} y={200 - height} width="30" height={height} fill="#a78bfa" rx="4"/>
-                        <text x={x + 15} y="230" textAnchor="middle" fontSize="12" fill="#6b7280">{month}</text>
-                      </g>
-                    );
-                  })}
-                </svg>
-              </div>
-            </div>
-
-            {/* Content Performance */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Content Performance</h2>
-                <span className="text-sm text-gray-500">Music • Video • Podcast • Courses • Images</span>
-              </div>
-
-              {/* Legend */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Music</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Video</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-indigo-700 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Podcast</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-indigo-300 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Courses</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Images</span>
-                </div>
-              </div>
-
-              {/* Placeholder chart area */}
-              <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center">
-                <p className="text-sm text-gray-500">Chart visualization placeholder</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Key Report Data Table */}
+          {/* Recent Activity */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Key Report Data</h2>
-              <select
-                value={reportFilter}
-                onChange={(e) => setReportFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
-              >
-                <option>Filter: All</option>
-                <option>Video</option>
-                <option>Music</option>
-                <option>Podcast</option>
-                <option>Images</option>
-              </select>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Recent Activity</h2>
+              <span className="text-sm text-gray-500">Last 10 activities</span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">#</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Creator Name</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Total Views</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Revenue (USD)</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Engagement Rate</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Category</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.map((item) => (
-                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.id}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.creator}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.views}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.revenue}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.engagement}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.category}</td>
-                      <td className="py-4 px-4">
-                        <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline">
-                          View Report
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {!recentActivity || recentActivity.data.length === 0 ? (
+              <div className="text-center py-12">
+                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <p className="text-gray-500">No recent activity</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentActivity.data.slice(0, 10).map((activity: any, index: number) => (
+                  <div key={index} className="flex items-start gap-4 pb-4 border-b border-gray-100 last:border-0">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{activity.description || 'Activity'}</p>
+                      <p className="text-sm text-gray-500 mt-1">{activity.type || 'System Event'}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'Just now'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Footer */}
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-              <p className="text-sm text-gray-500">Last updated: October 23, 2025</p>
+              <p className="text-sm text-gray-500">
+                Last updated: {new Date().toLocaleDateString()}
+              </p>
               <div className="flex items-center gap-3">
-                <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                <button
+                  onClick={exportReportAsCSV}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  Export as PDF
-                </button>
-                <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  Export as CSV
+                  Export CSV
                 </button>
               </div>
             </div>

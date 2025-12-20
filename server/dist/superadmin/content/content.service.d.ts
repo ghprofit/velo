@@ -1,0 +1,127 @@
+import { PrismaService } from '../../prisma/prisma.service';
+import { QueryContentDto } from './dto/query-content.dto';
+import { UpdateContentDto, ReviewContentDto, RemoveContentDto } from './dto/update-content.dto';
+export declare class ContentService {
+    private prisma;
+    constructor(prisma: PrismaService);
+    getContent(query: QueryContentDto): Promise<{
+        data: {
+            id: any;
+            title: any;
+            description: any;
+            creatorName: any;
+            creatorId: any;
+            contentType: any;
+            thumbnailUrl: any;
+            price: any;
+            status: any;
+            complianceStatus: any;
+            complianceNotes: any;
+            isPublished: any;
+            viewCount: any;
+            purchaseCount: any;
+            totalRevenue: any;
+            createdAt: any;
+            publishedAt: any;
+        }[];
+        pagination: {
+            total: number;
+            page: number;
+            limit: number;
+            totalPages: number;
+        };
+    }>;
+    getContentStats(): Promise<{
+        totalContent: number;
+        pendingReview: number;
+        flagged: number;
+        approved: number;
+        rejected: number;
+        highSeverity: number;
+    }>;
+    getContentById(id: string): Promise<{
+        creatorEmail: any;
+        fileSize: any;
+        duration: any;
+        s3Key: any;
+        complianceLogs: any;
+        contentItems: any;
+        id: any;
+        title: any;
+        description: any;
+        creatorName: any;
+        creatorId: any;
+        contentType: any;
+        thumbnailUrl: any;
+        price: any;
+        status: any;
+        complianceStatus: any;
+        complianceNotes: any;
+        isPublished: any;
+        viewCount: any;
+        purchaseCount: any;
+        totalRevenue: any;
+        createdAt: any;
+        publishedAt: any;
+    }>;
+    updateContent(id: string, dto: UpdateContentDto): Promise<{
+        id: any;
+        title: any;
+        description: any;
+        creatorName: any;
+        creatorId: any;
+        contentType: any;
+        thumbnailUrl: any;
+        price: any;
+        status: any;
+        complianceStatus: any;
+        complianceNotes: any;
+        isPublished: any;
+        viewCount: any;
+        purchaseCount: any;
+        totalRevenue: any;
+        createdAt: any;
+        publishedAt: any;
+    }>;
+    reviewContent(id: string, dto: ReviewContentDto, adminId: string): Promise<{
+        id: any;
+        title: any;
+        description: any;
+        creatorName: any;
+        creatorId: any;
+        contentType: any;
+        thumbnailUrl: any;
+        price: any;
+        status: any;
+        complianceStatus: any;
+        complianceNotes: any;
+        isPublished: any;
+        viewCount: any;
+        purchaseCount: any;
+        totalRevenue: any;
+        createdAt: any;
+        publishedAt: any;
+    }>;
+    removeContent(id: string, dto: RemoveContentDto, adminId: string): Promise<{
+        id: any;
+        title: any;
+        description: any;
+        creatorName: any;
+        creatorId: any;
+        contentType: any;
+        thumbnailUrl: any;
+        price: any;
+        status: any;
+        complianceStatus: any;
+        complianceNotes: any;
+        isPublished: any;
+        viewCount: any;
+        purchaseCount: any;
+        totalRevenue: any;
+        createdAt: any;
+        publishedAt: any;
+    }>;
+    private formatContentResponse;
+    private formatContentDetailResponse;
+}
+//# sourceMappingURL=content.service.d.ts.map

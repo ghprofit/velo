@@ -4,26 +4,96 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
 import LogoutModal from '@/components/LogoutModal';
+import {
+  useGetPaymentStatsQuery,
+  useGetTransactionsQuery,
+  useGetRevenueChartQuery,
+} from '@/state/api';
+import TransactionDetailsModal from '@/components/admin/TransactionDetailsModal';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function PaymentsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('payments');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [timeRange, setTimeRange] = useState('Monthly');
+  const [timeRange, setTimeRange] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const transactions = [
-    { id: '#TXN1023', creator: 'Afedi Designs', buyer: 'John D.', amount: '$75.00', method: 'Stripe Card', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 23 2025' },
-    { id: '#TXN1022', creator: 'Velo Films', buyer: 'Anna K.', amount: '$90.00', method: 'Apple Pay', status: 'Pending', statusColor: 'bg-yellow-100 text-yellow-700', date: 'Oct 22 2025' },
-    { id: '#TXN1021', creator: 'Studio Nova', buyer: 'Chris P.', amount: '$42.50', method: 'Google Pay', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 21 2025' },
-    { id: '#TXN1020', creator: 'Pixel House', buyer: 'Maya L.', amount: '$18.00', method: 'PayPal', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 20 2025' },
-    { id: '#TXN1019', creator: 'Afedi Designs', buyer: 'Noah P.', amount: '$64.10', method: 'Apple Pay', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 19 2025' },
-    { id: '#TXN1018', creator: 'Velo Films', buyer: 'Leo C.', amount: '$22.50', method: 'Google Pay', status: 'Failed', statusColor: 'bg-red-100 text-red-700', date: 'Oct 18 2025' },
-    { id: '#TXN1017', creator: 'Nova Labs', buyer: 'Ola R.', amount: '$260.00', method: 'Stripe Card', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 17 2025' },
-    { id: '#TXN1016', creator: 'Motion Co', buyer: 'Nora T.', amount: '$45.50', method: 'Google Pay', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 16 2025' },
-    { id: '#TXN1015', creator: 'Lens Hub', buyer: 'Liam G.', amount: '$18.00', method: 'Apple Pay', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 15 2025' },
-    { id: '#TXN1014', creator: 'Afedi Designs', buyer: 'John D.', amount: '$75.00', method: 'Stripe Card', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 14 2025' },
-  ];
+  // Fetch payment stats
+  const { data: statsData, isLoading: statsLoading } = useGetPaymentStatsQuery();
+
+  // Fetch transactions with filters
+  const { data: transactionsData, isLoading: transactionsLoading } = useGetTransactionsQuery({
+    search: searchQuery || undefined,
+    status: statusFilter || undefined,
+    paymentMethod: paymentMethodFilter || undefined,
+    page,
+    limit,
+  });
+
+  // Fetch revenue chart data
+  const { data: chartData } = useGetRevenueChartQuery({ period: timeRange });
+
+  const stats = statsData || {
+    totalRevenue: 0,
+    totalPayouts: 0,
+    pendingPayouts: 0,
+    failedTransactions: 0,
+  };
+
+  const transactions = transactionsData?.data || [];
+  const pagination = transactionsData?.pagination;
+
+  // CSV Export function
+  const exportToCSV = () => {
+    if (!transactions.length) return;
+
+    const headers = ['Transaction ID', 'Creator', 'Buyer', 'Amount', 'Currency', 'Payment Method', 'Status', 'Date'];
+    const csvData = transactions.map(t => [
+      t.transactionId || t.id,
+      t.creator,
+      t.buyer,
+      t.amount,
+      t.currency,
+      t.paymentMethod,
+      t.status,
+      new Date(t.createdAt).toLocaleDateString(),
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.join(',')),
+    ].join('\\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-700';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'FAILED':
+        return 'bg-red-100 text-red-700';
+      case 'REFUNDED':
+        return 'bg-gray-100 text-gray-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -42,7 +112,10 @@ export default function PaymentsPage() {
                   type="text"
                   placeholder="Search transaction or creator..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
                   className="w-96 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 />
                 <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,37 +124,27 @@ export default function PaymentsPage() {
               </div>
 
               {/* Filter Button */}
-              <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors ${
+                  showFilters ? 'bg-indigo-50 border-indigo-600' : ''
+                }`}
+              >
                 <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
               </button>
 
               {/* Export CSV Button */}
-              <button className="px-4 py-2 border-2 border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2">
+              <button
+                onClick={exportToCSV}
+                disabled={!transactions.length}
+                className="px-4 py-2 border-2 border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Export CSV
-              </button>
-
-              {/* Date Range */}
-              <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Date Range
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {/* Settings Icon */}
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
               </button>
 
               {/* Profile Icon */}
@@ -90,6 +153,59 @@ export default function PaymentsPage() {
               </div>
             </div>
           </div>
+
+          {/* Filters Panel */}
+          {showFilters && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="FAILED">Failed</option>
+                    <option value="REFUNDED">Refunded</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                  <select
+                    value={paymentMethodFilter}
+                    onChange={(e) => {
+                      setPaymentMethodFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="">All Methods</option>
+                    <option value="STRIPE">Stripe</option>
+                    <option value="PAYPAL">PayPal</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setStatusFilter('');
+                      setPaymentMethodFilter('');
+                      setSearchQuery('');
+                      setPage(1);
+                    }}
+                    className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </header>
 
         <div className="p-4 sm:p-6 lg:p-8">
@@ -105,7 +221,13 @@ export default function PaymentsPage() {
                 </div>
                 <span className="text-sm text-gray-600">Total Revenue</span>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-2">$124,580</p>
+              {statsLoading ? (
+                <div className="h-8 bg-gray-200 rounded animate-pulse mb-2"></div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900 mb-2">
+                  ${stats.totalRevenue.toFixed(2)}
+                </p>
+              )}
               <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
             </div>
 
@@ -119,7 +241,13 @@ export default function PaymentsPage() {
                 </div>
                 <span className="text-sm text-gray-600">Total Payouts</span>
               </div>
-              <p className="text-3xl font-bold text-green-600 mb-2">$98,300</p>
+              {statsLoading ? (
+                <div className="h-8 bg-gray-200 rounded animate-pulse mb-2"></div>
+              ) : (
+                <p className="text-3xl font-bold text-green-600 mb-2">
+                  ${stats.totalPayouts.toFixed(2)}
+                </p>
+              )}
               <div className="h-1 bg-green-500 rounded-full"></div>
             </div>
 
@@ -133,7 +261,13 @@ export default function PaymentsPage() {
                 </div>
                 <span className="text-sm text-gray-600">Pending Payouts</span>
               </div>
-              <p className="text-3xl font-bold text-yellow-600 mb-2">$6,270</p>
+              {statsLoading ? (
+                <div className="h-8 bg-gray-200 rounded animate-pulse mb-2"></div>
+              ) : (
+                <p className="text-3xl font-bold text-yellow-600 mb-2">
+                  ${stats.pendingPayouts.toFixed(2)}
+                </p>
+              )}
               <div className="h-1 bg-yellow-500 rounded-full"></div>
             </div>
 
@@ -147,7 +281,11 @@ export default function PaymentsPage() {
                 </div>
                 <span className="text-sm text-gray-600">Failed Transactions</span>
               </div>
-              <p className="text-3xl font-bold text-red-600 mb-2">5</p>
+              {statsLoading ? (
+                <div className="h-8 bg-gray-200 rounded animate-pulse mb-2"></div>
+              ) : (
+                <p className="text-3xl font-bold text-red-600 mb-2">{stats.failedTransactions}</p>
+              )}
               <div className="h-1 bg-red-500 rounded-full"></div>
             </div>
           </div>
@@ -158,9 +296,9 @@ export default function PaymentsPage() {
               <h2 className="text-lg sm:text-xl font-bold text-gray-900">Earnings Over Time</h2>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setTimeRange('Weekly')}
+                  onClick={() => setTimeRange('weekly')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    timeRange === 'Weekly'
+                    timeRange === 'weekly'
                       ? 'bg-indigo-600 text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
@@ -168,9 +306,9 @@ export default function PaymentsPage() {
                   Weekly
                 </button>
                 <button
-                  onClick={() => setTimeRange('Monthly')}
+                  onClick={() => setTimeRange('monthly')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    timeRange === 'Monthly'
+                    timeRange === 'monthly'
                       ? 'bg-indigo-600 text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
@@ -178,9 +316,9 @@ export default function PaymentsPage() {
                   Monthly
                 </button>
                 <button
-                  onClick={() => setTimeRange('Yearly')}
+                  onClick={() => setTimeRange('yearly')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    timeRange === 'Yearly'
+                    timeRange === 'yearly'
                       ? 'bg-indigo-600 text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
@@ -190,58 +328,47 @@ export default function PaymentsPage() {
               </div>
             </div>
 
-            {/* Chart Legend */}
-            <div className="flex items-center justify-end gap-6 mb-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>
-                <span className="text-gray-600">Revenue (line)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-gray-300 rounded"></div>
-                <span className="text-gray-600">Bars (volume)</span>
-              </div>
-            </div>
-
-            {/* Chart Area */}
-            <div className="h-64 border border-gray-200 rounded-lg bg-gray-50 relative">
-              {/* Simple line visualization */}
-              <svg className="w-full h-full" viewBox="0 0 800 250">
-                {/* Grid lines */}
-                <line x1="0" y1="200" x2="800" y2="200" stroke="#e5e7eb" strokeWidth="1" />
-
-                {/* Bars */}
-                <rect x="50" y="140" width="40" height="60" fill="#e5e7eb" rx="2" />
-                <rect x="150" y="120" width="40" height="80" fill="#e5e7eb" rx="2" />
-                <rect x="250" y="100" width="40" height="100" fill="#e5e7eb" rx="2" />
-                <rect x="350" y="110" width="40" height="90" fill="#e5e7eb" rx="2" />
-                <rect x="450" y="80" width="40" height="120" fill="#e5e7eb" rx="2" />
-                <rect x="550" y="90" width="40" height="110" fill="#e5e7eb" rx="2" />
-                <rect x="650" y="70" width="40" height="130" fill="#e5e7eb" rx="2" />
-
-                {/* Revenue line */}
-                <polyline
-                  points="70,150 170,130 270,110 370,115 470,90 570,95 670,75"
-                  fill="none"
-                  stroke="#6366f1"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-
-                {/* Data points */}
-                <circle cx="70" cy="150" r="4" fill="#6366f1" />
-                <circle cx="170" cy="130" r="4" fill="#6366f1" />
-                <circle cx="270" cy="110" r="4" fill="#6366f1" />
-                <circle cx="370" cy="115" r="4" fill="#6366f1" />
-                <circle cx="470" cy="90" r="4" fill="#6366f1" />
-                <circle cx="570" cy="95" r="4" fill="#6366f1" />
-                <circle cx="670" cy="75" r="4" fill="#6366f1" />
-              </svg>
-
-              {/* Axis labels */}
-              <div className="absolute bottom-2 left-4 text-xs text-gray-500">
-                X: Weeks • Y: USD
-              </div>
+            {/* Revenue Chart */}
+            <div className="h-80">
+              {!chartData || chartData.length === 0 ? (
+                <div className="h-full border border-gray-200 rounded-lg bg-gray-50 flex items-center justify-center">
+                  <p className="text-gray-500">No revenue data available for this period</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis
+                      dataKey="period"
+                      stroke="#6b7280"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis
+                      stroke="#6b7280"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `$${value.toFixed(0)}`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        padding: '12px'
+                      }}
+                      formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                      labelFormatter={(label) => `Period: ${label}`}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#4f46e5"
+                      strokeWidth={3}
+                      dot={{ fill: '#4f46e5', r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
@@ -249,60 +376,124 @@ export default function PaymentsPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">Transactions</h2>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Transaction ID</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Creator Name</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Buyer Name</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Amount (USD)</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Payment Method</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Date</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((transaction) => (
-                    <tr key={transaction.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{transaction.id}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.creator}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.buyer}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.amount}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.method}</td>
-                      <td className="py-4 px-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${transaction.statusColor}`}>
-                          {transaction.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.date}</td>
-                      <td className="py-4 px-4">
-                        <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline">
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-6">
-              <p className="text-sm text-gray-600">Showing 1-10 of 250 transactions</p>
-              <div className="flex items-center gap-2">
-                <button className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">
-                  1
-                </button>
-                <button className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium">
-                  2
-                </button>
-                <button className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium">
-                  3
-                </button>
+            {transactionsLoading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-16 bg-gray-200 rounded animate-pulse"></div>
+                ))}
               </div>
-            </div>
+            ) : transactions.length === 0 ? (
+              <div className="text-center py-12">
+                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <p className="text-gray-500">No transactions found</p>
+                {(searchQuery || statusFilter || paymentMethodFilter) && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setStatusFilter('');
+                      setPaymentMethodFilter('');
+                      setPage(1);
+                    }}
+                    className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Transaction ID</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Creator Name</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Buyer</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Amount</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Payment Method</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Status</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Date</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.map((transaction) => (
+                        <tr key={transaction.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-4 px-4 text-sm font-medium text-gray-900">
+                            {transaction.transactionId || `#${transaction.id.slice(0, 8)}`}
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-900">{transaction.creator}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900">{transaction.buyer}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900">
+                            ${transaction.amount.toFixed(2)} {transaction.currency}
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-900">{transaction.paymentMethod}</td>
+                          <td className="py-4 px-4">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(transaction.status)}`}>
+                              {transaction.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-900">
+                            {new Date(transaction.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-4 px-4">
+                            <button
+                              onClick={() => setSelectedTransactionId(transaction.id)}
+                              className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline"
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {pagination && pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6">
+                    <p className="text-sm text-gray-600">
+                      Showing {((page - 1) * limit) + 1}-{Math.min(page * limit, pagination.total)} of {pagination.total} transactions
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      {[...Array(Math.min(5, pagination.totalPages))].map((_, i) => {
+                        const pageNum = i + 1;
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setPage(pageNum)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                              page === pageNum
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      <button
+                        onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                        disabled={page === pagination.totalPages}
+                        className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </main>
@@ -316,6 +507,14 @@ export default function PaymentsPage() {
           router.push('/login');
         }}
       />
+
+      {/* Transaction Details Modal */}
+      {selectedTransactionId && (
+        <TransactionDetailsModal
+          transactionId={selectedTransactionId}
+          onClose={() => setSelectedTransactionId(null)}
+        />
+      )}
     </div>
   );
 }

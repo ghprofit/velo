@@ -7,7 +7,7 @@ import {
   useLogoutUserMutation,
   useGetAdminContentQuery,
   useGetAdminContentStatsQuery,
-  useReviewContentMutation,
+  useAdminReviewContentMutation,
 } from '@/state/api';
 import { clearAuth } from '@/state/authSlice';
 import { RootState } from '@/app/redux';
@@ -18,7 +18,7 @@ export default function ContentManagementPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const [logoutUser] = useLogoutUserMutation();
-  const [reviewContent] = useReviewContentMutation();
+  const [reviewContent] = useAdminReviewContentMutation();
   
   const [activeTab, setActiveTab] = useState('content');
   const [showLogoutModal, setShowLogoutModal] = useState(false);

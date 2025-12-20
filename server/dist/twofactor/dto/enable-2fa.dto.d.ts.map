@@ -1,0 +1,1 @@
+{"version":3,"file":"enable-2fa.dto.d.ts","sourceRoot":"","sources":["../../../src/twofactor/dto/enable-2fa.dto.ts"],"names":[],"mappings":"AAEA,qBAAa,YAAY;IAGvB,MAAM,EAAE,MAAM,CAAC;IAIf,MAAM,EAAE,MAAM,CAAC;IAKf,KAAK,EAAE,MAAM,CAAC;CACf;AAED,qBAAa,oBAAoB;IAC/B,OAAO,EAAE,OAAO,CAAC;IACjB,OAAO,EAAE,MAAM,CAAC;IAChB,WAAW,CAAC,EAAE,MAAM,EAAE,CAAC;CACxB"}

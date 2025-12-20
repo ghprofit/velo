@@ -414,7 +414,7 @@ interface UpdateContentRequest {
     isPublished?: boolean;
 }
 
-interface ReviewContentRequest {
+interface SuperadminReviewContentRequest {
     decision: 'APPROVED' | 'REJECTED' | 'FLAGGED';
     notes?: string;
     reason?: string;
@@ -572,9 +572,272 @@ interface QueryAdminContentParams {
     limit?: number;
 }
 
-interface ReviewContentRequest {
+interface AdminReviewContentRequest {
     status: 'APPROVED' | 'REJECTED';
     reason?: string;
+}
+
+// Admin Payments Types
+interface PaymentStats {
+    totalRevenue: number;
+    totalPayouts: number;
+    pendingPayouts: number;
+    failedTransactions: number;
+}
+
+interface Transaction {
+    id: string;
+    transactionId?: string;
+    creator: string;
+    creatorEmail: string;
+    buyer: string;
+    contentTitle: string;
+    amount: number;
+    currency: string;
+    paymentMethod: string;
+    status: string;
+    createdAt: string;
+}
+
+interface TransactionDetails {
+    id: string;
+    transactionId?: string;
+    paymentIntentId?: string;
+    creator: {
+        id: string;
+        name: string;
+        email: string;
+        profileImage?: string;
+    };
+    buyer: {
+        email?: string;
+        sessionId: string;
+        fingerprint?: string;
+        ipAddress?: string;
+    };
+    content: {
+        id: string;
+        title: string;
+        thumbnailUrl: string;
+    };
+    amount: number;
+    currency: string;
+    paymentProvider: string;
+    status: string;
+    accessToken: string;
+    viewCount: number;
+    lastViewedAt?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface Payout {
+    id: string;
+    creatorName: string;
+    creatorEmail: string;
+    amount: number;
+    currency: string;
+    status: string;
+    paymentMethod: string;
+    paymentId?: string;
+    processedAt?: string;
+    notes?: string;
+    createdAt: string;
+}
+
+interface PaymentPagination {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+}
+
+interface TransactionsResponse {
+    success: boolean;
+    data: Transaction[];
+    pagination: PaymentPagination;
+}
+
+interface TransactionDetailsResponse {
+    success: boolean;
+    data?: TransactionDetails;
+    message?: string;
+}
+
+interface PayoutsResponse {
+    success: boolean;
+    data: Payout[];
+    pagination: PaymentPagination;
+}
+
+interface RevenueChartData {
+    period: string;
+    revenue: number;
+    count: number;
+}
+
+interface QueryPaymentsParams {
+    search?: string;
+    status?: string;
+    paymentMethod?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+}
+
+interface QueryPayoutsParams {
+    search?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+}
+
+// Support Ticket Types
+interface SupportStats {
+    totalTickets: number;
+    openTickets: number;
+    inProgressTickets: number;
+    resolvedTickets: number;
+    urgentTickets: number;
+    averageResponseTime: number;
+}
+
+interface SupportTicket {
+    id: string;
+    userId?: string;
+    userEmail: string;
+    subject: string;
+    message: string;
+    status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+    assignedTo?: string;
+    attachmentCount: number;
+    createdAt: string;
+    updatedAt: string;
+    resolvedAt?: string;
+}
+
+interface SupportAttachment {
+    id: string;
+    fileName: string;
+    fileSize: number;
+    contentType: string;
+    s3Key: string;
+    s3Bucket: string;
+}
+
+interface SupportTicketDetails extends Omit<SupportTicket, 'attachmentCount'> {
+    attachments: SupportAttachment[];
+}
+
+interface SupportTicketsResponse {
+    success: boolean;
+    data: SupportTicket[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+interface SupportTicketResponse {
+    success: boolean;
+    data?: SupportTicketDetails;
+    message?: string;
+}
+
+interface QuerySupportTicketsParams {
+    search?: string;
+    status?: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+    priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+    assignedTo?: string;
+    page?: number;
+    limit?: number;
+}
+
+interface UpdateTicketStatusParams {
+    id: string;
+    status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+}
+
+interface UpdateTicketPriorityParams {
+    id: string;
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+}
+
+interface AssignTicketParams {
+    id: string;
+    assignedTo: string;
+}
+
+// Notification Types
+interface NotificationStats {
+    totalNotifications: number;
+    unreadNotifications: number;
+    notificationsByType: {
+        type: string;
+        count: number;
+    }[];
+    recentNotifications: number;
+}
+
+interface Notification {
+    id: string;
+    userId: string;
+    userEmail: string;
+    userRole: string;
+    type: string;
+    title: string;
+    message: string;
+    isRead: boolean;
+    metadata?: any;
+    createdAt: string;
+}
+
+interface NotificationsResponse {
+    success: boolean;
+    data: Notification[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+interface NotificationResponse {
+    success: boolean;
+    data?: Notification;
+    message?: string;
+}
+
+interface QueryNotificationsParams {
+    search?: string;
+    type?: string;
+    isRead?: boolean;
+    userId?: string;
+    page?: number;
+    limit?: number;
+}
+
+interface CreateNotificationParams {
+    userId: string;
+    type: string;
+    title: string;
+    message: string;
+    metadata?: any;
+}
+
+interface BroadcastNotificationParams {
+    type: string;
+    title: string;
+    message: string;
+    userRole?: string;
+    metadata?: any;
 }
 
 export const api = createApi({
@@ -590,7 +853,7 @@ export const api = createApi({
         },
     }),
     reducerPath: "api",
-    tagTypes: ["Auth", "User", "Admin", "Creator", "Content", "Settings", "Dashboard"],
+    tagTypes: ["Auth", "User", "Admin", "Creator", "Content", "Settings", "Dashboard", "Support", "Notifications"],
     endpoints: (build) => ({
         registerUser: build.mutation<AuthResponse, RegisterRequest>({
             query: (data) => ({
@@ -780,7 +1043,7 @@ export const api = createApi({
             }),
             invalidatesTags: ['Content'],
         }),
-        reviewContent: build.mutation<ContentResponse, { id: string; data: ReviewContentRequest }>({
+        reviewContent: build.mutation<ContentResponse, { id: string; data: SuperadminReviewContentRequest }>({
             query: ({ id, data }) => ({
                 url: `/api/superadmin/content/${id}/review`,
                 method: 'POST',
@@ -925,7 +1188,8 @@ export const api = createApi({
             query: (id) => `/api/admin/content/${id}`,
             providesTags: ['Content'],
         }),
-        reviewContent: build.mutation<{ success: boolean; message: string }, { id: string; data: ReviewContentRequest }>({
+        // Admin content mutations (named to avoid conflicts with superadmin hooks)
+        adminReviewContent: build.mutation<{ success: boolean; message: string }, { id: string; data: AdminReviewContentRequest }>({
             query: ({ id, data }) => ({
                 url: `/api/admin/content/${id}/review`,
                 method: 'POST',
@@ -941,13 +1205,184 @@ export const api = createApi({
             }),
             invalidatesTags: ['Content'],
         }),
-        removeContent: build.mutation<{ success: boolean; message: string }, { id: string; reason: string }>({
+        adminRemoveContent: build.mutation<{ success: boolean; message: string }, { id: string; reason: string }>({
             query: ({ id, reason }) => ({
                 url: `/api/admin/content/${id}/remove`,
                 method: 'POST',
                 body: { reason },
             }),
             invalidatesTags: ['Content'],
+        }),
+
+        // Admin Payments endpoints
+        getPaymentStats: build.query<PaymentStats, void>({
+            query: () => '/api/admin/payments/stats',
+            providesTags: ['Dashboard'],
+        }),
+        getTransactions: build.query<TransactionsResponse, QueryPaymentsParams>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.search) searchParams.append('search', params.search);
+                if (params.status) searchParams.append('status', params.status);
+                if (params.paymentMethod) searchParams.append('paymentMethod', params.paymentMethod);
+                if (params.startDate) searchParams.append('startDate', params.startDate);
+                if (params.endDate) searchParams.append('endDate', params.endDate);
+                if (params.page) searchParams.append('page', params.page.toString());
+                if (params.limit) searchParams.append('limit', params.limit.toString());
+                return `/api/admin/payments/transactions?${searchParams.toString()}`;
+            },
+            providesTags: ['Dashboard'],
+        }),
+        getTransactionById: build.query<TransactionDetailsResponse, string>({
+            query: (id) => `/api/admin/payments/transactions/${id}`,
+            providesTags: ['Dashboard'],
+        }),
+        getPayouts: build.query<PayoutsResponse, QueryPayoutsParams>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.search) searchParams.append('search', params.search);
+                if (params.status) searchParams.append('status', params.status);
+                if (params.startDate) searchParams.append('startDate', params.startDate);
+                if (params.endDate) searchParams.append('endDate', params.endDate);
+                if (params.page) searchParams.append('page', params.page.toString());
+                if (params.limit) searchParams.append('limit', params.limit.toString());
+                return `/api/admin/payments/payouts?${searchParams.toString()}`;
+            },
+            providesTags: ['Dashboard'],
+        }),
+        processPayout: build.mutation<{ success: boolean; message: string; data?: any }, { payoutId: string }>({
+            query: (body) => ({
+                url: '/api/admin/payments/payouts/process',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Dashboard'],
+        }),
+        getRevenueChart: build.query<RevenueChartData[], { period: 'weekly' | 'monthly' | 'yearly' }>({
+            query: ({ period = 'monthly' }) => ({
+                url: '/api/admin/payments/revenue-chart',
+                params: { period },
+            }),
+            providesTags: ['Dashboard'],
+        }),
+
+        // Support Endpoints
+        getSupportStats: build.query<SupportStats, void>({
+            query: () => ({
+                url: '/api/admin/support/stats',
+            }),
+            providesTags: ['Support'],
+        }),
+        getSupportTickets: build.query<SupportTicketsResponse, QuerySupportTicketsParams>({
+            query: (params) => ({
+                url: '/api/admin/support/tickets',
+                params,
+            }),
+            providesTags: ['Support'],
+        }),
+        getSupportTicketById: build.query<SupportTicketResponse, string>({
+            query: (id) => ({
+                url: `/api/admin/support/tickets/${id}`,
+            }),
+            providesTags: ['Support'],
+        }),
+        updateTicketStatus: build.mutation<{ success: boolean; message: string; data?: any }, UpdateTicketStatusParams>({
+            query: ({ id, status }) => ({
+                url: `/api/admin/support/tickets/${id}/status`,
+                method: 'PUT',
+                body: { status },
+            }),
+            invalidatesTags: ['Support'],
+        }),
+        updateTicketPriority: build.mutation<{ success: boolean; message: string; data?: any }, UpdateTicketPriorityParams>({
+            query: ({ id, priority }) => ({
+                url: `/api/admin/support/tickets/${id}/priority`,
+                method: 'PUT',
+                body: { priority },
+            }),
+            invalidatesTags: ['Support'],
+        }),
+        assignTicket: build.mutation<{ success: boolean; message: string; data?: any }, AssignTicketParams>({
+            query: ({ id, assignedTo }) => ({
+                url: `/api/admin/support/tickets/${id}/assign`,
+                method: 'PUT',
+                body: { assignedTo },
+            }),
+            invalidatesTags: ['Support'],
+        }),
+        deleteTicket: build.mutation<{ success: boolean; message: string }, string>({
+            query: (id) => ({
+                url: `/api/admin/support/tickets/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Support'],
+        }),
+
+        // Notifications Endpoints
+        getNotificationStats: build.query<NotificationStats, void>({
+            query: () => ({
+                url: '/api/admin/notifications/stats',
+            }),
+            providesTags: ['Notifications'],
+        }),
+        getNotifications: build.query<NotificationsResponse, QueryNotificationsParams>({
+            query: (params) => ({
+                url: '/api/admin/notifications',
+                params,
+            }),
+            providesTags: ['Notifications'],
+        }),
+        getNotificationById: build.query<NotificationResponse, string>({
+            query: (id) => ({
+                url: `/api/admin/notifications/${id}`,
+            }),
+            providesTags: ['Notifications'],
+        }),
+        createNotification: build.mutation<{ success: boolean; message: string; data?: any }, CreateNotificationParams>({
+            query: (body) => ({
+                url: '/api/admin/notifications',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Notifications'],
+        }),
+        broadcastNotification: build.mutation<{ success: boolean; message: string; data?: any }, BroadcastNotificationParams>({
+            query: (body) => ({
+                url: '/api/admin/notifications/broadcast',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Notifications'],
+        }),
+        markNotificationAsRead: build.mutation<{ success: boolean; message: string; data?: any }, string>({
+            query: (id) => ({
+                url: `/api/admin/notifications/${id}/read`,
+                method: 'PUT',
+            }),
+            invalidatesTags: ['Notifications'],
+        }),
+        markAllNotificationsAsRead: build.mutation<{ success: boolean; message: string; data?: any }, string | undefined>({
+            query: (userId) => ({
+                url: '/api/admin/notifications/read-all',
+                method: 'PUT',
+                params: userId ? { userId } : {},
+            }),
+            invalidatesTags: ['Notifications'],
+        }),
+        deleteNotification: build.mutation<{ success: boolean; message: string }, string>({
+            query: (id) => ({
+                url: `/api/admin/notifications/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Notifications'],
+        }),
+        deleteAllNotifications: build.mutation<{ success: boolean; message: string; data?: any }, string | undefined>({
+            query: (userId) => ({
+                url: '/api/admin/notifications',
+                method: 'DELETE',
+                params: userId ? { userId } : {},
+            }),
+            invalidatesTags: ['Notifications'],
         }),
     }),
 });
@@ -1011,9 +1446,34 @@ export const {
     useGetAdminContentQuery,
     useGetAdminContentStatsQuery,
     useGetAdminContentByIdQuery,
-    useReviewContentMutation,
+    useAdminReviewContentMutation,
     useFlagContentMutation,
-    useRemoveContentMutation,
+    useAdminRemoveContentMutation,
+    // Admin payments hooks
+    useGetPaymentStatsQuery,
+    useGetTransactionsQuery,
+    useGetTransactionByIdQuery,
+    useGetPayoutsQuery,
+    useProcessPayoutMutation,
+    useGetRevenueChartQuery,
+    // Support hooks
+    useGetSupportStatsQuery,
+    useGetSupportTicketsQuery,
+    useGetSupportTicketByIdQuery,
+    useUpdateTicketStatusMutation,
+    useUpdateTicketPriorityMutation,
+    useAssignTicketMutation,
+    useDeleteTicketMutation,
+    // Notification hooks
+    useGetNotificationStatsQuery,
+    useGetNotificationsQuery,
+    useGetNotificationByIdQuery,
+    useCreateNotificationMutation,
+    useBroadcastNotificationMutation,
+    useMarkNotificationAsReadMutation,
+    useMarkAllNotificationsAsReadMutation,
+    useDeleteNotificationMutation,
+    useDeleteAllNotificationsMutation,
 } = api;
 
 export default api;

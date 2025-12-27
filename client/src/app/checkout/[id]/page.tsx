@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { buyerApi } from '@/lib/api-client';
 import { getBuyerSession, saveBuyerSession, getBrowserFingerprint, getPurchaseToken } from '@/lib/buyer-session';
+import Footer from '@/components/Footer';
 
 interface ContentData {
   id: string;
@@ -75,26 +76,42 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
     setError(null);
 
     try {
-      // Get or create session
+      // Get or create session with retry logic
       let session = getBuyerSession();
-      if (!session) {
-        // Try to create a new session
+      let retries = 0;
+
+      while (!session && retries < 3) {
         try {
           const fingerprint = await getBrowserFingerprint();
           const response = await buyerApi.createSession({ fingerprint, email });
           session = response.data;
+
           if (session) {
             saveBuyerSession(session);
-          } else {
-            throw new Error('Failed to create session. Please refresh the page and try again.');
+            // Add small delay to ensure storage completes
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Verify session was saved
+            const savedSession = getBuyerSession();
+            if (!savedSession) {
+              throw new Error('Session not persisted');
+            }
+            break;
           }
         } catch (err) {
-          console.error('Failed to create session:', err);
-          throw new Error('Failed to create session. Please refresh the page and try again.');
+          retries++;
+          console.error(`Session creation attempt ${retries} failed:`, err);
+          if (retries >= 3) throw err;
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
-      // Redirect to payment page with email
+      if (!session) {
+        throw new Error('Failed to create session. Please try again.');
+      }
+
+      // Navigate only after session is confirmed
       router.push(`/checkout/${id}/payment?email=${encodeURIComponent(email)}`);
     } catch (err: any) {
       console.error('Checkout error:', err);
@@ -137,9 +154,9 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
   if (!content) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
+      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center">
             <img
@@ -148,38 +165,73 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
               className="h-7 sm:h-8 w-auto"
             />
           </Link>
-          <div className="flex items-center gap-2 text-gray-600">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
             <span className="text-xs sm:text-sm font-medium hidden sm:inline">Secure Checkout</span>
             <span className="hidden md:inline text-gray-400">•</span>
-            <span className="text-xs sm:text-sm text-gray-500 hidden md:inline">End-to-end encrypted</span>
+            <span className="text-xs sm:text-sm text-gray-500 hidden md:inline">Encrypted</span>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="py-4 sm:py-8 lg:py-12">
+      <main className="flex-1 py-4 sm:py-8 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          {/* Mobile Title - Shows above thumbnail on mobile only */}
+          <div className="lg:hidden mb-4">
+            <h1 className="text-xl font-bold text-gray-900 px-2">{content.title}</h1>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
             {/* Left Column - Content Preview */}
             <div className="space-y-6">
-              <div className="relative bg-white rounded-xl lg:rounded-2xl overflow-hidden shadow-sm aspect-video">
+              <div className="relative bg-white rounded-xl lg:rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-200 aspect-video">
                 <img
                   src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
                   alt={content.title}
                   className="w-full h-full object-cover blur-sm"
                 />
-                <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center">
-                  <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-xl">
+                <div className="absolute inset-0 bg-gradient-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
+                  <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-5 shadow-2xl">
                     <div className="flex items-center gap-3">
                       <img
                         src="/assets/logo_svgs/Brand_Icon(black).svg"
                         alt="Lock"
-                        className="w-6 h-6"
+                        className="w-7 h-7"
                       />
-                      <span className="text-gray-900 font-semibold text-lg">Locked Content</span>
+                      <span className="text-gray-900 font-bold text-lg">Locked Content</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Features Grid - Desktop */}
+              <div className="hidden lg:grid grid-cols-2 gap-4">
+                <div className="bg-white rounded-xl p-4 shadow-sm ring-1 ring-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-900">Instant Access</p>
+                      <p className="text-xs text-gray-500">Unlock immediately</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm ring-1 ring-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-900">Secure</p>
+                      <p className="text-xs text-gray-500">256-bit encryption</p>
                     </div>
                   </div>
                 </div>
@@ -188,16 +240,11 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
             {/* Right Column - Checkout Form */}
             <div className="space-y-6">
-              <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm p-6 sm:p-8">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">{content.title}</h1>
-
-                {/* Price */}
-                <div className="mb-6">
-                  <div className="text-3xl sm:text-4xl font-bold text-gray-900">${content.price.toFixed(2)}</div>
-                </div>
+              <div className="bg-white rounded-xl lg:rounded-2xl shadow-lg ring-1 ring-gray-200 p-6 sm:p-8">
+                <h1 className="hidden lg:block text-2xl sm:text-3xl font-bold text-gray-900 mb-6">{content.title}</h1>
 
                 {content.description && (
-                  <p className="text-gray-600 mb-6 leading-relaxed text-sm sm:text-base">{content.description}</p>
+                  <p className="hidden sm:block text-gray-600 mb-6 leading-relaxed text-sm sm:text-base">{content.description}</p>
                 )}
 
                 {/* Email Form */}
@@ -234,39 +281,69 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                   <button
                     type="submit"
                     disabled={isProcessing || !email}
-                    className="w-full px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isProcessing ? 'Processing...' : 'Continue to Payment →'}
+                    {isProcessing ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Continue to Payment
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      </>
+                    )}
                   </button>
 
-                  {/* Payment Info */}
-                  <div className="space-y-2">
-                    <p className="text-center text-xs sm:text-sm text-gray-500">
-                      Secure payment • Instant access
-                    </p>
-                    <div className="flex items-center justify-center gap-1 text-xs text-gray-400">
-                      <span>Your payment is encrypted and secure.</span>
+                  {/* Price Breakdown */}
+                  <div className="space-y-3 pt-6 border-t border-gray-200">
+                    <div className="flex justify-between text-gray-600 text-sm">
+                      <span>Content Price:</span>
+                      <span className="font-medium">${content.price.toFixed(2)}</span>
                     </div>
-                    <div className="flex items-center justify-center gap-3 pt-2">
-                      <span className="text-xs font-medium text-gray-500">Stripe</span>
+                    <div className="flex justify-between text-gray-600 text-sm">
+                      <span>Platform Fee (10%):</span>
+                      <span className="font-medium">${(content.price * 0.10).toFixed(2)}</span>
+                    </div>
+                    <div className="border-t border-gray-200 pt-3 mt-3"></div>
+                    <div className="flex justify-between text-lg font-bold text-gray-900">
+                      <span>Total:</span>
+                      <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        ${(content.price * 1.10).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Payment Info */}
+                  <div className="space-y-3 pt-4">
+                    <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                      <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-medium">Secure payment • Instant access</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-4 pt-1">
+                      <img src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" className="h-5" />
+                      <span className="text-xs font-medium text-gray-400">•</span>
                       <span className="text-xs font-medium text-gray-500">VISA</span>
                       <span className="text-xs font-medium text-gray-500">Mastercard</span>
+                      <span className="text-xs font-medium text-gray-500">Apple Pay</span>
                     </div>
                   </div>
                 </form>
               </div>
             </div>
           </div>
-
-          {/* Footer */}
-          <div className="mt-8 sm:mt-12 flex items-center justify-between text-sm text-gray-500">
-            <span>Questions? Contact support</span>
-            <Link href={`/c/${id}`} className="text-indigo-600 hover:text-indigo-700 font-medium">
-              ← Back to content
-            </Link>
-          </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

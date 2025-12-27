@@ -12,4 +12,8 @@ export class CreatePurchaseDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  fingerprint?: string;
 }

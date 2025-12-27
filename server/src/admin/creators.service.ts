@@ -169,7 +169,6 @@ export class CreatorsService {
         id: creator.id,
         name: creator.displayName,
         email: creator.user.email,
-        bio: creator.bio,
         profileImage: creator.profileImage,
         coverImage: creator.coverImage,
         kycStatus: creator.verificationStatus,

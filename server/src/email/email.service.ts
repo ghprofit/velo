@@ -1,5 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
-import sgMail from '@sendgrid/mail';
+import { SESClient, SendEmailCommand, SendRawEmailCommand } from '@aws-sdk/client-ses';
+import * as nodemailer from 'nodemailer';
 import type {
   EmailConfig,
   SendEmailOptions,
@@ -12,31 +13,42 @@ import { EMAIL_TEMPLATES, HTML_TEMPLATES } from './templates/email-templates';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private readonly config: EmailConfig;
+  private readonly sesClient: SESClient;
   private isConfigured = false;
 
   constructor() {
     // Initialize configuration from environment variables
     this.config = {
-      apiKey: process.env.SENDGRID_API_KEY || '',
-      fromEmail: process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com',
-      fromName: process.env.SENDGRID_FROM_NAME || 'NestJS App',
-      replyToEmail: process.env.SENDGRID_REPLY_TO_EMAIL,
+      apiKey: '', // Not used for AWS SES
+      fromEmail: process.env.SES_FROM_EMAIL || 'noreply@example.com',
+      fromName: process.env.SES_FROM_NAME || 'VeloLink',
+      replyToEmail: process.env.SES_REPLY_TO_EMAIL,
     };
 
-    // Configure SendGrid
-    if (this.config.apiKey) {
-      sgMail.setApiKey(this.config.apiKey);
+    // Configure AWS SES
+    const hasCredentials = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY;
+
+    if (hasCredentials) {
+      this.sesClient = new SESClient({
+        region: process.env.AWS_REGION || 'us-east-1',
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        },
+      });
       this.isConfigured = true;
-      this.logger.log('SendGrid configured successfully');
+      this.logger.log('AWS SES configured successfully');
     } else {
+      // Create a dummy client for development mode
+      this.sesClient = new SESClient({ region: 'us-east-1' });
       this.logger.warn(
-        'SendGrid API key not found. Email sending will be simulated.',
+        'AWS SES credentials not found. Email sending will be simulated.',
       );
     }
   }
 
   /**
-   * Send a single email
+   * Send a single email using AWS SES
    */
   async sendEmail(options: SendEmailOptions): Promise<EmailSendResult> {
     try {
@@ -53,66 +65,69 @@ export class EmailService {
         );
       }
 
-      // Build email message
-      const msg: any = {
-        to: options.to,
-        from: {
-          email: options.from || this.config.fromEmail,
-          name: options.fromName || this.config.fromName,
+      // Handle attachments with nodemailer
+      if (options.attachments && options.attachments.length > 0) {
+        return this.sendEmailWithAttachments(options);
+      }
+
+      // Prepare email addresses
+      const toAddresses = Array.isArray(options.to) ? options.to : [options.to];
+      const ccAddresses = options.cc ? (Array.isArray(options.cc) ? options.cc : [options.cc]) : undefined;
+      const bccAddresses = options.bcc ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc]) : undefined;
+
+      const fromAddress = options.from || `${this.config.fromName} <${this.config.fromEmail}>`;
+      const replyToAddresses = options.replyTo ? [options.replyTo] : (this.config.replyToEmail ? [this.config.replyToEmail] : undefined);
+
+      // Build SES email parameters
+      const params: any = {
+        Source: fromAddress,
+        Destination: {
+          ToAddresses: toAddresses,
+          CcAddresses: ccAddresses,
+          BccAddresses: bccAddresses,
         },
-        subject: options.subject,
-        text: options.text,
-        html: options.html,
-        replyTo: options.replyTo || this.config.replyToEmail,
+        Message: {
+          Subject: {
+            Data: options.subject || '',
+            Charset: 'UTF-8',
+          },
+          Body: {},
+        },
       };
 
-      // Add template if provided
-      if (options.templateId) {
-        msg.templateId = options.templateId;
-        msg.dynamicTemplateData = options.templateData || {};
+      // Add HTML and/or Text body
+      if (options.html) {
+        params.Message.Body.Html = {
+          Data: options.html,
+          Charset: 'UTF-8',
+        };
       }
 
-      // Add CC and BCC
-      if (options.cc && options.cc.length > 0) {
-        msg.cc = options.cc;
+      if (options.text) {
+        params.Message.Body.Text = {
+          Data: options.text,
+          Charset: 'UTF-8',
+        };
       }
 
-      if (options.bcc && options.bcc.length > 0) {
-        msg.bcc = options.bcc;
-      }
-
-      // Add attachments
-      if (options.attachments && options.attachments.length > 0) {
-        msg.attachments = options.attachments;
-      }
-
-      // Add custom args for tracking
-      if (options.customArgs) {
-        msg.customArgs = options.customArgs;
-      }
-
-      // Add scheduled sending
-      if (options.sendAt) {
-        msg.sendAt = options.sendAt;
-      }
-
-      // Add batch ID
-      if (options.batchId) {
-        msg.batchId = options.batchId;
+      // Add Reply-To
+      if (replyToAddresses) {
+        params.ReplyToAddresses = replyToAddresses;
       }
 
       // Send email
       if (this.isConfigured) {
-        const [response] = await sgMail.send(msg);
+        const command = new SendEmailCommand(params);
+        const response = await this.sesClient.send(command);
 
         this.logger.log(
-          `Email sent successfully to ${options.to}. Status: ${response.statusCode}`,
+          `Email sent successfully to ${options.to}. MessageId: ${response.MessageId}`,
         );
 
         return {
           success: true,
-          messageId: response.headers['x-message-id'] as string,
-          statusCode: response.statusCode,
+          messageId: response.MessageId || `ses-${Date.now()}`,
+          statusCode: response.$metadata.httpStatusCode || 200,
         };
       } else {
         // Simulate sending in development
@@ -132,8 +147,76 @@ export class EmailService {
   }
 
   /**
+   * Send email with attachments using nodemailer + AWS SES
+   */
+  private async sendEmailWithAttachments(options: SendEmailOptions): Promise<EmailSendResult> {
+    try {
+      // Build email message using nodemailer
+      const mailOptions = {
+        from: options.from || `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+        cc: options.cc,
+        bcc: options.bcc,
+        replyTo: options.replyTo || this.config.replyToEmail,
+        attachments: options.attachments,
+      };
+
+      if (this.isConfigured) {
+        // Use nodemailer's streamTransport to build raw MIME message
+        const transporter = nodemailer.createTransport({
+          streamTransport: true,
+          newline: 'unix',
+        } as any);
+
+        const info: any = await transporter.sendMail(mailOptions);
+
+        // Collect the raw email message from the stream
+        const chunks: Buffer[] = [];
+        for await (const chunk of info.message) {
+          chunks.push(chunk);
+        }
+        const message = Buffer.concat(chunks);
+
+        // Send the raw email using AWS SES
+        const command = new SendRawEmailCommand({
+          RawMessage: {
+            Data: message,
+          },
+        });
+
+        const response = await this.sesClient.send(command);
+
+        this.logger.log(
+          `Email with attachments sent successfully to ${options.to}. MessageId: ${response.MessageId}`,
+        );
+
+        return {
+          success: true,
+          messageId: response.MessageId || `ses-${Date.now()}`,
+          statusCode: response.$metadata.httpStatusCode || 200,
+        };
+      } else {
+        this.logger.warn(`[SIMULATED] Email with attachments would be sent to: ${options.to}`);
+        return {
+          success: true,
+          messageId: `simulated-attach-${Date.now()}`,
+        };
+      }
+    } catch (error) {
+      this.logger.error('Failed to send email with attachments:', error);
+      return {
+        success: false,
+        error: (error as any)?.message || 'Failed to send email with attachments',
+      };
+    }
+  }
+
+  /**
    * Send email using a predefined template
-   * Uses single SendGrid template with {{{message}}} placeholder
+   * Uses HTML templates defined in code
    */
   async sendTemplateEmail(
     to: string,
@@ -166,20 +249,17 @@ export class EmailService {
 
     const htmlMessage = htmlGenerator(templateData as any);
 
-    // Send email with single template ID and message as HTML
+    // Send email with HTML content
     return this.sendEmail({
       to,
       subject: template.subject || '',
-      templateId: template.id,
-      templateData: {
-        message: htmlMessage,
-      },
+      html: htmlMessage,
       ...options,
     });
   }
 
   /**
-   * Send bulk emails (up to 1000 recipients per batch)
+   * Send bulk emails (up to 50 recipients per batch for AWS SES)
    */
   async sendBulkEmails(
     recipients: Array<{ email: string; templateData?: Record<string, any> }>,
@@ -194,58 +274,32 @@ export class EmailService {
       failures: [],
     };
 
-    // SendGrid allows up to 1000 recipients per API call
-    const batchSize = 1000;
+    // AWS SES allows up to 50 recipients per API call
+    const batchSize = 50;
     const batches = this.chunkArray(recipients, batchSize);
 
     for (const batch of batches) {
       try {
-        if (options.templateId) {
-          // Use personalization for template emails
-          const personalizations = batch.map((recipient) => ({
-            to: { email: recipient.email },
-            dynamicTemplateData: {
-              ...options.templateData,
-              ...recipient.templateData,
-            },
-          }));
+        // Send individual emails for bulk sends
+        // Note: AWS SES doesn't have the same batch personalization as SendGrid
+        for (const recipient of batch) {
+          const emailResult = await this.sendEmail({
+            to: recipient.email,
+            ...options,
+          });
 
-          const msg: any = {
-            from: {
-              email: options.from || this.config.fromEmail,
-              name: options.fromName || this.config.fromName,
-            },
-            templateId: options.templateId,
-            personalizations,
-          };
-
-          if (this.isConfigured) {
-            await sgMail.send(msg);
-            result.successCount += batch.length;
+          if (emailResult.success) {
+            result.successCount++;
           } else {
-            this.logger.warn(
-              `[SIMULATED] Bulk email would be sent to ${batch.length} recipients`,
-            );
-            result.successCount += batch.length;
-          }
-        } else {
-          // Send individual emails for non-template bulk sends
-          for (const recipient of batch) {
-            const emailResult = await this.sendEmail({
-              to: recipient.email,
-              ...options,
+            result.failureCount++;
+            result.failures.push({
+              email: recipient.email,
+              error: emailResult.error || 'Unknown error',
             });
-
-            if (emailResult.success) {
-              result.successCount++;
-            } else {
-              result.failureCount++;
-              result.failures.push({
-                email: recipient.email,
-                error: emailResult.error || 'Unknown error',
-              });
-            }
           }
+
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (error) {
         this.logger.error(`Failed to send batch of ${batch.length} emails:`, error);
@@ -267,7 +321,7 @@ export class EmailService {
   }
 
   /**
-   * Send email with HTML template using single SendGrid template
+   * Send email with HTML template
    */
   async sendHTMLTemplateEmail(
     to: string,
@@ -283,32 +337,34 @@ export class EmailService {
 
     const htmlMessage = htmlGenerator(templateData as any);
 
-    // Use single SendGrid template with message placeholder
+    // Use HTML template from code
     const template = EMAIL_TEMPLATES[templateKey];
 
     return this.sendEmail({
       to,
       subject: subject || template?.subject || 'Notification',
-      templateId: template?.id || process.env.SENDGRID_TEMPLATE_ID,
-      templateData: {
-        message: htmlMessage,
-      },
+      html: htmlMessage,
     });
   }
 
   /**
    * Schedule an email to be sent later
+   * Note: AWS SES does not support native scheduling.
+   * This method immediately sends the email.
+   * For true scheduling, implement with AWS EventBridge or similar service.
+   * @deprecated Use AWS EventBridge for scheduled emails
    */
   async scheduleEmail(
     options: SendEmailOptions,
     sendAt: Date,
   ): Promise<EmailSendResult> {
-    const unixTimestamp = Math.floor(sendAt.getTime() / 1000);
+    this.logger.warn(
+      `AWS SES does not support native scheduling. Email will be sent immediately. ` +
+      `Scheduled time ${sendAt.toISOString()} was requested but ignored.`
+    );
 
-    return this.sendEmail({
-      ...options,
-      sendAt: unixTimestamp,
-    });
+    // Send immediately since AWS SES doesn't support scheduling
+    return this.sendEmail(options);
   }
 
   /**
@@ -360,11 +416,11 @@ export class EmailService {
    * Get email statistics (if configured)
    */
   async getEmailStats(days: number = 7): Promise<any> {
-    // This would require SendGrid API for stats
-    // Implementation depends on your SendGrid plan
+    // This would require AWS CloudWatch API for SES stats
+    // Implementation requires CloudWatch integration
     this.logger.log(`Getting email stats for last ${days} days`);
     return {
-      message: 'Stats endpoint not implemented. Use SendGrid dashboard.',
+      message: 'Stats endpoint not implemented. Use AWS CloudWatch or SES console for metrics.',
     };
   }
 
@@ -395,9 +451,9 @@ export class EmailService {
 
     return this.sendEmail({
       to: testEmail,
-      subject: 'SendGrid Configuration Test',
-      html: '<h1>Test Email</h1><p>If you received this, your SendGrid configuration is working!</p>',
-      text: 'Test Email - If you received this, your SendGrid configuration is working!',
+      subject: 'AWS SES Configuration Test',
+      html: '<h1>Test Email</h1><p>If you received this, your AWS SES configuration is working!</p>',
+      text: 'Test Email - If you received this, your AWS SES configuration is working!',
     });
   }
 
@@ -678,6 +734,29 @@ export class EmailService {
         newsletter_content: newsletterContent,
       },
       'Velo Newsletter',
+    );
+  }
+
+  /**
+   * Send email verification code (6-digit)
+   */
+  async sendEmailVerificationCode(
+    to: string,
+    userName: string,
+    verificationCode: string,
+    expiryMinutes: number = 15,
+  ): Promise<EmailSendResult> {
+    const expiryTime = `${expiryMinutes} minutes`;
+
+    return this.sendHTMLTemplateEmail(
+      to,
+      'EMAIL_VERIFICATION_CODE',
+      {
+        user_name: userName,
+        verification_code: verificationCode,
+        expiry_time: expiryTime,
+      },
+      'Your Velo verification code',
     );
   }
 }

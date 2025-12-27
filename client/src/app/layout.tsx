@@ -7,7 +7,7 @@ import { AuthProvider } from '@/context/auth-context';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Velo Link - Login',
+  title: 'VeloLink',
   description: 'Login to manage your platform with confidence',
   icons: {
     icon: [

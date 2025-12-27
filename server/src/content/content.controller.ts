@@ -9,6 +9,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { VerifiedCreatorGuard } from '../auth/guards/verified-creator.guard';
 import { ContentService } from './content.service';
 import { CreateContentDto } from './dto/create-content.dto';
 
@@ -17,7 +18,7 @@ export class ContentController {
   constructor(private contentService: ContentService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, VerifiedCreatorGuard)
   async createContent(@Request() req: any, @Body() createContentDto: CreateContentDto) {
     const result = await this.contentService.createContent(req.user.id, createContentDto);
     return {

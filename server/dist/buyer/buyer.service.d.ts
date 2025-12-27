@@ -1,12 +1,19 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../stripe/stripe.service';
+import { EmailService } from '../email/email.service';
+import { S3Service } from '../s3/s3.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 export declare class BuyerService {
     private prisma;
     private stripeService;
+    private emailService;
+    private s3Service;
     private readonly logger;
-    constructor(prisma: PrismaService, stripeService: StripeService);
+    private readonly MAX_TRUSTED_DEVICES;
+    private readonly ACCESS_WINDOW_HOURS;
+    private readonly VERIFICATION_CODE_EXPIRY_MINUTES;
+    constructor(prisma: PrismaService, stripeService: StripeService, emailService: EmailService, s3Service: S3Service);
     createOrGetSession(dto: CreateSessionDto, ipAddress?: string, userAgent?: string): Promise<{
         sessionToken: string;
         expiresAt: Date;
@@ -28,7 +35,7 @@ export declare class BuyerService {
             verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
         };
     }>;
-    createPurchase(dto: CreatePurchaseDto): Promise<{
+    createPurchase(dto: CreatePurchaseDto, ipAddress?: string): Promise<{
         alreadyPurchased: boolean;
         accessToken: string;
         purchaseId?: undefined;
@@ -51,7 +58,7 @@ export declare class BuyerService {
             contentType: string;
         };
     }>;
-    getContentAccess(accessToken: string): Promise<{
+    getContentAccess(accessToken: string, fingerprint: string, ipAddress?: string): Promise<{
         content: {
             id: string;
             title: string;
@@ -70,6 +77,7 @@ export declare class BuyerService {
                 s3Key: string;
                 s3Bucket: string;
                 order: number;
+                signedUrl: string;
             }[];
         };
         purchase: {
@@ -93,6 +101,45 @@ export declare class BuyerService {
         purchaseId: string;
         accessToken: string;
         status: string;
+    }>;
+    checkAccessEligibility(accessToken: string, fingerprint: string): Promise<{
+        hasAccess: boolean;
+        reason: string;
+        isExpired?: undefined;
+        needsEmailVerification?: undefined;
+        canAddMoreDevices?: undefined;
+        accessExpiresAt?: undefined;
+        timeRemaining?: undefined;
+    } | {
+        hasAccess: boolean;
+        isExpired: boolean;
+        reason: string;
+        needsEmailVerification?: undefined;
+        canAddMoreDevices?: undefined;
+        accessExpiresAt?: undefined;
+        timeRemaining?: undefined;
+    } | {
+        hasAccess: boolean;
+        needsEmailVerification: boolean;
+        reason: string;
+        canAddMoreDevices: boolean;
+        isExpired?: undefined;
+        accessExpiresAt?: undefined;
+        timeRemaining?: undefined;
+    } | {
+        hasAccess: boolean;
+        accessExpiresAt: Date | null;
+        timeRemaining: number | null;
+        reason?: undefined;
+        isExpired?: undefined;
+        needsEmailVerification?: undefined;
+        canAddMoreDevices?: undefined;
+    }>;
+    requestDeviceVerification(accessToken: string, fingerprint: string, email: string): Promise<{
+        success: boolean;
+    }>;
+    verifyDeviceCode(accessToken: string, fingerprint: string, verificationCode: string): Promise<{
+        success: boolean;
     }>;
 }
 //# sourceMappingURL=buyer.service.d.ts.map

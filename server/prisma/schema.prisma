@@ -62,6 +62,15 @@ enum PayoutStatus {
   SUSPENDED
 }
 
+enum PayoutRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 // User Models
 model User {
   id                String              @id @default(cuid())
@@ -88,7 +97,6 @@ model User {
   displayName       String?
   firstName         String?
   lastName          String?
-  profilePicture    String?
 
   // Notification Preferences
   notifyPayoutUpdates      Boolean @default(true)
@@ -145,16 +153,18 @@ model AdminProfile {
 
 // Email Verification
 model EmailVerificationToken {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  code            String   // 6-digit code (100000-999999)
+  expiresAt       DateTime // 15 minutes from creation
+  resendCount     Int      @default(0)
+  lastResendAt    DateTime?
+  createdAt       DateTime @default(now())
 
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([token])
+  @@index([code])
   @@map("email_verification_tokens")
 }
 
@@ -228,6 +238,7 @@ model CreatorProfile {
   user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   content               Content[]
   payouts               Payout[]
+  payoutRequests        PayoutRequest[]
 
   @@index([userId])
   @@index([verificationStatus])
@@ -345,7 +356,8 @@ model Purchase {
   buyerSessionId        String
 
   // Payment Info
-  amount                Float
+  amount                Float               // Total amount buyer pays (110% of basePrice)
+  basePrice             Float?              // Creator's set price (100%) - nullable for migration
   currency              String              @default("USD")
   paymentProvider       String              // STRIPE, PAYPAL
   paymentIntentId       String?             @unique
@@ -360,6 +372,18 @@ model Purchase {
   viewCount             Int                 @default(0)
   lastViewedAt          DateTime?
 
+  // Time-Based Access Control
+  accessWindowStartedAt DateTime?           // First access timestamp
+  firstAccessIpAddress  String?             // IP during first access
+
+  // Device Fingerprinting
+  purchaseFingerprint   String?             // Fingerprint during purchase
+  trustedFingerprints   String[]            @default([]) // Max 3 devices
+  purchaseIpAddress     String?             // IP during purchase
+
+  // Email Verification for Devices
+  deviceVerificationCodes Json?             // Array of {code, fingerprint, expiresAt}
+
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
@@ -370,6 +394,7 @@ model Purchase {
   @@index([contentId])
   @@index([buyerSessionId])
   @@index([accessToken])
+  @@index([accessExpiresAt])
   @@map("purchases")
 }
 
@@ -411,10 +436,38 @@ model Payout {
 
   // Relations
   creator               CreatorProfile      @relation(fields: [creatorId], references: [id])
+  payoutRequest         PayoutRequest?
 
   @@index([creatorId])
   @@index([status])
   @@map("payouts")
+}
+
+// Payout Requests
+model PayoutRequest {
+  id                String              @id @default(cuid())
+  creatorId         String
+  requestedAmount   Float
+  availableBalance  Float
+  currency          String              @default("USD")
+  status            PayoutRequestStatus @default(PENDING)
+  emailVerifiedAt   DateTime?
+  kycVerifiedAt     DateTime?
+  bankSetupAt       DateTime?
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  reviewNotes       String?
+  payoutId          String?             @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // Relations
+  creator           CreatorProfile      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  payout            Payout?             @relation(fields: [payoutId], references: [id])
+
+  @@index([creatorId])
+  @@index([status])
+  @@map("payout_requests")
 }
 
 // Admin Actions Log

@@ -11,6 +11,21 @@ export class ContentService {
     private s3Service: S3Service,
   ) {}
 
+  /**
+   * Helper to generate signed URL for thumbnail
+   */
+  private async getSignedThumbnailUrl(s3Key: string, thumbnailUrl: string): Promise<string> {
+    if (s3Key) {
+      try {
+        return await this.s3Service.getSignedUrl(s3Key, 86400); // 24 hours
+      } catch (error) {
+        console.error('Failed to generate signed URL, using fallback:', error);
+        return thumbnailUrl;
+      }
+    }
+    return thumbnailUrl;
+  }
+
   async createContent(userId: string, createContentDto: CreateContentDto) {
     // Verify user has a creator profile
     const creatorProfile = await this.prisma.creatorProfile.findUnique({
@@ -32,7 +47,7 @@ export class ContentService {
 
     // Generate unique content ID and link
     const contentId = nanoid(10);
-    const contentLink = `velo.link/c/${contentId}`;
+    const contentLink = `velolink.club/c/${contentId}`;
 
     // Upload thumbnail to S3
     const thumbnailUpload = await this.s3Service.uploadFile(
@@ -81,7 +96,7 @@ export class ContentService {
         s3Key: thumbnailUpload.key,
         s3Bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
         fileSize: totalFileSize,
-        status: 'PENDING_REVIEW',
+        status: 'APPROVED',
         isPublished: true,
         publishedAt: new Date(),
         contentItems: {
@@ -95,7 +110,6 @@ export class ContentService {
             user: {
               select: {
                 displayName: true,
-                profilePicture: true,
               },
             },
           },
@@ -136,7 +150,15 @@ export class ContentService {
       },
     });
 
-    return content;
+    // Add signed URLs to all content thumbnails
+    const contentWithSignedUrls = await Promise.all(
+      content.map(async (item) => ({
+        ...item,
+        thumbnailUrl: await this.getSignedThumbnailUrl(item.s3Key, item.thumbnailUrl),
+      })),
+    );
+
+    return contentWithSignedUrls;
   }
 
   async getContentById(contentId: string) {
@@ -153,7 +175,6 @@ export class ContentService {
             user: {
               select: {
                 displayName: true,
-                profilePicture: true,
               },
             },
           },
@@ -165,7 +186,13 @@ export class ContentService {
       throw new NotFoundException('Content not found');
     }
 
-    return content;
+    // Add signed URL for thumbnail
+    const thumbnailUrl = await this.getSignedThumbnailUrl(content.s3Key, content.thumbnailUrl);
+
+    return {
+      ...content,
+      thumbnailUrl,
+    };
   }
 
   async deleteContent(userId: string, contentId: string) {

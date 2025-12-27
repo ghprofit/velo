@@ -28,6 +28,14 @@ export const EMAIL_TEMPLATES = {
     requiredVariables: ['user_name', 'verification_link', 'expiry_time'],
   } as EmailTemplate,
 
+  EMAIL_VERIFICATION_CODE: {
+    id: SENDGRID_TEMPLATE_ID,
+    name: 'Email Verification Code',
+    description: 'Verify user email address with 6-digit code',
+    subject: 'Your Velo verification code',
+    requiredVariables: ['user_name', 'verification_code', 'expiry_time'],
+  } as EmailTemplate,
+
   PASSWORD_RESET: {
     id: SENDGRID_TEMPLATE_ID,
     name: 'Password Reset',
@@ -253,6 +261,51 @@ export const HTML_TEMPLATES = {
 
       <p class="text-sm">If the button doesn't work, copy and paste this link into your browser:</p>
       <p class="text-xs" style="color: #6b7280; word-break: break-all;">${data.verification_link}</p>
+
+      <div class="divider"></div>
+
+      <p class="text-sm" style="color: #6b7280;">If you didn't create a Velo account, you can safely ignore this email.</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">This is an automated message, please do not reply.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+
+  EMAIL_VERIFICATION_CODE: (data: { user_name: string; verification_code: string; expiry_time: string }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📧 Verify Your Email</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Thank you for signing up with Velo! To complete your registration and start using your account, please enter the verification code below:</p>
+
+      <div style="text-align: center; margin: 40px 0;">
+        <div style="display: inline-block; background: #f3f4f6; border: 2px solid #4f46e5; border-radius: 12px; padding: 20px 40px;">
+          <p style="margin: 0; color: #6b7280; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+          <p style="margin: 10px 0 0 0; font-size: 36px; font-weight: bold; color: #4f46e5; letter-spacing: 8px; font-family: 'Courier New', monospace;">${data.verification_code}</p>
+        </div>
+      </div>
+
+      <div class="warning-box">
+        <p style="margin: 0;"><strong>⏱ Important:</strong> This verification code expires in ${data.expiry_time}.</p>
+      </div>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>🔒 Security Tip:</strong> Never share this code with anyone. Velo will never ask for your verification code via email or phone.</p>
+      </div>
 
       <div class="divider"></div>
 

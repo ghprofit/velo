@@ -259,4 +259,186 @@ export class CreatorsService {
       throw error;
     }
   }
+
+  /**
+   * Request a payout
+   * Requires: email verified, KYC verified, bank details set
+   */
+  async requestPayout(userId: string, requestedAmount: number) {
+    try {
+      this.logger.log(`Payout request initiated by user: ${userId} for amount: ${requestedAmount}`);
+
+      // Get user with creator profile
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { creatorProfile: true },
+      });
+
+      if (!user || !user.creatorProfile) {
+        throw new NotFoundException('Creator profile not found');
+      }
+
+      // Validate minimum payout amount
+      if (requestedAmount < 10) {
+        throw new BadRequestException('Minimum payout amount is $10');
+      }
+
+      // Validate available balance
+      const availableBalance = user.creatorProfile.totalEarnings;
+      if (requestedAmount > availableBalance) {
+        throw new BadRequestException(
+          `Insufficient balance. Available: $${availableBalance.toFixed(2)}, Requested: $${requestedAmount.toFixed(2)}`,
+        );
+      }
+
+      // Check if there's already a pending payout request
+      const existingPendingRequest = await this.prisma.payoutRequest.findFirst({
+        where: {
+          creatorId: user.creatorProfile.id,
+          status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
+        },
+      });
+
+      if (existingPendingRequest) {
+        throw new BadRequestException('You already have a pending payout request');
+      }
+
+      // Create payout request with verification timestamps
+      const payoutRequest = await this.prisma.payoutRequest.create({
+        data: {
+          creatorId: user.creatorProfile.id,
+          requestedAmount,
+          availableBalance,
+          currency: user.creatorProfile.bankCurrency || 'USD',
+          status: 'PENDING',
+          emailVerifiedAt: user.emailVerified ? new Date() : null,
+          kycVerifiedAt: user.creatorProfile.verificationStatus === VerificationStatus.VERIFIED
+            ? user.creatorProfile.verifiedAt
+            : null,
+          bankSetupAt: user.creatorProfile.payoutSetupCompleted ? new Date() : null,
+        },
+      });
+
+      this.logger.log(`Payout request created: ${payoutRequest.id} for user ${userId}`);
+
+      return {
+        id: payoutRequest.id,
+        requestedAmount: payoutRequest.requestedAmount,
+        availableBalance: payoutRequest.availableBalance,
+        currency: payoutRequest.currency,
+        status: payoutRequest.status,
+        createdAt: payoutRequest.createdAt,
+        message: 'Payout request submitted successfully. It will be reviewed by our team.',
+      };
+    } catch (error) {
+      this.logger.error(`Failed to create payout request for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all payout requests for a creator
+   */
+  async getPayoutRequests(userId: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { creatorProfile: true },
+      });
+
+      if (!user || !user.creatorProfile) {
+        throw new NotFoundException('Creator profile not found');
+      }
+
+      const requests = await this.prisma.payoutRequest.findMany({
+        where: { creatorId: user.creatorProfile.id },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          payout: {
+            select: {
+              id: true,
+              amount: true,
+              status: true,
+              processedAt: true,
+              paymentId: true,
+            },
+          },
+        },
+      });
+
+      return requests.map(request => ({
+        id: request.id,
+        requestedAmount: request.requestedAmount,
+        availableBalance: request.availableBalance,
+        currency: request.currency,
+        status: request.status,
+        reviewedAt: request.reviewedAt,
+        reviewNotes: request.reviewNotes,
+        createdAt: request.createdAt,
+        payout: request.payout,
+      }));
+    } catch (error) {
+      this.logger.error(`Failed to get payout requests for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific payout request by ID
+   */
+  async getPayoutRequestById(userId: string, requestId: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { creatorProfile: true },
+      });
+
+      if (!user || !user.creatorProfile) {
+        throw new NotFoundException('Creator profile not found');
+      }
+
+      const request = await this.prisma.payoutRequest.findFirst({
+        where: {
+          id: requestId,
+          creatorId: user.creatorProfile.id,
+        },
+        include: {
+          payout: {
+            select: {
+              id: true,
+              amount: true,
+              status: true,
+              processedAt: true,
+              paymentId: true,
+              notes: true,
+            },
+          },
+        },
+      });
+
+      if (!request) {
+        throw new NotFoundException('Payout request not found');
+      }
+
+      return {
+        id: request.id,
+        requestedAmount: request.requestedAmount,
+        availableBalance: request.availableBalance,
+        currency: request.currency,
+        status: request.status,
+        emailVerifiedAt: request.emailVerifiedAt,
+        kycVerifiedAt: request.kycVerifiedAt,
+        bankSetupAt: request.bankSetupAt,
+        reviewedBy: request.reviewedBy,
+        reviewedAt: request.reviewedAt,
+        reviewNotes: request.reviewNotes,
+        createdAt: request.createdAt,
+        updatedAt: request.updatedAt,
+        payout: request.payout,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get payout request ${requestId} for user ${userId}:`, error);
+      throw error;
+    }
+  }
 }

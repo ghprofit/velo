@@ -50,7 +50,7 @@ export default function LoginPage() {
               <h2 className="text-3xl font-bold text-gray-900">
                 Manage your platform with confidence.
               </h2>
-              <p className="text-lg text-gray-600">
+              <p className="hidden text-lg text-gray-600">
                 Simple, secure access to your admin dashboard.
               </p>
             </div>
@@ -151,7 +151,7 @@ export default function LoginPage() {
             <h2 className="text-3xl font-bold text-gray-900">
               Manage your platform with confidence.
             </h2>
-            <p className="text-lg text-gray-600">
+            <p className="hidden text-lg text-gray-600">
               Simple, secure access to your admin dashboard.
             </p>
           </div>
@@ -163,7 +163,7 @@ export default function LoginPage() {
             {/* Welcome Text */}
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome Back
+                Welcome
               </h2>
               <p className="text-base text-gray-600">
                 Login to manage your content and earnings.

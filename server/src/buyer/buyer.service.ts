@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../stripe/stripe.service';
+import { EmailService } from '../email/email.service';
+import { S3Service } from '../s3/s3.service';
 import * as crypto from 'crypto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
@@ -15,9 +17,16 @@ import { CreatePurchaseDto } from './dto/create-purchase.dto';
 export class BuyerService {
   private readonly logger = new Logger(BuyerService.name);
 
+  // Access control constants
+  private readonly MAX_TRUSTED_DEVICES = 3;
+  private readonly ACCESS_WINDOW_HOURS = 24;
+  private readonly VERIFICATION_CODE_EXPIRY_MINUTES = 15;
+
   constructor(
     private prisma: PrismaService,
     private stripeService: StripeService,
+    private emailService: EmailService,
+    private s3Service: S3Service,
   ) {}
 
   /**
@@ -114,13 +123,18 @@ export class BuyerService {
           verificationStatus: content.creator.verificationStatus,
         };
 
+    // Generate signed URL for thumbnail (valid for 24 hours)
+    const thumbnailUrl = content.s3Key
+      ? await this.s3Service.getSignedUrl(content.s3Key, 86400)
+      : content.thumbnailUrl;
+
     // Return public content info (without S3 keys)
     return {
       id: content.id,
       title: content.title,
       description: content.description,
       price: content.price,
-      thumbnailUrl: content.thumbnailUrl,
+      thumbnailUrl,
       contentType: content.contentType,
       duration: content.duration,
       viewCount: content.viewCount,
@@ -132,7 +146,7 @@ export class BuyerService {
   /**
    * Create a purchase and payment intent
    */
-  async createPurchase(dto: CreatePurchaseDto) {
+  async createPurchase(dto: CreatePurchaseDto, ipAddress?: string) {
     // Verify session exists
     const session = await this.prisma.buyerSession.findUnique({
       where: { sessionToken: dto.sessionToken },
@@ -186,51 +200,46 @@ export class BuyerService {
       };
     }
 
-    // Create payment intent
+    // Create payment intent - buyer pays 110% of content price
+    const buyerAmount = content.price * 1.10;
     const paymentIntent = await this.stripeService.createPaymentIntent(
-      content.price,
+      buyerAmount,
       'usd',
       {
         contentId: content.id,
         contentTitle: content.title,
         creatorName: content.creator.displayName,
-        sessionId: session.id,
+        sessionId: session.id.toString(), // Ensure string for Stripe metadata
       },
     );
 
     // Generate access token
     const accessToken = crypto.randomBytes(32).toString('hex');
 
-    // Create purchase record
+    // Create purchase record with fingerprinting
     const purchase = await this.prisma.purchase.create({
       data: {
         contentId: dto.contentId,
         buyerSessionId: session.id,
-        amount: content.price,
+        amount: buyerAmount,           // Total buyer pays (110%)
+        basePrice: content.price,       // Creator's set price (100%)
         currency: 'USD',
         paymentProvider: 'STRIPE',
         paymentIntentId: paymentIntent.id,
         status: 'PENDING',
         accessToken,
+        purchaseFingerprint: dto.fingerprint || null,
+        trustedFingerprints: dto.fingerprint ? [dto.fingerprint] : [],
+        purchaseIpAddress: ipAddress || null,
       },
     });
 
-    // Update payment intent metadata with purchase details
-    await this.stripeService.getStripeInstance().paymentIntents.update(
-      paymentIntent.id,
-      {
-        metadata: {
-          ...paymentIntent.metadata,
-          purchaseId: purchase.id,
-          accessToken: purchase.accessToken,
-        },
-      },
-    );
-
+    // Return purchase details directly to client
+    // Client will use these values instead of relying on Stripe metadata
     return {
       purchaseId: purchase.id,
       clientSecret: paymentIntent.client_secret,
-      amount: content.price,
+      amount: buyerAmount,            // Return total buyer pays (110%)
       accessToken: purchase.accessToken,
     };
   }
@@ -267,7 +276,11 @@ export class BuyerService {
   /**
    * Get content access with signed URL (after purchase)
    */
-  async getContentAccess(accessToken: string) {
+  async getContentAccess(
+    accessToken: string,
+    fingerprint: string,
+    ipAddress?: string,
+  ) {
     const purchase = await this.prisma.purchase.findUnique({
       where: { accessToken },
       include: {
@@ -294,9 +307,31 @@ export class BuyerService {
       throw new UnauthorizedException('Purchase not completed');
     }
 
+    // Verify fingerprint
+    if (!purchase.trustedFingerprints.includes(fingerprint)) {
+      throw new UnauthorizedException('Device not verified');
+    }
+
     // Check if access has expired (if expiration is set)
     if (purchase.accessExpiresAt && purchase.accessExpiresAt < new Date()) {
       throw new UnauthorizedException('Access has expired');
+    }
+
+    // Initialize 24-hour window on FIRST access
+    if (!purchase.accessWindowStartedAt) {
+      const now = new Date();
+      const expiry = new Date(
+        now.getTime() + this.ACCESS_WINDOW_HOURS * 60 * 60 * 1000,
+      );
+
+      await this.prisma.purchase.update({
+        where: { id: purchase.id },
+        data: {
+          accessWindowStartedAt: now,
+          accessExpiresAt: expiry,
+          firstAccessIpAddress: ipAddress,
+        },
+      });
     }
 
     // Update view count and last viewed
@@ -327,7 +362,23 @@ export class BuyerService {
           profileImage: null, // Hide profile image even after purchase if privacy is disabled
         };
 
-    // Return content info (S3 service will generate signed URLs separately)
+    // Generate signed URLs for thumbnail and content items (valid for 24 hours)
+    const thumbnailUrl = purchase.content.s3Key
+      ? await this.s3Service.getSignedUrl(purchase.content.s3Key, 86400)
+      : purchase.content.thumbnailUrl;
+
+    // Generate signed URLs for all content items
+    const contentItemsWithUrls = await Promise.all(
+      purchase.content.contentItems.map(async (item) => ({
+        id: item.id,
+        s3Key: item.s3Key,
+        s3Bucket: item.s3Bucket,
+        order: item.order,
+        signedUrl: await this.s3Service.getSignedUrl(item.s3Key, 86400),
+      })),
+    );
+
+    // Return content info with signed URLs
     return {
       content: {
         id: purchase.content.id,
@@ -336,15 +387,10 @@ export class BuyerService {
         contentType: purchase.content.contentType,
         s3Key: purchase.content.s3Key,
         s3Bucket: purchase.content.s3Bucket,
-        thumbnailUrl: purchase.content.thumbnailUrl,
+        thumbnailUrl,
         duration: purchase.content.duration,
         creator: creatorInfo,
-        contentItems: purchase.content.contentItems.map((item) => ({
-          id: item.id,
-          s3Key: item.s3Key,
-          s3Bucket: item.s3Bucket,
-          order: item.order,
-        })),
+        contentItems: contentItemsWithUrls,
       },
       purchase: {
         viewCount: purchase.viewCount + 1,
@@ -399,6 +445,8 @@ export class BuyerService {
    * This provides immediate feedback while the webhook serves as backup
    */
   async confirmPurchase(purchaseId: string, paymentIntentId: string) {
+    this.logger.log(`Confirming purchase ${purchaseId} with payment intent ${paymentIntentId}`);
+
     // Find the purchase
     const purchase = await this.prisma.purchase.findUnique({
       where: { id: purchaseId },
@@ -412,11 +460,13 @@ export class BuyerService {
     });
 
     if (!purchase) {
+      this.logger.error(`Purchase not found: ${purchaseId}`);
       throw new NotFoundException('Purchase not found');
     }
 
     // Verify payment intent matches
     if (purchase.paymentIntentId !== paymentIntentId) {
+      this.logger.error(`Payment intent mismatch for purchase ${purchaseId}: expected ${purchase.paymentIntentId}, got ${paymentIntentId}`);
       throw new BadRequestException('Payment intent mismatch');
     }
 
@@ -426,11 +476,13 @@ export class BuyerService {
     );
 
     if (paymentIntent.status !== 'succeeded') {
+      this.logger.error(`Payment intent ${paymentIntentId} status is ${paymentIntent.status}, expected succeeded`);
       throw new BadRequestException('Payment not completed');
     }
 
     // If already completed, just return the data
     if (purchase.status === 'COMPLETED') {
+      this.logger.log(`Purchase ${purchase.id} already completed, returning existing data`);
       return {
         purchaseId: purchase.id,
         accessToken: purchase.accessToken,
@@ -456,8 +508,12 @@ export class BuyerService {
       },
     });
 
-    // Update creator earnings
-    const creatorEarnings = purchase.amount * 0.85; // 85% to creator, 15% platform fee
+    // Update creator earnings - 90% of base price
+    // For new purchases: basePrice exists, creator gets 90% of basePrice
+    // For old purchases (migration): basePrice is null, use old calculation (85% of amount)
+    const creatorEarnings = purchase.basePrice
+      ? purchase.basePrice * 0.90  // New pricing: 90% of base price
+      : purchase.amount * 0.85;    // Legacy purchases: 85% of amount
     await this.prisma.creatorProfile.update({
       where: { id: purchase.content.creatorId },
       data: {
@@ -473,5 +529,165 @@ export class BuyerService {
       accessToken: purchase.accessToken,
       status: 'COMPLETED',
     };
+  }
+
+  /**
+   * Check if buyer has access to content (pre-check before loading)
+   */
+  async checkAccessEligibility(accessToken: string, fingerprint: string) {
+    this.logger.log(`Checking access eligibility for token: ${accessToken?.substring(0, 10)}...`);
+
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { accessToken },
+    });
+
+    if (!purchase) {
+      this.logger.warn(`No purchase found for access token: ${accessToken?.substring(0, 10)}...`);
+      return {
+        hasAccess: false,
+        reason: 'Invalid purchase - not found',
+      };
+    }
+
+    if (purchase.status !== 'COMPLETED') {
+      this.logger.warn(`Purchase ${purchase.id} status is ${purchase.status}, expected COMPLETED`);
+      return {
+        hasAccess: false,
+        reason: `Invalid purchase - status is ${purchase.status}`,
+      };
+    }
+
+    // Check expiration
+    if (purchase.accessExpiresAt && purchase.accessExpiresAt < new Date()) {
+      return {
+        hasAccess: false,
+        isExpired: true,
+        reason: 'Your 24-hour access has expired',
+      };
+    }
+
+    // Check fingerprint
+    const isTrusted = purchase.trustedFingerprints.includes(fingerprint);
+    if (!isTrusted) {
+      return {
+        hasAccess: false,
+        needsEmailVerification: true,
+        reason: 'Accessing from new device',
+        canAddMoreDevices:
+          purchase.trustedFingerprints.length < this.MAX_TRUSTED_DEVICES,
+      };
+    }
+
+    return {
+      hasAccess: true,
+      accessExpiresAt: purchase.accessExpiresAt,
+      timeRemaining: purchase.accessExpiresAt
+        ? purchase.accessExpiresAt.getTime() - Date.now()
+        : null,
+    };
+  }
+
+  /**
+   * Request device verification via email
+   */
+  async requestDeviceVerification(
+    accessToken: string,
+    fingerprint: string,
+    email: string,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { accessToken },
+      include: {
+        buyerSession: true,
+      },
+    });
+
+    if (!purchase) {
+      throw new NotFoundException('Purchase not found');
+    }
+
+    // Verify email matches
+    if (purchase.buyerSession.email !== email) {
+      throw new UnauthorizedException('Email mismatch');
+    }
+
+    // Check device limit
+    if (purchase.trustedFingerprints.length >= this.MAX_TRUSTED_DEVICES) {
+      throw new BadRequestException('Maximum devices reached');
+    }
+
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(
+      Date.now() + this.VERIFICATION_CODE_EXPIRY_MINUTES * 60 * 1000,
+    );
+
+    // Store code
+    const codes = (purchase.deviceVerificationCodes as any[]) || [];
+    codes.push({ code, fingerprint, expiresAt: expiresAt.toISOString() });
+
+    await this.prisma.purchase.update({
+      where: { id: purchase.id },
+      data: { deviceVerificationCodes: codes },
+    });
+
+    // Send email
+    await this.emailService.sendEmail({
+      to: email,
+      subject: 'Device Verification Code',
+      html: `<div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Device Verification</h2>
+        <p>You're attempting to access purchased content from a new device.</p>
+        <p>Your verification code is:</p>
+        <h1 style="color: #4F46E5; font-size: 36px; letter-spacing: 8px;">${code}</h1>
+        <p>This code will expire in ${this.VERIFICATION_CODE_EXPIRY_MINUTES} minutes.</p>
+        <p>If you didn't request this code, please ignore this email.</p>
+      </div>`,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Verify device code and add to trusted devices
+   */
+  async verifyDeviceCode(
+    accessToken: string,
+    fingerprint: string,
+    verificationCode: string,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { accessToken },
+    });
+
+    if (!purchase) {
+      throw new NotFoundException('Purchase not found');
+    }
+
+    // Find valid code
+    const codes = (purchase.deviceVerificationCodes as any[]) || [];
+    const validCode = codes.find(
+      (c) =>
+        c.code === verificationCode &&
+        c.fingerprint === fingerprint &&
+        new Date(c.expiresAt) > new Date(),
+    );
+
+    if (!validCode) {
+      throw new UnauthorizedException('Invalid or expired verification code');
+    }
+
+    // Add to trusted fingerprints
+    await this.prisma.purchase.update({
+      where: { id: purchase.id },
+      data: {
+        trustedFingerprints: [...purchase.trustedFingerprints, fingerprint],
+        deviceVerificationCodes: codes.filter(
+          (c) => c.code !== verificationCode,
+        ),
+      },
+    });
+
+    return { success: true };
   }
 }

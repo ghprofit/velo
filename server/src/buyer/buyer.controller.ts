@@ -13,6 +13,9 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { VerifyAccessDto } from './dto/verify-access.dto';
 import { ConfirmPurchaseDto } from './dto/confirm-purchase.dto';
+import { CheckAccessEligibilityDto } from './dto/check-access-eligibility.dto';
+import { RequestDeviceVerificationDto } from './dto/request-device-verification.dto';
+import { VerifyDeviceCodeDto } from './dto/verify-device-code.dto';
 
 @Controller('buyer')
 export class BuyerController {
@@ -43,8 +46,8 @@ export class BuyerController {
    * Create a purchase
    */
   @Post('purchase')
-  async createPurchase(@Body() dto: CreatePurchaseDto) {
-    return this.buyerService.createPurchase(dto);
+  async createPurchase(@Body() dto: CreatePurchaseDto, @Ip() ipAddress: string) {
+    return this.buyerService.createPurchase(dto, ipAddress);
   }
 
   /**
@@ -59,8 +62,8 @@ export class BuyerController {
    * Get content access after purchase
    */
   @Post('access')
-  async getContentAccess(@Body() dto: VerifyAccessDto) {
-    return this.buyerService.getContentAccess(dto.accessToken);
+  async getContentAccess(@Body() dto: VerifyAccessDto, @Ip() ipAddress: string) {
+    return this.buyerService.getContentAccess(dto.accessToken, dto.fingerprint, ipAddress);
   }
 
   /**
@@ -77,5 +80,37 @@ export class BuyerController {
   @Post('purchase/confirm')
   async confirmPurchase(@Body() dto: ConfirmPurchaseDto) {
     return this.buyerService.confirmPurchase(dto.purchaseId, dto.paymentIntentId);
+  }
+
+  /**
+   * Check access eligibility before loading content
+   */
+  @Post('access/check-eligibility')
+  async checkAccessEligibility(@Body() dto: CheckAccessEligibilityDto) {
+    return this.buyerService.checkAccessEligibility(dto.accessToken, dto.fingerprint);
+  }
+
+  /**
+   * Request device verification code
+   */
+  @Post('access/request-device-verification')
+  async requestDeviceVerification(@Body() dto: RequestDeviceVerificationDto) {
+    return this.buyerService.requestDeviceVerification(
+      dto.accessToken,
+      dto.fingerprint,
+      dto.email,
+    );
+  }
+
+  /**
+   * Verify device code
+   */
+  @Post('access/verify-device')
+  async verifyDeviceCode(@Body() dto: VerifyDeviceCodeDto) {
+    return this.buyerService.verifyDeviceCode(
+      dto.accessToken,
+      dto.fingerprint,
+      dto.verificationCode,
+    );
   }
 }

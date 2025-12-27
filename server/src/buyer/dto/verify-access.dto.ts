@@ -4,4 +4,8 @@ export class VerifyAccessDto {
   @IsNotEmpty()
   @IsString()
   accessToken: string;
+
+  @IsNotEmpty()
+  @IsString()
+  fingerprint: string;
 }

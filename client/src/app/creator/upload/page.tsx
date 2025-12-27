@@ -305,7 +305,7 @@ export default function UploadContentPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Upload & Monetize Your Content</h1>
-        <p className="text-sm sm:text-base text-gray-600">Follow the steps to upload, price, and share your exclusive content.</p>
+        <p className="hidden text-sm sm:text-base text-gray-600">Follow the steps to upload, price, and share your exclusive content.</p>
       </div>
 
       {/* Progress Steps */}
@@ -361,7 +361,7 @@ export default function UploadContentPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <div>
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Step 1: Upload Your Content</h2>
-                  <p className="text-sm text-gray-600 mt-1">Drag and drop or browse to upload your files</p>
+                  <p className="hidden text-sm text-gray-600 mt-1">Drag and drop or browse to upload your files</p>
                 </div>
                 <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2.5 sm:px-3 py-1 rounded-full w-fit">
                   {uploadedFiles.length}/10 files
@@ -474,7 +474,7 @@ export default function UploadContentPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
               <div className="mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Step 2: Content Details</h2>
-                <p className="text-sm text-gray-600 mt-1">Give your content a title, description, and set your price</p>
+                <p className="hidden text-sm text-gray-600 mt-1">Give your content a title, description, and set your price</p>
               </div>
 
               <div className="space-y-4 sm:space-y-6">
@@ -545,7 +545,9 @@ export default function UploadContentPage() {
                       className="w-full pl-7 sm:pl-8 pr-3 sm:pr-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1.5 sm:mt-2">You'll receive 80% of the sale price after platform fees.</p>
+                  <p className="text-xs text-gray-500 mt-1.5 sm:mt-2">
+                    You'll receive <span className="font-semibold text-gray-900">${price && !isNaN(parseFloat(price)) ? (parseFloat(price) * 0.90).toFixed(2) : '0.00'}</span> (90% of your price)
+                  </p>
                 </div>
               </div>
 
@@ -580,7 +582,7 @@ export default function UploadContentPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
               <div className="mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Step 3: Generate Your Unique Link</h2>
-                <p className="text-sm text-gray-600 mt-1">Review your content and generate a unique, trackable link</p>
+                <p className="hidden text-sm text-gray-600 mt-1">Review your content and generate a unique, trackable link</p>
               </div>
 
               {/* Content Summary */}

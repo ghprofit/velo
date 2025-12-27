@@ -5,15 +5,20 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { EmailVerifiedGuard } from './guards/email-verified.guard';
+import { VerifiedCreatorGuard } from './guards/verified-creator.guard';
+import { PayoutEligibleGuard } from './guards/payout-eligible.guard';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EmailModule } from '../email/email.module';
 import { TwofactorModule } from '../twofactor/twofactor.module';
+import { RedisModule } from '../redis/redis.module';
 
 @Module({
   imports: [
     PrismaModule,
     EmailModule,
     TwofactorModule,
+    RedisModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -36,7 +41,19 @@ import { TwofactorModule } from '../twofactor/twofactor.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    EmailVerifiedGuard,
+    VerifiedCreatorGuard,
+    PayoutEligibleGuard,
+  ],
+  exports: [
+    AuthService,
+    JwtStrategy,
+    EmailVerifiedGuard,
+    VerifiedCreatorGuard,
+    PayoutEligibleGuard,
+  ],
 })
 export class AuthModule {}

@@ -58,6 +58,8 @@
     "test",
     "**/*spec.ts",
     "prisma/**/*",
+    "**/examples/**",
+    "src/recognition/**/*",
     "src/controllers/auth/*.ts",
     "src/controllers/buyer/*.ts",
     "src/controllers/verification/*.ts",

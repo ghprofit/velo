@@ -47,12 +47,19 @@ exports.BuyerService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const stripe_service_1 = require("../stripe/stripe.service");
+const email_service_1 = require("../email/email.service");
+const s3_service_1 = require("../s3/s3.service");
 const crypto = __importStar(require("crypto"));
 let BuyerService = BuyerService_1 = class BuyerService {
-    constructor(prisma, stripeService) {
+    constructor(prisma, stripeService, emailService, s3Service) {
         this.prisma = prisma;
         this.stripeService = stripeService;
+        this.emailService = emailService;
+        this.s3Service = s3Service;
         this.logger = new common_1.Logger(BuyerService_1.name);
+        this.MAX_TRUSTED_DEVICES = 3;
+        this.ACCESS_WINDOW_HOURS = 24;
+        this.VERIFICATION_CODE_EXPIRY_MINUTES = 15;
     }
     async createOrGetSession(dto, ipAddress, userAgent) {
         if (dto.fingerprint) {
@@ -124,12 +131,15 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 profileImage: null,
                 verificationStatus: content.creator.verificationStatus,
             };
+        const thumbnailUrl = content.s3Key
+            ? await this.s3Service.getSignedUrl(content.s3Key, 86400)
+            : content.thumbnailUrl;
         return {
             id: content.id,
             title: content.title,
             description: content.description,
             price: content.price,
-            thumbnailUrl: content.thumbnailUrl,
+            thumbnailUrl,
             contentType: content.contentType,
             duration: content.duration,
             viewCount: content.viewCount,
@@ -137,7 +147,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
             creator: creatorInfo,
         };
     }
-    async createPurchase(dto) {
+    async createPurchase(dto, ipAddress) {
         const session = await this.prisma.buyerSession.findUnique({
             where: { sessionToken: dto.sessionToken },
         });
@@ -179,36 +189,34 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 accessToken: existingPurchase.accessToken,
             };
         }
-        const paymentIntent = await this.stripeService.createPaymentIntent(content.price, 'usd', {
+        const buyerAmount = content.price * 1.10;
+        const paymentIntent = await this.stripeService.createPaymentIntent(buyerAmount, 'usd', {
             contentId: content.id,
             contentTitle: content.title,
             creatorName: content.creator.displayName,
-            sessionId: session.id,
+            sessionId: session.id.toString(),
         });
         const accessToken = crypto.randomBytes(32).toString('hex');
         const purchase = await this.prisma.purchase.create({
             data: {
                 contentId: dto.contentId,
                 buyerSessionId: session.id,
-                amount: content.price,
+                amount: buyerAmount,
+                basePrice: content.price,
                 currency: 'USD',
                 paymentProvider: 'STRIPE',
                 paymentIntentId: paymentIntent.id,
                 status: 'PENDING',
                 accessToken,
-            },
-        });
-        await this.stripeService.getStripeInstance().paymentIntents.update(paymentIntent.id, {
-            metadata: {
-                ...paymentIntent.metadata,
-                purchaseId: purchase.id,
-                accessToken: purchase.accessToken,
+                purchaseFingerprint: dto.fingerprint || null,
+                trustedFingerprints: dto.fingerprint ? [dto.fingerprint] : [],
+                purchaseIpAddress: ipAddress || null,
             },
         });
         return {
             purchaseId: purchase.id,
             clientSecret: paymentIntent.client_secret,
-            amount: content.price,
+            amount: buyerAmount,
             accessToken: purchase.accessToken,
         };
     }
@@ -235,7 +243,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
             content: purchase.content,
         };
     }
-    async getContentAccess(accessToken) {
+    async getContentAccess(accessToken, fingerprint, ipAddress) {
         const purchase = await this.prisma.purchase.findUnique({
             where: { accessToken },
             include: {
@@ -259,8 +267,23 @@ let BuyerService = BuyerService_1 = class BuyerService {
         if (purchase.status !== 'COMPLETED') {
             throw new common_1.UnauthorizedException('Purchase not completed');
         }
+        if (!purchase.trustedFingerprints.includes(fingerprint)) {
+            throw new common_1.UnauthorizedException('Device not verified');
+        }
         if (purchase.accessExpiresAt && purchase.accessExpiresAt < new Date()) {
             throw new common_1.UnauthorizedException('Access has expired');
+        }
+        if (!purchase.accessWindowStartedAt) {
+            const now = new Date();
+            const expiry = new Date(now.getTime() + this.ACCESS_WINDOW_HOURS * 60 * 60 * 1000);
+            await this.prisma.purchase.update({
+                where: { id: purchase.id },
+                data: {
+                    accessWindowStartedAt: now,
+                    accessExpiresAt: expiry,
+                    firstAccessIpAddress: ipAddress,
+                },
+            });
         }
         await this.prisma.purchase.update({
             where: { id: purchase.id },
@@ -284,6 +307,16 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 displayName: purchase.content.creator.displayName,
                 profileImage: null,
             };
+        const thumbnailUrl = purchase.content.s3Key
+            ? await this.s3Service.getSignedUrl(purchase.content.s3Key, 86400)
+            : purchase.content.thumbnailUrl;
+        const contentItemsWithUrls = await Promise.all(purchase.content.contentItems.map(async (item) => ({
+            id: item.id,
+            s3Key: item.s3Key,
+            s3Bucket: item.s3Bucket,
+            order: item.order,
+            signedUrl: await this.s3Service.getSignedUrl(item.s3Key, 86400),
+        })));
         return {
             content: {
                 id: purchase.content.id,
@@ -292,15 +325,10 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 contentType: purchase.content.contentType,
                 s3Key: purchase.content.s3Key,
                 s3Bucket: purchase.content.s3Bucket,
-                thumbnailUrl: purchase.content.thumbnailUrl,
+                thumbnailUrl,
                 duration: purchase.content.duration,
                 creator: creatorInfo,
-                contentItems: purchase.content.contentItems.map((item) => ({
-                    id: item.id,
-                    s3Key: item.s3Key,
-                    s3Bucket: item.s3Bucket,
-                    order: item.order,
-                })),
+                contentItems: contentItemsWithUrls,
             },
             purchase: {
                 viewCount: purchase.viewCount + 1,
@@ -343,6 +371,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
         }));
     }
     async confirmPurchase(purchaseId, paymentIntentId) {
+        this.logger.log(`Confirming purchase ${purchaseId} with payment intent ${paymentIntentId}`);
         const purchase = await this.prisma.purchase.findUnique({
             where: { id: purchaseId },
             include: {
@@ -354,16 +383,20 @@ let BuyerService = BuyerService_1 = class BuyerService {
             },
         });
         if (!purchase) {
+            this.logger.error(`Purchase not found: ${purchaseId}`);
             throw new common_1.NotFoundException('Purchase not found');
         }
         if (purchase.paymentIntentId !== paymentIntentId) {
+            this.logger.error(`Payment intent mismatch for purchase ${purchaseId}: expected ${purchase.paymentIntentId}, got ${paymentIntentId}`);
             throw new common_1.BadRequestException('Payment intent mismatch');
         }
         const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);
         if (paymentIntent.status !== 'succeeded') {
+            this.logger.error(`Payment intent ${paymentIntentId} status is ${paymentIntent.status}, expected succeeded`);
             throw new common_1.BadRequestException('Payment not completed');
         }
         if (purchase.status === 'COMPLETED') {
+            this.logger.log(`Purchase ${purchase.id} already completed, returning existing data`);
             return {
                 purchaseId: purchase.id,
                 accessToken: purchase.accessToken,
@@ -384,7 +417,9 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 totalRevenue: { increment: purchase.amount },
             },
         });
-        const creatorEarnings = purchase.amount * 0.85;
+        const creatorEarnings = purchase.basePrice
+            ? purchase.basePrice * 0.90
+            : purchase.amount * 0.85;
         await this.prisma.creatorProfile.update({
             where: { id: purchase.content.creatorId },
             data: {
@@ -399,11 +434,117 @@ let BuyerService = BuyerService_1 = class BuyerService {
             status: 'COMPLETED',
         };
     }
+    async checkAccessEligibility(accessToken, fingerprint) {
+        this.logger.log(`Checking access eligibility for token: ${accessToken?.substring(0, 10)}...`);
+        const purchase = await this.prisma.purchase.findUnique({
+            where: { accessToken },
+        });
+        if (!purchase) {
+            this.logger.warn(`No purchase found for access token: ${accessToken?.substring(0, 10)}...`);
+            return {
+                hasAccess: false,
+                reason: 'Invalid purchase - not found',
+            };
+        }
+        if (purchase.status !== 'COMPLETED') {
+            this.logger.warn(`Purchase ${purchase.id} status is ${purchase.status}, expected COMPLETED`);
+            return {
+                hasAccess: false,
+                reason: `Invalid purchase - status is ${purchase.status}`,
+            };
+        }
+        if (purchase.accessExpiresAt && purchase.accessExpiresAt < new Date()) {
+            return {
+                hasAccess: false,
+                isExpired: true,
+                reason: 'Your 24-hour access has expired',
+            };
+        }
+        const isTrusted = purchase.trustedFingerprints.includes(fingerprint);
+        if (!isTrusted) {
+            return {
+                hasAccess: false,
+                needsEmailVerification: true,
+                reason: 'Accessing from new device',
+                canAddMoreDevices: purchase.trustedFingerprints.length < this.MAX_TRUSTED_DEVICES,
+            };
+        }
+        return {
+            hasAccess: true,
+            accessExpiresAt: purchase.accessExpiresAt,
+            timeRemaining: purchase.accessExpiresAt
+                ? purchase.accessExpiresAt.getTime() - Date.now()
+                : null,
+        };
+    }
+    async requestDeviceVerification(accessToken, fingerprint, email) {
+        const purchase = await this.prisma.purchase.findUnique({
+            where: { accessToken },
+            include: {
+                buyerSession: true,
+            },
+        });
+        if (!purchase) {
+            throw new common_1.NotFoundException('Purchase not found');
+        }
+        if (purchase.buyerSession.email !== email) {
+            throw new common_1.UnauthorizedException('Email mismatch');
+        }
+        if (purchase.trustedFingerprints.length >= this.MAX_TRUSTED_DEVICES) {
+            throw new common_1.BadRequestException('Maximum devices reached');
+        }
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + this.VERIFICATION_CODE_EXPIRY_MINUTES * 60 * 1000);
+        const codes = purchase.deviceVerificationCodes || [];
+        codes.push({ code, fingerprint, expiresAt: expiresAt.toISOString() });
+        await this.prisma.purchase.update({
+            where: { id: purchase.id },
+            data: { deviceVerificationCodes: codes },
+        });
+        await this.emailService.sendEmail({
+            to: email,
+            subject: 'Device Verification Code',
+            html: `<div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Device Verification</h2>
+        <p>You're attempting to access purchased content from a new device.</p>
+        <p>Your verification code is:</p>
+        <h1 style="color: #4F46E5; font-size: 36px; letter-spacing: 8px;">${code}</h1>
+        <p>This code will expire in ${this.VERIFICATION_CODE_EXPIRY_MINUTES} minutes.</p>
+        <p>If you didn't request this code, please ignore this email.</p>
+      </div>`,
+        });
+        return { success: true };
+    }
+    async verifyDeviceCode(accessToken, fingerprint, verificationCode) {
+        const purchase = await this.prisma.purchase.findUnique({
+            where: { accessToken },
+        });
+        if (!purchase) {
+            throw new common_1.NotFoundException('Purchase not found');
+        }
+        const codes = purchase.deviceVerificationCodes || [];
+        const validCode = codes.find((c) => c.code === verificationCode &&
+            c.fingerprint === fingerprint &&
+            new Date(c.expiresAt) > new Date());
+        if (!validCode) {
+            throw new common_1.UnauthorizedException('Invalid or expired verification code');
+        }
+        await this.prisma.purchase.update({
+            where: { id: purchase.id },
+            data: {
+                trustedFingerprints: [...purchase.trustedFingerprints, fingerprint],
+                deviceVerificationCodes: codes.filter((c) => c.code !== verificationCode),
+            },
+        });
+        return { success: true };
+    }
 };
 exports.BuyerService = BuyerService;
 exports.BuyerService = BuyerService = BuyerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        stripe_service_1.StripeService])
+        stripe_service_1.StripeService,
+        email_service_1.EmailService,
+        s3_service_1.S3Service])
 ], BuyerService);
 //# sourceMappingURL=buyer.service.js.map

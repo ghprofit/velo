@@ -8,10 +8,14 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  Param,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CreatorsService } from './creators.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PayoutEligibleGuard } from '../auth/guards/payout-eligible.guard';
 import { SetupBankAccountDto } from './dto/bank-account.dto';
+import { RequestPayoutDto } from './dto/request-payout.dto';
 
 @Controller('creators')
 @UseGuards(JwtAuthGuard)
@@ -106,6 +110,83 @@ export class CreatorsController {
       };
     } catch (error) {
       this.logger.error('Failed to get bank account:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Request a payout
+   * POST /api/creators/payout/request
+   * Requires: email verified, KYC verified, and bank details setup
+   */
+  @Post('payout/request')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(PayoutEligibleGuard)
+  @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 payout requests per hour
+  async requestPayout(@Request() req: any, @Body() requestPayoutDto: RequestPayoutDto) {
+    this.logger.log(`Payout request from user: ${req.user.id}`);
+
+    try {
+      const result = await this.creatorsService.requestPayout(req.user.id, requestPayoutDto.amount);
+
+      return {
+        success: true,
+        message: result.message,
+        data: {
+          id: result.id,
+          requestedAmount: result.requestedAmount,
+          availableBalance: result.availableBalance,
+          currency: result.currency,
+          status: result.status,
+          createdAt: result.createdAt,
+        },
+      };
+    } catch (error) {
+      this.logger.error('Failed to create payout request:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all payout requests for the authenticated creator
+   * GET /api/creators/payout/requests
+   */
+  @Get('payout/requests')
+  @HttpCode(HttpStatus.OK)
+  async getPayoutRequests(@Request() req: any) {
+    this.logger.log(`Getting payout requests for user: ${req.user.id}`);
+
+    try {
+      const requests = await this.creatorsService.getPayoutRequests(req.user.id);
+
+      return {
+        success: true,
+        data: requests,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get payout requests:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific payout request by ID
+   * GET /api/creators/payout/requests/:id
+   */
+  @Get('payout/requests/:id')
+  @HttpCode(HttpStatus.OK)
+  async getPayoutRequestById(@Request() req: any, @Param('id') requestId: string) {
+    this.logger.log(`Getting payout request ${requestId} for user: ${req.user.id}`);
+
+    try {
+      const request = await this.creatorsService.getPayoutRequestById(req.user.id, requestId);
+
+      return {
+        success: true,
+        data: request,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get payout request:', error);
       throw error;
     }
   }

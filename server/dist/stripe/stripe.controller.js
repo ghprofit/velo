@@ -99,7 +99,9 @@ let StripeController = StripeController_1 = class StripeController {
                 totalRevenue: { increment: purchase.amount },
             },
         });
-        const creatorEarnings = purchase.amount * 0.85;
+        const creatorEarnings = purchase.basePrice
+            ? purchase.basePrice * 0.90
+            : purchase.amount * 0.85;
         await this.prisma.creatorProfile.update({
             where: { id: purchase.content.creatorId },
             data: {
@@ -155,7 +157,9 @@ let StripeController = StripeController_1 = class StripeController {
                 totalRevenue: { decrement: purchase.amount },
             },
         });
-        const creatorEarnings = purchase.amount * 0.85;
+        const creatorEarnings = purchase.basePrice
+            ? purchase.basePrice * 0.90
+            : purchase.amount * 0.85;
         await this.prisma.creatorProfile.update({
             where: { id: purchase.content.creatorId },
             data: {

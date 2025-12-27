@@ -10,7 +10,6 @@ interface UserProfile {
   displayName: string | null;
   firstName: string | null;
   lastName: string | null;
-  profilePicture: string | null;
   emailVerified: boolean;
 }
 
@@ -32,7 +31,6 @@ interface NotificationPreferences {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [settingsTab, setSettingsTab] = useState('Profile Info');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,8 +43,6 @@ export default function SettingsPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [profilePicture, setProfilePicture] = useState('');
-  const [profilePicturePreview, setProfilePicturePreview] = useState('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Bank account state
@@ -83,7 +79,7 @@ export default function SettingsPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
-  const settingsTabs = ['Profile Info', 'Payouts', 'Security', 'Notifications', 'Danger Zone'];
+  const settingsTabs = ['Profile Info', 'Payouts', 'Security', 'Email Preferences', 'Danger Zone'];
 
   useEffect(() => {
     loadUserData();
@@ -101,8 +97,6 @@ export default function SettingsPage() {
       setFirstName(userData.firstName || '');
       setLastName(userData.lastName || '');
       setEmail(userData.email || '');
-      setProfilePicture(userData.profilePicture || '');
-      setProfilePicturePreview(userData.profilePicture || '');
 
       // Load bank account
       try {
@@ -125,39 +119,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Clear any previous errors
-      setError('');
-
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image size must be less than 5MB');
-        return;
-      }
-
-      // Create preview URL and convert to base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setProfilePicturePreview(base64String);
-        setProfilePicture(base64String);
-        console.log('Image loaded successfully, preview set');
-      };
-      reader.onerror = () => {
-        setError('Failed to read image file');
-        console.error('FileReader error');
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,7 +132,6 @@ export default function SettingsPage() {
         firstName,
         lastName,
         email,
-        profilePicture,
       });
 
       setSuccess('Profile updated successfully!');
@@ -191,8 +151,6 @@ export default function SettingsPage() {
       setFirstName(profile.firstName || '');
       setLastName(profile.lastName || '');
       setEmail(profile.email || '');
-      setProfilePicture(profile.profilePicture || '');
-      setProfilePicturePreview(profile.profilePicture || '');
     }
     setIsEditingProfile(false);
     setError('');
@@ -411,62 +369,6 @@ export default function SettingsPage() {
               </div>
 
               <form onSubmit={handleSaveProfile} className="space-y-6 sm:space-y-8">
-                {/* Profile Picture */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Profile Picture
-                  </label>
-                  {isEditingProfile ? (
-                    <>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProfilePictureChange}
-                        className="hidden"
-                      />
-                      <div
-                        onClick={() => fileInputRef.current?.click()}
-                        className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-gray-300 overflow-hidden cursor-pointer hover:border-indigo-500 transition-colors group"
-                      >
-                        {profilePicturePreview ? (
-                          <img
-                            src={profilePicturePreview}
-                            alt="Profile"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <span className="text-3xl sm:text-4xl text-gray-400">👤</span>
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center">
-                          <span className="text-white opacity-0 group-hover:opacity-100 text-xs sm:text-sm font-medium">
-                            Click to upload
-                          </span>
-                        </div>
-                      </div>
-                      <p className="mt-2 text-xs text-gray-500">
-                        Click the image to upload a new profile picture (max 5MB)
-                      </p>
-                    </>
-                  ) : (
-                    <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-gray-200 overflow-hidden">
-                      {profilePicturePreview ? (
-                        <img
-                          src={profilePicturePreview}
-                          alt="Profile"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <span className="text-3xl sm:text-4xl text-gray-400">👤</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
                 {/* Display Name */}
                 <div>
                   <label htmlFor="displayName" className="block text-sm font-medium text-gray-900 mb-2">
@@ -879,12 +781,12 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Notifications Tab */}
-          {settingsTab === 'Notifications' && (
+          {/* Email Preferences Tab */}
+          {settingsTab === 'Email Preferences' && (
             <div className="max-w-5xl">
               <div className="mb-6 sm:mb-8">
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Notifications Preferences</h2>
-                <p className="text-sm sm:text-base text-gray-600">Control which emails and in-app alerts you receive from VELO.</p>
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Email Preferences</h2>
+                <p className="text-sm sm:text-base text-gray-600">Control which email notifications you receive from VELO.</p>
               </div>
 
               {/* Earning & Engagement */}
@@ -1003,7 +905,7 @@ export default function SettingsPage() {
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
                 <p className="text-xs sm:text-sm text-blue-900">
-                  <strong>Auto-save enabled:</strong> Your notification preferences are automatically saved when you make changes.
+                  <strong>Auto-save enabled:</strong> Your email preferences are automatically saved when you make changes.
                 </p>
               </div>
             </div>

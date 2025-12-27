@@ -37,7 +37,6 @@ let StripeService = StripeService_1 = class StripeService {
                 amount: Math.round(amount * 100),
                 currency: currency.toLowerCase(),
                 metadata,
-                payment_method_types: ['card'],
                 automatic_payment_methods: {
                     enabled: true,
                 },
@@ -47,7 +46,8 @@ let StripeService = StripeService_1 = class StripeService {
         }
         catch (error) {
             this.logger.error('Failed to create payment intent:', error);
-            throw new common_1.BadRequestException('Failed to create payment intent');
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            throw new common_1.BadRequestException(`Failed to create payment intent: ${errorMessage}`);
         }
     }
     async retrievePaymentIntent(paymentIntentId) {

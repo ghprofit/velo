@@ -35,7 +35,6 @@ export class StripeService {
         amount: Math.round(amount * 100), // Convert to cents
         currency: currency.toLowerCase(),
         metadata,
-        payment_method_types: ['card'],
         automatic_payment_methods: {
           enabled: true,
         },
@@ -45,7 +44,8 @@ export class StripeService {
       return paymentIntent;
     } catch (error) {
       this.logger.error('Failed to create payment intent:', error);
-      throw new BadRequestException('Failed to create payment intent');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new BadRequestException(`Failed to create payment intent: ${errorMessage}`);
     }
   }
 

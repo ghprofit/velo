@@ -7,7 +7,7 @@ Get your authentication system up and running in minutes.
 - Node.js 18+ installed
 - PostgreSQL database running
 - Redis server installed
-- SendGrid account (for emails)
+- AWS account with SES configured (for emails)
 
 ---
 
@@ -36,10 +36,12 @@ JWT_REFRESH_EXPIRES_IN="7d"
 REDIS_HOST="localhost"
 REDIS_PORT=6379
 
-# SendGrid
-SENDGRID_API_KEY="SG.your-api-key-here"
-SENDGRID_FROM_EMAIL="noreply@yourdomain.com"
-SENDGRID_FROM_NAME="VeloLink"
+# AWS SES
+AWS_REGION="us-east-1"
+AWS_ACCESS_KEY_ID="your-aws-access-key-id"
+AWS_SECRET_ACCESS_KEY="your-aws-secret-access-key"
+SES_FROM_EMAIL="noreply@yourdomain.com"
+SES_FROM_NAME="VeloLink"
 
 # App URLs
 CLIENT_URL="http://localhost:3000"
@@ -274,9 +276,11 @@ Quick steps:
 
 ### ❌ "Email not sending"
 **Fix**:
-- Verify SENDGRID_API_KEY is valid
-- Check SendGrid dashboard for quota
-- Test API key: `curl https://api.sendgrid.com/v3/api_keys -H "Authorization: Bearer YOUR_KEY"`
+- Verify AWS credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) are valid
+- Ensure SES email addresses are verified in AWS Console
+- Check if account is in SES sandbox mode (requires recipient verification)
+- Review AWS SES sending quota in AWS Console
+- See [AWS_SES_SETUP.md](../src/email/AWS_SES_SETUP.md) for detailed setup instructions
 
 ### ❌ "Account locked" message
 **Fix**: This is working as intended after 5 failed login attempts. Wait 30 minutes or clear Redis: `redis-cli FLUSHDB`

@@ -119,7 +119,7 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
                   <svg className="w-8 h-8 sm:w-10 sm:h-10 text-purple-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  <p className="text-xs sm:text-sm font-medium text-gray-900">Lifetime</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-900">24-Hour Access</p>
                 </div>
               </div>
             </div>

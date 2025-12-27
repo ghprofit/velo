@@ -42,7 +42,6 @@ export default function CreatorSidebar(): JSX.Element {
     { id: 'upload', label: 'Upload Content', icon: 'upload', href: '/creator/upload' },
     { id: 'analytics', label: 'Analytics', icon: 'analytics', href: '/creator/analytics' },
     { id: 'earnings', label: 'Earnings', icon: 'earnings', href: '/creator/earnings' },
-    { id: 'notifications', label: 'Notifications', icon: 'notifications', href: '/creator/notifications' },
     { id: 'settings', label: 'Settings', icon: 'settings', href: '/creator/settings' },
     { id: 'support', label: 'Support', icon: 'support', href: '/creator/support' },
   ];

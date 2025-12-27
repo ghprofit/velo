@@ -8,9 +8,12 @@ interface CheckoutFormProps {
   onError: (error: string) => void;
   amount: number;
   paymentElementOptions?: any;
+  purchaseId: string;
+  accessToken: string;
+  contentId: string;
 }
 
-export default function CheckoutForm({ onSuccess, onError, amount, paymentElementOptions }: CheckoutFormProps) {
+export default function CheckoutForm({ onSuccess, onError, amount, paymentElementOptions, purchaseId, accessToken, contentId }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -28,7 +31,7 @@ export default function CheckoutForm({ onSuccess, onError, amount, paymentElemen
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/checkout/success`,
+          return_url: `${window.location.origin}/checkout/${contentId}/success?token=${accessToken}`,
         },
         redirect: 'if_required',
       });
@@ -37,9 +40,7 @@ export default function CheckoutForm({ onSuccess, onError, amount, paymentElemen
         onError(error.message || 'Payment failed');
         setIsProcessing(false);
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment successful
-        const purchaseId = paymentIntent.metadata?.purchaseId || '';
-        const accessToken = paymentIntent.metadata?.accessToken || '';
+        // Payment successful - use props instead of metadata
         onSuccess(purchaseId, accessToken, paymentIntent.id);
       }
     } catch (err: any) {

@@ -9,7 +9,7 @@ export const apiClient: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds
+  timeout: 60000, // 60 seconds (increased from 30)
 });
 
 // Track if we're currently refreshing the token
@@ -31,7 +31,7 @@ const processQueue = (error: any = null, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Request interceptor - Add auth token to requests
+// Request interceptor - Add auth token to requests and adjust timeouts
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Get access token from localStorage (or cookies in production)
@@ -39,6 +39,15 @@ apiClient.interceptors.request.use(
 
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    // Increase timeout for payment-related endpoints
+    if (
+      config.url?.includes('/purchase') ||
+      config.url?.includes('/stripe') ||
+      config.url?.includes('/confirm')
+    ) {
+      config.timeout = 90000; // 90 seconds for payment operations
     }
 
     return config;
@@ -217,7 +226,6 @@ export const authApi = {
     firstName?: string;
     lastName?: string;
     email?: string;
-    profilePicture?: string;
   }) => apiClient.post('/auth/profile/update', data),
 
   getNotificationPreferences: () => apiClient.get('/auth/notifications/preferences'),
@@ -448,6 +456,7 @@ export const buyerApi = {
     contentId: string;
     sessionToken: string;
     email?: string;
+    fingerprint?: string;
   }) =>
     apiClient.post('/buyer/purchase', data),
 
@@ -456,8 +465,28 @@ export const buyerApi = {
     apiClient.get(`/buyer/purchase/${id}`),
 
   // Get content access after purchase
-  getContentAccess: (accessToken: string) =>
-    apiClient.post('/buyer/access', { accessToken }),
+  getContentAccess: (accessToken: string, fingerprint: string) =>
+    apiClient.post('/buyer/access', { accessToken, fingerprint }),
+
+  // Check access eligibility before loading content
+  checkAccessEligibility: (accessToken: string, fingerprint: string) =>
+    apiClient.post('/buyer/access/check-eligibility', { accessToken, fingerprint }),
+
+  // Request device verification code
+  requestDeviceVerification: (data: {
+    accessToken: string;
+    fingerprint: string;
+    email: string;
+  }) =>
+    apiClient.post('/buyer/access/request-device-verification', data),
+
+  // Verify device code
+  verifyDeviceCode: (data: {
+    accessToken: string;
+    fingerprint: string;
+    verificationCode: string;
+  }) =>
+    apiClient.post('/buyer/access/verify-device', data),
 
   // Get all purchases for a session
   getSessionPurchases: (sessionToken: string) =>

@@ -131,8 +131,12 @@ export class StripeController {
       },
     });
 
-    // Update creator earnings
-    const creatorEarnings = purchase.amount * 0.85; // 85% to creator, 15% platform fee
+    // Update creator earnings - 90% of base price
+    // For new purchases: basePrice exists, creator gets 90% of basePrice
+    // For old purchases (migration): basePrice is null, use old calculation (85% of amount)
+    const creatorEarnings = purchase.basePrice
+      ? purchase.basePrice * 0.90  // New pricing: 90% of base price
+      : purchase.amount * 0.85;    // Legacy purchases: 85% of amount
     await this.prisma.creatorProfile.update({
       where: { id: purchase.content.creatorId },
       data: {
@@ -212,7 +216,10 @@ export class StripeController {
     });
 
     // Reverse creator earnings
-    const creatorEarnings = purchase.amount * 0.85;
+    // Use same logic as earnings calculation to properly reverse
+    const creatorEarnings = purchase.basePrice
+      ? purchase.basePrice * 0.90  // New pricing: 90% of base price
+      : purchase.amount * 0.85;    // Legacy purchases: 85% of amount
     await this.prisma.creatorProfile.update({
       where: { id: purchase.content.creatorId },
       data: {

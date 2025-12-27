@@ -1011,9 +1011,9 @@ export const {
     useGetAdminContentQuery,
     useGetAdminContentStatsQuery,
     useGetAdminContentByIdQuery,
-    useReviewContentMutation,
+    // useReviewContentMutation,
     useFlagContentMutation,
-    useRemoveContentMutation,
+    // useRemoveContentMutation,
 } = api;
 
 export default api;

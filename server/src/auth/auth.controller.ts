@@ -25,6 +25,7 @@ import { Enable2FADto } from './dto/enable-2fa.dto';
 import { Verify2FADto } from './dto/verify-2fa.dto';
 import { Disable2FADto } from './dto/disable-2fa.dto';
 import { VerifyBackupCodeDto } from './dto/verify-backup-code.dto';
+import { VerifyEmailCodeDto } from './dto/verify-email-code.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { TwofactorService } from '../twofactor/twofactor.service';
 
@@ -97,6 +98,18 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     const result = await this.authService.verifyEmail(dto);
+    return {
+      success: true,
+      message: result.message,
+    };
+  }
+
+  @Post('verify-email-code')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
+  async verifyEmailCode(@Req() req: any, @Body() dto: VerifyEmailCodeDto) {
+    const result = await this.authService.verifyEmailCode(req.user.userId, dto.code);
     return {
       success: true,
       message: result.message,

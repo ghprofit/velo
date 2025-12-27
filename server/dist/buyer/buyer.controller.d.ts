@@ -4,6 +4,9 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { VerifyAccessDto } from './dto/verify-access.dto';
 import { ConfirmPurchaseDto } from './dto/confirm-purchase.dto';
+import { CheckAccessEligibilityDto } from './dto/check-access-eligibility.dto';
+import { RequestDeviceVerificationDto } from './dto/request-device-verification.dto';
+import { VerifyDeviceCodeDto } from './dto/verify-device-code.dto';
 export declare class BuyerController {
     private readonly buyerService;
     constructor(buyerService: BuyerService);
@@ -28,7 +31,7 @@ export declare class BuyerController {
             verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
         };
     }>;
-    createPurchase(dto: CreatePurchaseDto): Promise<{
+    createPurchase(dto: CreatePurchaseDto, ipAddress: string): Promise<{
         alreadyPurchased: boolean;
         accessToken: string;
         purchaseId?: undefined;
@@ -51,7 +54,7 @@ export declare class BuyerController {
             contentType: string;
         };
     }>;
-    getContentAccess(dto: VerifyAccessDto): Promise<{
+    getContentAccess(dto: VerifyAccessDto, ipAddress: string): Promise<{
         content: {
             id: string;
             title: string;
@@ -70,6 +73,7 @@ export declare class BuyerController {
                 s3Key: string;
                 s3Bucket: string;
                 order: number;
+                signedUrl: string;
             }[];
         };
         purchase: {
@@ -93,6 +97,45 @@ export declare class BuyerController {
         purchaseId: string;
         accessToken: string;
         status: string;
+    }>;
+    checkAccessEligibility(dto: CheckAccessEligibilityDto): Promise<{
+        hasAccess: boolean;
+        reason: string;
+        isExpired?: undefined;
+        needsEmailVerification?: undefined;
+        canAddMoreDevices?: undefined;
+        accessExpiresAt?: undefined;
+        timeRemaining?: undefined;
+    } | {
+        hasAccess: boolean;
+        isExpired: boolean;
+        reason: string;
+        needsEmailVerification?: undefined;
+        canAddMoreDevices?: undefined;
+        accessExpiresAt?: undefined;
+        timeRemaining?: undefined;
+    } | {
+        hasAccess: boolean;
+        needsEmailVerification: boolean;
+        reason: string;
+        canAddMoreDevices: boolean;
+        isExpired?: undefined;
+        accessExpiresAt?: undefined;
+        timeRemaining?: undefined;
+    } | {
+        hasAccess: boolean;
+        accessExpiresAt: Date | null;
+        timeRemaining: number | null;
+        reason?: undefined;
+        isExpired?: undefined;
+        needsEmailVerification?: undefined;
+        canAddMoreDevices?: undefined;
+    }>;
+    requestDeviceVerification(dto: RequestDeviceVerificationDto): Promise<{
+        success: boolean;
+    }>;
+    verifyDeviceCode(dto: VerifyDeviceCodeDto): Promise<{
+        success: boolean;
     }>;
 }
 //# sourceMappingURL=buyer.controller.d.ts.map

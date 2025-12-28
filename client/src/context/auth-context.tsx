@@ -28,6 +28,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
+  // Listen for token refresh events from axios interceptor
+  useEffect(() => {
+    const handleTokenRefresh = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { accessToken, refreshToken } = customEvent.detail;
+
+      // Tokens are already updated in localStorage by the interceptor
+      // Just refresh the user data to sync Context state
+      try {
+        await refreshUser();
+      } catch (error) {
+        console.error('Failed to refresh user after token refresh:', error);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('auth-token-refreshed', handleTokenRefresh);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('auth-token-refreshed', handleTokenRefresh);
+      }
+    };
+  }, []);
+
   const initializeAuth = async () => {
     try {
       const storedUser = localStorage.getItem('user');

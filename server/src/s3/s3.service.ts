@@ -68,8 +68,8 @@ export class S3Service {
           Key: key,
           Body: fileBuffer,
           ContentType: contentType,
-          // Make files publicly readable (adjust based on your security needs)
-          // ACL: 'public-read',
+          // Note: ACL removed - modern S3 buckets have ACLs disabled by default
+          // Configure bucket policy for public access if needed
         },
       });
 

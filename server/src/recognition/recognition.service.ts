@@ -116,19 +116,26 @@ export class RecognitionService {
         taxonomyLevel: label.TaxonomyLevel,
       }));
 
-      // Extract unique flagged categories
+      // Only flag serious categories - exclude Rude Gestures, Drugs, Tobacco, Alcohol, Gambling, Hate Symbols
+      const seriousCategoriesOnly = ['Explicit Nudity', 'Suggestive', 'Violence', 'Visually Disturbing'];
+      const filteredLabels = moderationLabels.filter((label) => {
+        const category = label.parentName || label.name;
+        return seriousCategoriesOnly.some((serious) => category.includes(serious));
+      });
+
+      // Extract unique flagged categories from filtered labels only
       const flaggedCategories = [
         ...new Set(
-          moderationLabels
+          filteredLabels
             .map((l) => l.parentName || l.name)
             .filter((name) => name),
         ),
       ];
 
-      const isSafe = moderationLabels.length === 0;
+      const isSafe = filteredLabels.length === 0;
       const maxConfidence =
-        moderationLabels.length > 0
-          ? Math.max(...moderationLabels.map((l) => l.confidence))
+        filteredLabels.length > 0
+          ? Math.max(...filteredLabels.map((l) => l.confidence))
           : 100;
 
       this.logger.log(
@@ -139,13 +146,14 @@ export class RecognitionService {
         isSafe,
         confidence: isSafe ? 100 : maxConfidence,
         flaggedCategories,
-        moderationLabels,
+        moderationLabels: filteredLabels,
         timestamp: new Date(),
       };
-    } catch (error) {
-      this.logger.error('Failed to check image safety:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Failed to check image safety:', errorMessage);
       throw new BadRequestException(
-        `Safety check failed: ${error.message || 'Unknown error'}`,
+        `Safety check failed: ${errorMessage}`,
       );
     }
   }
@@ -184,12 +192,13 @@ export class RecognitionService {
         } else {
           result.unsafeCount++;
         }
-      } catch (error) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Check failed';
         result.results.push({
           id: item.id,
           isSafe: false,
           flaggedCategories: [],
-          error: error.message || 'Check failed',
+          error: errorMessage,
         });
         result.unsafeCount++;
       }
@@ -254,10 +263,11 @@ export class RecognitionService {
         jobId: response.JobId || '',
         status: 'IN_PROGRESS',
       };
-    } catch (error) {
-      this.logger.error('Failed to start video safety check:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Failed to start video safety check:', errorMessage);
       throw new BadRequestException(
-        `Video safety check failed: ${error.message || 'Unknown error'}`,
+        `Video safety check failed: ${errorMessage}`,
       );
     }
   }
@@ -309,10 +319,11 @@ export class RecognitionService {
         isSafe,
         unsafeSegments,
       };
-    } catch (error) {
-      this.logger.error('Failed to get video safety results:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Failed to get video safety results:', errorMessage);
       throw new BadRequestException(
-        `Failed to get results: ${error.message || 'Unknown error'}`,
+        `Failed to get results: ${errorMessage}`,
       );
     }
   }

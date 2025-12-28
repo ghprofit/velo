@@ -15,6 +15,7 @@ export declare class CreatorsService {
         verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
         veriffSessionId: string | null;
         verifiedAt: Date | null;
+        emailVerified: boolean;
     }>;
     processVeriffWebhook(sessionId: string, status: string, code: number, vendorData?: string): Promise<void>;
     setupBankAccount(userId: string, bankAccountDto: SetupBankAccountDto): Promise<BankAccountResponseDto>;

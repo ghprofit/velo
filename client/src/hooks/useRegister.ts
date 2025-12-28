@@ -8,8 +8,9 @@ interface RegisterData {
   email: string;
   password: string;
   displayName: string;
-  firstName?: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
+  country: string;
 }
 
 interface UseRegisterReturn {
@@ -34,8 +35,9 @@ export const useRegister = (): UseRegisterReturn => {
         email: data.email.toLowerCase(),
         password: data.password,
         displayName: data.displayName.trim(),
-        firstName: data.firstName?.trim() || undefined,
-        lastName: data.lastName?.trim() || undefined,
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        country: data.country,
       });
 
       const { user, tokens } = response.data.data;

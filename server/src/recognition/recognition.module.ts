@@ -5,5 +5,6 @@ import { RecognitionController } from './recognition.controller';
 @Module({
   controllers: [RecognitionController],
   providers: [RecognitionService],
+  exports: [RecognitionService],
 })
 export class RecognitionModule {}

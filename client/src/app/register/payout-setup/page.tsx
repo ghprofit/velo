@@ -85,8 +85,16 @@ export default function PayoutSetupPage() {
             <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
           </div>
 
-          {/* Step Indicator */}
-          <div className="flex items-center justify-center mb-6">
+          {/* Mobile: Simplified Step Indicator (Dots) */}
+          <div className="flex md:hidden items-center justify-center gap-2 mb-6">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
+          </div>
+
+          {/* Desktop: Full Step Indicator */}
+          <div className="hidden md:flex items-center justify-center mb-6">
             <div className="flex items-center gap-3">
               {/* Step 1 - Registration (Completed) */}
               <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-semibold text-lg">
@@ -120,7 +128,7 @@ export default function PayoutSetupPage() {
           </div>
 
           <p className="text-center text-sm text-gray-600 mb-10">
-            Step 3 of 4: Payout Details
+            Step 4 of 4: Payout Setup
           </p>
 
           {/* Main Content */}

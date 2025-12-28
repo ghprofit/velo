@@ -109,7 +109,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   async verifyEmailCode(@Req() req: any, @Body() dto: VerifyEmailCodeDto) {
-    const result = await this.authService.verifyEmailCode(req.user.userId, dto.code);
+    const result = await this.authService.verifyEmailCode(req.user.id, dto.code);
     return {
       success: true,
       message: result.message,

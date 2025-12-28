@@ -86,6 +86,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 verificationStatus: user.creatorProfile.verificationStatus,
                 veriffSessionId: user.creatorProfile.veriffSessionId,
                 verifiedAt: user.creatorProfile.verifiedAt,
+                emailVerified: user.emailVerified,
             };
         }
         catch (error) {
@@ -216,8 +217,8 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             if (!user || !user.creatorProfile) {
                 throw new common_1.NotFoundException('Creator profile not found');
             }
-            if (requestedAmount < 10) {
-                throw new common_1.BadRequestException('Minimum payout amount is $10');
+            if (requestedAmount < 100) {
+                throw new common_1.BadRequestException('Minimum payout amount is $100');
             }
             const availableBalance = user.creatorProfile.totalEarnings;
             if (requestedAmount > availableBalance) {

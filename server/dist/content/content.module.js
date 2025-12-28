@@ -13,12 +13,14 @@ const content_service_1 = require("./content.service");
 const prisma_module_1 = require("../prisma/prisma.module");
 const auth_module_1 = require("../auth/auth.module");
 const s3_module_1 = require("../s3/s3.module");
+const recognition_module_1 = require("../recognition/recognition.module");
+const notifications_module_1 = require("../notifications/notifications.module");
 let ContentModule = class ContentModule {
 };
 exports.ContentModule = ContentModule;
 exports.ContentModule = ContentModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, auth_module_1.AuthModule, s3_module_1.S3Module],
+        imports: [prisma_module_1.PrismaModule, auth_module_1.AuthModule, s3_module_1.S3Module, recognition_module_1.RecognitionModule, notifications_module_1.NotificationsModule],
         controllers: [content_controller_1.ContentController],
         providers: [content_service_1.ContentService],
         exports: [content_service_1.ContentService],

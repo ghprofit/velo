@@ -128,11 +128,12 @@ export class RecognitionController {
           : `Content flagged for: ${result.flaggedCategories.join(', ')}`,
         timestamp: result.timestamp,
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Safety check failed';
       return {
         success: false,
         isSafe: false,
-        error: error.message || 'Safety check failed',
+        error: errorMessage,
         timestamp: new Date(),
       };
     }
@@ -165,11 +166,12 @@ export class RecognitionController {
         message: isSafe ? 'Content is safe' : 'Content is unsafe',
         timestamp: new Date(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Safety check failed';
       return {
         success: false,
         isSafe: false,
-        error: error.message || 'Safety check failed',
+        error: errorMessage,
         timestamp: new Date(),
       };
     }
@@ -209,10 +211,11 @@ export class RecognitionController {
         message: `${result.safeCount}/${result.totalItems} items are safe`,
         timestamp: new Date(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Batch safety check failed';
       return {
         success: false,
-        error: error.message || 'Batch safety check failed',
+        error: errorMessage,
         timestamp: new Date(),
       };
     }
@@ -246,10 +249,11 @@ export class RecognitionController {
         message: 'Video safety check started. Poll /recognition/video/:jobId for results.',
         timestamp: new Date(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Video safety check failed';
       return {
         success: false,
-        error: error.message || 'Video safety check failed',
+        error: errorMessage,
         timestamp: new Date(),
       };
     }
@@ -289,10 +293,11 @@ export class RecognitionController {
             : `Job status: ${result.status}`,
         timestamp: new Date(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get video results';
       return {
         success: false,
-        error: error.message || 'Failed to get video results',
+        error: errorMessage,
         timestamp: new Date(),
       };
     }

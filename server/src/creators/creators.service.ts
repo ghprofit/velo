@@ -106,6 +106,7 @@ export class CreatorsService {
         verificationStatus: user.creatorProfile.verificationStatus,
         veriffSessionId: user.creatorProfile.veriffSessionId,
         verifiedAt: user.creatorProfile.verifiedAt,
+        emailVerified: user.emailVerified,
       };
     } catch (error) {
       this.logger.error(`Failed to get verification status for user ${userId}:`, error);
@@ -279,8 +280,8 @@ export class CreatorsService {
       }
 
       // Validate minimum payout amount
-      if (requestedAmount < 10) {
-        throw new BadRequestException('Minimum payout amount is $10');
+      if (requestedAmount < 100) {
+        throw new BadRequestException('Minimum payout amount is $100');
       }
 
       // Validate available balance

@@ -1,15 +1,20 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
+import { RecognitionService } from '../recognition/recognition.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateContentDto } from './dto/create-content.dto';
 export declare class ContentService {
     private prisma;
     private s3Service;
-    constructor(prisma: PrismaService, s3Service: S3Service);
+    private recognitionService;
+    private notificationsService;
+    constructor(prisma: PrismaService, s3Service: S3Service, recognitionService: RecognitionService, notificationsService: NotificationsService);
     private getSignedThumbnailUrl;
     createContent(userId: string, createContentDto: CreateContentDto): Promise<{
         content: {
             creator: {
                 user: {
+                    email: string;
                     displayName: string | null;
                 };
             } & {

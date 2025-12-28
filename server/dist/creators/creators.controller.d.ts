@@ -20,6 +20,7 @@ export declare class CreatorsController {
             verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
             veriffSessionId: string | null;
             verifiedAt: Date | null;
+            emailVerified: boolean;
         };
     }>;
     setupBankAccount(req: any, bankAccountDto: SetupBankAccountDto): Promise<{

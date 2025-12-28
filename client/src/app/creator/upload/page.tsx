@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, DragEvent, ChangeEvent } from 'react';
-import { contentApi } from '@/lib/api-client';
+import { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react';
+import { contentApi, veriffApi } from '@/lib/api-client';
+import UploadBlockedScreen from '@/components/UploadBlockedScreen';
 
 interface UploadedFile {
   file: File;
@@ -42,6 +43,37 @@ export default function UploadContentPage() {
   const [shortId, setShortId] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Verification state
+  const [isCheckingVerification, setIsCheckingVerification] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState<string>('PENDING');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [canUpload, setCanUpload] = useState(false);
+
+  // Check verification status on mount
+  useEffect(() => {
+    checkVerificationStatus();
+  }, []);
+
+  const checkVerificationStatus = async () => {
+    try {
+      setIsCheckingVerification(true);
+      const response = await veriffApi.getMyVerificationStatus();
+      const data = response.data.data;
+
+      setVerificationStatus(data.verificationStatus);
+      setEmailVerified(data.emailVerified);
+
+      // Only allow upload if BOTH conditions met
+      const allowed = data.emailVerified && data.verificationStatus === 'VERIFIED';
+      setCanUpload(allowed);
+    } catch (err: any) {
+      console.error('Failed to check verification:', err);
+      setError('Failed to check verification status. Please refresh.');
+    } finally {
+      setIsCheckingVerification(false);
+    }
+  };
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -145,8 +177,8 @@ export default function UploadContentPage() {
   const processFiles = async (files: File[]) => {
     setError('');
 
-    if (uploadedFiles.length + files.length > 10) {
-      setError('Maximum 10 files allowed per upload');
+    if (uploadedFiles.length + files.length > 20) {
+      setError('Maximum 20 files allowed per upload');
       return;
     }
 
@@ -302,8 +334,40 @@ export default function UploadContentPage() {
 
   return (
     <>
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      {/* Loading State */}
+      {isCheckingVerification && (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Checking verification status...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Blocked State */}
+      {!isCheckingVerification && !canUpload && (
+        <>
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Upload & Monetize Your Content
+            </h1>
+          </div>
+
+          {/* Blocked Screen */}
+          <UploadBlockedScreen
+            verificationStatus={verificationStatus as any}
+            emailVerified={emailVerified}
+            onRefresh={checkVerificationStatus}
+          />
+        </>
+      )}
+
+      {/* Upload Form - Only show if verified */}
+      {!isCheckingVerification && canUpload && (
+        <>
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Upload & Monetize Your Content</h1>
         <p className="hidden text-sm sm:text-base text-gray-600">Follow the steps to upload, price, and share your exclusive content.</p>
       </div>
@@ -364,11 +428,11 @@ export default function UploadContentPage() {
                   <p className="hidden text-sm text-gray-600 mt-1">Drag and drop or browse to upload your files</p>
                 </div>
                 <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2.5 sm:px-3 py-1 rounded-full w-fit">
-                  {uploadedFiles.length}/10 files
+                  {uploadedFiles.length}/20 files
                 </span>
               </div>
 
-              {uploadedFiles.length < 10 && (
+              {uploadedFiles.length < 20 && (
                 <div
                   className={`border-2 border-dashed rounded-xl p-6 sm:p-8 lg:p-12 text-center transition-colors mb-4 sm:mb-6 ${
                     isDragging
@@ -856,6 +920,8 @@ export default function UploadContentPage() {
           )}
         </div>
       </div>
+        </>
+      )}
     </>
   );
 }

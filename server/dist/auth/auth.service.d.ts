@@ -46,6 +46,8 @@ export declare class AuthService {
             refreshToken: string;
             expiresIn: number;
         };
+        emailSent: boolean;
+        emailError: any;
         message: string;
     }>;
     login(dto: LoginDto, ipAddress?: string, userAgent?: string): Promise<{
@@ -138,6 +140,8 @@ export declare class AuthService {
         message: string;
     }>;
     resendVerification(dto: ResendVerificationDto): Promise<{
+        emailSent: boolean;
+        emailError: any;
         message: string;
     }>;
     private generate6DigitCode;

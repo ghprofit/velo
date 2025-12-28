@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
+import { RecognitionService } from '../recognition/recognition.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/create-notification.dto';
 import { CreateContentDto } from './dto/create-content.dto';
 import { nanoid } from 'nanoid';
 
@@ -9,6 +12,8 @@ export class ContentService {
   constructor(
     private prisma: PrismaService,
     private s3Service: S3Service,
+    private recognitionService: RecognitionService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -41,8 +46,19 @@ export class ContentService {
       throw new BadRequestException('At least one content item is required');
     }
 
-    if (createContentDto.items.length > 10) {
-      throw new BadRequestException('Maximum 10 content items allowed per upload');
+    if (createContentDto.items.length > 20) {
+      throw new BadRequestException('Maximum 20 content items allowed per upload');
+    }
+
+    // Validate total file size (10GB max)
+    const MAX_TOTAL_SIZE = 10 * 1024 * 1024 * 1024; // 10GB in bytes
+    const totalFileSize = createContentDto.items.reduce((sum, item) => sum + item.fileSize, 0);
+
+    if (totalFileSize > MAX_TOTAL_SIZE) {
+      const totalSizeGB = (totalFileSize / (1024 * 1024 * 1024)).toFixed(2);
+      throw new BadRequestException(
+        `Total file size (${totalSizeGB}GB) exceeds maximum allowed size of 10GB`
+      );
     }
 
     // Generate unique content ID and link
@@ -81,9 +97,7 @@ export class ContentService {
       }),
     );
 
-    const totalFileSize = createContentDto.items.reduce((sum, item) => sum + item.fileSize, 0);
-
-    // Create content with items
+    // Create content with items (initially set to PENDING_REVIEW for moderation)
     const content = await this.prisma.content.create({
       data: {
         id: contentId,
@@ -96,9 +110,8 @@ export class ContentService {
         s3Key: thumbnailUpload.key,
         s3Bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
         fileSize: totalFileSize,
-        status: 'APPROVED',
-        isPublished: true,
-        publishedAt: new Date(),
+        status: 'PENDING_REVIEW',
+        isPublished: false,
         contentItems: {
           create: contentItemsData,
         },
@@ -110,6 +123,7 @@ export class ContentService {
             user: {
               select: {
                 displayName: true,
+                email: true,
               },
             },
           },
@@ -117,11 +131,124 @@ export class ContentService {
       },
     });
 
-    return {
-      content,
-      link: `https://${contentLink}`,
-      shortId: contentId,
-    };
+    // Run AWS Rekognition safety check on all content items
+    try {
+      const contentItems = content.contentItems.map((item) => ({
+        id: item.id,
+        content: {
+          type: 's3' as const,
+          data: item.s3Key,
+          bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
+        },
+      }));
+
+      const batchResults = await this.recognitionService.checkBatchSafety(contentItems, 60);
+
+      let allSafe = true;
+      const flaggedReasons: string[] = [];
+
+      // Process results and create ComplianceLog entries
+      for (const result of batchResults.results) {
+        await this.prisma.complianceLog.create({
+          data: {
+            contentId: content.id,
+            checkType: 'AWS_REKOGNITION',
+            status: result.isSafe ? 'PASSED' : 'FAILED',
+            flaggedReasons: result.flaggedCategories || [],
+            createdAt: new Date(),
+          },
+        });
+
+        if (!result.isSafe) {
+          allSafe = false;
+          flaggedReasons.push(...(result.flaggedCategories || []));
+        }
+      }
+
+      // Update content status based on safety results
+      const finalStatus = allSafe ? 'APPROVED' : 'FLAGGED';
+      const updatedContent = await this.prisma.content.update({
+        where: { id: content.id },
+        data: {
+          status: finalStatus,
+          isPublished: allSafe,
+          publishedAt: allSafe ? new Date() : null,
+          complianceStatus: allSafe ? 'PASSED' : 'FAILED',
+        },
+        include: {
+          contentItems: true,
+          creator: {
+            include: {
+              user: {
+                select: {
+                  displayName: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Notify admins if content is flagged
+      if (!allSafe) {
+        const uniqueReasons = [...new Set(flaggedReasons)];
+        const creatorDisplayName = updatedContent.creator.user.displayName || 'Unknown Creator';
+        await this.notificationsService.notifyAdmins(
+          NotificationType.FLAGGED_CONTENT_ALERT,
+          'Content Flagged for Review',
+          `Content "${content.title}" by ${creatorDisplayName} has been flagged by AWS Rekognition for manual review.`,
+          {
+            contentId: content.id,
+            contentTitle: content.title,
+            creatorId: updatedContent.creator.id,
+            creatorDisplayName: creatorDisplayName,
+            flaggedReasons: uniqueReasons,
+            requiresManualReview: true,
+          },
+        );
+      }
+
+      return {
+        content: updatedContent,
+        link: `https://${contentLink}`,
+        shortId: contentId,
+      };
+    } catch (rekognitionError: unknown) {
+      const errorMessage = rekognitionError instanceof Error ? rekognitionError.message : 'Unknown error';
+      console.error('AWS Rekognition check failed:', errorMessage);
+
+      // Create manual review compliance log
+      await this.prisma.complianceLog.create({
+        data: {
+          contentId: content.id,
+          checkType: 'AWS_REKOGNITION',
+          status: 'MANUAL_REVIEW',
+          flaggedReasons: ['API_FAILURE'],
+          notes: `Rekognition API failed: ${errorMessage}`,
+          createdAt: new Date(),
+        },
+      });
+
+      // Notify admins about API failure
+      await this.notificationsService.notifyAdmins(
+        NotificationType.FLAGGED_CONTENT_ALERT,
+        'Content Requires Manual Review',
+        `Content "${content.title}" could not be automatically moderated due to API failure.`,
+        {
+          contentId: content.id,
+          contentTitle: content.title,
+          error: errorMessage,
+        },
+      );
+
+      // Return content with PENDING_REVIEW status for manual check
+      return {
+        content,
+        link: `https://${contentLink}`,
+        shortId: contentId,
+      };
+    }
   }
 
   async getCreatorContent(userId: string) {

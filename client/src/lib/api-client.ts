@@ -125,6 +125,18 @@ apiClient.interceptors.response.use(
         localStorage.setItem('accessToken', newAccessToken);
         localStorage.setItem('refreshToken', newRefreshToken);
 
+        // Notify Context/Redux of token refresh
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('auth-token-refreshed', {
+              detail: {
+                accessToken: newAccessToken,
+                refreshToken: newRefreshToken,
+              },
+            })
+          );
+        }
+
         // Update the authorization header
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -162,9 +174,10 @@ export const authApi = {
   register: (data: {
     email: string;
     password: string;
-    displayName?: string;
-    firstName?: string;
-    lastName?: string;
+    displayName: string;
+    firstName: string;
+    lastName: string;
+    country: string;
   }) =>
     apiClient.post('/auth/register', data),
 
@@ -176,8 +189,8 @@ export const authApi = {
 
   getProfile: () => apiClient.get('/auth/profile'),
 
-  verifyEmail: (token: string) =>
-    apiClient.post('/auth/verify-email', { token }),
+  verifyEmail: (code: string) =>
+    apiClient.post('/auth/verify-email-code', { code }),
 
   resendVerification: (email: string) =>
     apiClient.post('/auth/resend-verification', { email }),

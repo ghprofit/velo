@@ -579,7 +579,7 @@ interface ReviewContentRequest {
 
 export const api = createApi({
     baseQuery: fetchBaseQuery({
-        baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+        baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
         prepareHeaders: (headers, { getState }) => {
             const state = getState() as { auth?: { tokens?: { accessToken?: string } } };
             const token = state.auth?.tokens?.accessToken;

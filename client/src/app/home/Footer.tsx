@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import ScrollReveal from './ScrollReveal';
 import Image from 'next/image';
 import TermsModal from './TermsModal';
@@ -28,14 +29,13 @@ export default function Footer() {
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-10" style={{color: 'var(--dark-bg-text)'}}>
               Ready to monetize? Stop sharing for free and start selling with VELOLink.
             </h2>
-            <button
-              className="text-white px-10 py-4 rounded-2xl text-base font-semibold transition-all shadow-lg hover:shadow-xl"
+            <Link
+              href="/login"
+              className="inline-block text-white px-10 py-4 rounded-2xl text-base font-semibold transition-all shadow-lg hover:shadow-xl hover:opacity-90"
               style={{backgroundColor: 'var(--primary-accent)'}}
-              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
             >
               Sign Up Now and Start Selling
-            </button>
+            </Link>
           </ScrollReveal>
         </div>
       </section>

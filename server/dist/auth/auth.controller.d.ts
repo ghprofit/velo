@@ -41,6 +41,8 @@ export declare class AuthController {
                 refreshToken: string;
                 expiresIn: number;
             };
+            emailSent: boolean;
+            emailError: any;
             message: string;
         };
     }>;

@@ -31,14 +31,14 @@ export default function Hero() {
               and documents via a fast, private unlock link.
             </p>
 
-            <button
-              // href="/register"
-              className="group relative text-white px-10 py-4 rounded-2xl text-base font-semibold transition-all shadow-lg hover:shadow-2xl mb-8 overflow-hidden"
+            <Link
+              href="/login"
+              className="group relative text-white px-10 py-4 rounded-2xl text-base font-semibold transition-all shadow-lg hover:shadow-2xl mb-8 overflow-hidden inline-block"
               style={{backgroundColor: 'var(--primary-accent)'}}
             >
               <span className="relative z-10">Start Earning Now (Its free)</span>
               <div className="absolute inset-0 bg-linear-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            </button>
+            </Link>
 
             <div className="flex flex-wrap items-center gap-6">
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 hover:bg-indigo-100 transition-colors duration-200">

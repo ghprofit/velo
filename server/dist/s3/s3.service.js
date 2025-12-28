@@ -53,6 +53,7 @@ let S3Service = class S3Service {
                     Key: key,
                     Body: fileBuffer,
                     ContentType: contentType,
+                    ACL: 'public-read',
                 },
             });
             await upload.done();

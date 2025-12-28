@@ -113,10 +113,14 @@ export class AuthService {
       });
 
       // Send verification email with 6-digit code
+      let emailSent = false;
+      let emailError = null;
       try {
         await this.generateVerificationCode(user.id, user.email, dto.displayName);
+        emailSent = true;
       } catch (error) {
         console.error('Failed to generate verification code:', error);
+        emailError = (error as any)?.message || 'Failed to send verification email';
         // Don't fail registration if email fails
       }
 
@@ -140,7 +144,11 @@ export class AuthService {
           refreshToken: tokens.refreshToken,
           expiresIn: tokens.expiresIn,
         },
-        message: 'Registration successful! Please check your email for a verification code.',
+        emailSent,
+        emailError,
+        message: emailSent
+          ? 'Registration successful! Please check your email for a verification code.'
+          : 'Registration successful, but verification email failed to send. Please use the resend option in settings.',
       };
     } catch (error) {
       console.error('Registration error:', error);
@@ -520,6 +528,9 @@ export class AuthService {
       throw new BadRequestException('Email is already verified');
     }
 
+    let emailSent = false;
+    let emailError = null;
+
     // Check for existing verification token
     const existingToken = await this.prisma.emailVerificationToken.findUnique({
       where: { userId: user.id },
@@ -568,16 +579,28 @@ export class AuthService {
           code,
           15,
         );
+        emailSent = true;
       } catch (error) {
         console.error('Failed to send verification email:', error);
+        emailError = (error as any)?.message || 'Failed to send verification email';
       }
     } else {
       // No existing token, generate new one
-      await this.generateVerificationCode(user.id, user.email, user.displayName || undefined);
+      try {
+        await this.generateVerificationCode(user.id, user.email, user.displayName || undefined);
+        emailSent = true;
+      } catch (error) {
+        console.error('Failed to generate verification code:', error);
+        emailError = (error as any)?.message || 'Failed to send verification email';
+      }
     }
 
     return {
-      message: 'Verification code sent successfully',
+      emailSent,
+      emailError,
+      message: emailSent
+        ? 'Verification code sent successfully'
+        : 'Failed to send verification email. Please try again later or contact support.',
     };
   }
 

@@ -10,6 +10,7 @@ export declare class ContentController {
             content: {
                 creator: {
                     user: {
+                        email: string;
                         displayName: string | null;
                     };
                 } & {

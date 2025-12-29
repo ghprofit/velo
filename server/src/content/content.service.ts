@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { RecognitionService } from '../recognition/recognition.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService } from '../email/email.service';
+import { HTML_TEMPLATES } from '../email/templates/email-templates';
 import { NotificationType } from '../notifications/dto/create-notification.dto';
 import { CreateContentDto } from './dto/create-content.dto';
 import { nanoid } from 'nanoid';
@@ -14,6 +16,7 @@ export class ContentService {
     private s3Service: S3Service,
     private recognitionService: RecognitionService,
     private notificationsService: NotificationsService,
+    private emailService: EmailService,
   ) {}
 
   /**
@@ -207,6 +210,25 @@ export class ContentService {
             requiresManualReview: true,
           },
         );
+      } else {
+        // Send email notification to creator when content is approved and goes live
+        const creatorDisplayName = updatedContent.creator.user.displayName || 'Creator';
+        const creatorEmail = updatedContent.creator.user.email;
+
+        try {
+          await this.emailService.sendEmail({
+            to: creatorEmail,
+            subject: 'Your content is now live!',
+            html: HTML_TEMPLATES.CONTENT_APPROVED({
+              creator_name: creatorDisplayName,
+              content_title: updatedContent.title,
+              content_link: `https://${contentLink}`,
+            }),
+          });
+        } catch (emailError) {
+          console.error('Failed to send content approval email:', emailError);
+          // Don't fail the entire operation if email fails
+        }
       }
 
       return {

@@ -480,7 +480,7 @@ export default function UploadContentPage() {
               <div className="space-y-4 sm:space-y-6">
                 {/* Preview Thumbnail */}
                 <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200 shrink-0">
                     <img
                       src={uploadedFiles[0]?.thumbnail}
                       alt="Preview"
@@ -586,7 +586,7 @@ export default function UploadContentPage() {
               {/* Content Summary */}
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
                 <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0 relative">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-200 shrink-0 relative">
                     <img
                       src={uploadedFiles[0]?.thumbnail}
                       alt="Preview"
@@ -620,7 +620,7 @@ export default function UploadContentPage() {
               {/* Link Info */}
               <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
                 <div className="flex items-start gap-2 sm:gap-3">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div>
@@ -632,19 +632,19 @@ export default function UploadContentPage() {
                     </p>
                     <ul className="text-xs sm:text-sm text-gray-600 mt-2 space-y-1">
                       <li className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                         Is unique to this content only
                       </li>
                       <li className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                         Tracks all views and purchases
                       </li>
                       <li className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                         Links back to your creator profile
@@ -712,7 +712,7 @@ export default function UploadContentPage() {
 
                 <div className="bg-indigo-50 rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
                   <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
                     <input
@@ -724,7 +724,7 @@ export default function UploadContentPage() {
                   </div>
                   <button
                     onClick={handleCopyLink}
-                    className={`w-full sm:w-auto px-3 sm:px-4 py-2 rounded-lg font-medium transition-all flex-shrink-0 flex items-center justify-center gap-2 text-sm ${
+                    className={`w-full sm:w-auto px-3 sm:px-4 py-2 rounded-lg font-medium transition-all shrink-0 flex items-center justify-center gap-2 text-sm ${
                       copied
                         ? 'bg-green-500 text-white'
                         : 'bg-white hover:bg-gray-50 border border-gray-300 text-gray-700'
@@ -749,7 +749,7 @@ export default function UploadContentPage() {
                 </div>
 
                 <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
                   Content ID: <code className="bg-gray-100 px-1.5 sm:px-2 py-0.5 rounded text-gray-700 text-xs">{shortId}</code>
@@ -816,7 +816,7 @@ export default function UploadContentPage() {
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Content Summary</h3>
 
                 <div className="flex items-start gap-3 sm:gap-4">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200 shrink-0">
                     <img
                       src={uploadedFiles[0]?.thumbnail}
                       alt="Preview"

@@ -24,7 +24,7 @@ function FAQItem({ question, answer }: FAQItemProps) {
       >
         <span className="font-semibold text-base" style={{color: 'var(--dark-bg-text)'}}>{question}</span>
         <svg
-          className={`w-5 h-5 text-gray-500 transition-transform flex-shrink-0 ml-4 ${
+          className={`w-5 h-5 text-gray-500 transition-transform shrink-0 ml-4 ${
             isOpen ? 'rotate-180' : ''
           }`}
           fill="none"
@@ -202,7 +202,7 @@ export default function FAQ() {
                       {category.category}
                     </h3>
                     <svg
-                      className={`w-6 h-6 transition-transform flex-shrink-0 ml-4 ${
+                      className={`w-6 h-6 transition-transform shrink-0 ml-4 ${
                         isOpen ? 'rotate-180' : ''
                       }`}
                       style={{color: 'var(--primary-accent)'}}

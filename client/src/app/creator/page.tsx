@@ -241,7 +241,7 @@ export default function CreatorDashboardPage() {
           {error && !loading && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8">
               <div className="flex items-center gap-2 sm:gap-3">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-red-800 text-sm sm:text-base">{error}</p>
@@ -508,7 +508,7 @@ export default function CreatorDashboardPage() {
                             <img
                               src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                               alt={content.title}
-                              className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                              className="w-14 h-14 rounded-lg object-cover shrink-0"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
                               }}
@@ -572,7 +572,7 @@ export default function CreatorDashboardPage() {
                                   <img
                                     src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                                     alt={content.title}
-                                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                                    className="w-12 h-12 rounded-lg object-cover shrink-0"
                                     onError={(e) => {
                                       (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
                                     }}
@@ -612,7 +612,7 @@ export default function CreatorDashboardPage() {
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-3 flex-1">
-                <svg className="w-5 h-5 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-sm text-gray-600">

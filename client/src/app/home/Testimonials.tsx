@@ -41,7 +41,7 @@ export default function Testimonials() {
             <ScrollReveal key={index} delay={index * 0.15}>
               <div className="rounded-2xl p-7 hover:shadow-lg transition-shadow" style={{backgroundColor: 'var(--card-surface)'}}>
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="w-14 h-14 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-14 h-14 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden shrink-0">
                     <svg className="w-7 h-7 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>

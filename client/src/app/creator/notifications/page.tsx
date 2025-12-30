@@ -498,7 +498,7 @@ export default function NotificationsPage() {
                       }`}
                     >
                       <div className="flex items-start gap-3 sm:gap-4">
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 ${style.iconBg} rounded-full flex items-center justify-center flex-shrink-0 ${style.iconColor}`}>
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 ${style.iconBg} rounded-full flex items-center justify-center shrink-0 ${style.iconColor}`}>
                           {renderNotificationIcon(style.icon)}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -514,7 +514,7 @@ export default function NotificationsPage() {
                                 e.stopPropagation();
                                 handleDelete(notification.id);
                               }}
-                              className="w-6 h-6 sm:w-7 sm:h-7 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
+                              className="w-6 h-6 sm:w-7 sm:h-7 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors shrink-0"
                               title="Delete notification"
                             >
                               <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -548,7 +548,7 @@ export default function NotificationsPage() {
           </div>
 
           {/* Right Sidebar - Summary Stats (Desktop Only) */}
-          <div className="hidden lg:block w-80 space-y-6 flex-shrink-0">
+          <div className="hidden lg:block w-80 space-y-6 shrink-0">
             {/* Unread Notifications */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">

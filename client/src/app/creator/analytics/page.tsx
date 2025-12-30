@@ -575,7 +575,7 @@ export default function AnalyticsPage() {
                         <img
                           src={item.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                           alt={item.title}
-                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                          className="w-12 h-12 rounded-lg object-cover shrink-0"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
                           }}
@@ -639,7 +639,7 @@ export default function AnalyticsPage() {
                               <img
                                 src={item.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                                 alt={item.title}
-                                className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                                className="w-12 h-12 rounded-lg object-cover shrink-0"
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
                                 }}

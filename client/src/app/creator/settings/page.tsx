@@ -897,7 +897,7 @@ export default function SettingsPage() {
                       <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1">Payout updates</h4>
                       <p className="text-xs sm:text-sm text-gray-600">Receive alerts when payouts are processed or there's a payment issue.</p>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <button
                         onClick={() => {
                           setNotifications({ ...notifications, notifyPayoutUpdates: !notifications.notifyPayoutUpdates });
@@ -921,7 +921,7 @@ export default function SettingsPage() {
                       <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1">New content engagement</h4>
                       <p className="text-xs sm:text-sm text-gray-600">Receive alerts when your content is unlocked or there is a purchase.</p>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <button
                         onClick={() => {
                           setNotifications({ ...notifications, notifyContentEngagement: !notifications.notifyContentEngagement });
@@ -952,7 +952,7 @@ export default function SettingsPage() {
                       <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1">Platform announcements</h4>
                       <p className="text-xs sm:text-sm text-gray-600">Important information regarding system updates, new features, or terms changes.</p>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <button
                         onClick={() => {
                           setNotifications({ ...notifications, notifyPlatformAnnouncements: !notifications.notifyPlatformAnnouncements });
@@ -976,7 +976,7 @@ export default function SettingsPage() {
                       <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1">Marketing emails</h4>
                       <p className="text-xs sm:text-sm text-gray-600">Opt-in to promotional or marketing communications.</p>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <button
                         onClick={() => {
                           setNotifications({ ...notifications, notifyMarketingEmails: !notifications.notifyMarketingEmails });
@@ -999,7 +999,7 @@ export default function SettingsPage() {
 
               {/* Auto-save notice */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
                 <p className="text-xs sm:text-sm text-blue-900">
@@ -1015,7 +1015,7 @@ export default function SettingsPage() {
               <div className="mb-6 sm:mb-8">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600 mb-3 sm:mb-4">Danger Zone</h2>
                 <div className="flex items-start gap-2 sm:gap-3 border-l-4 border-red-600 pl-3 sm:pl-4 py-2">
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <div>

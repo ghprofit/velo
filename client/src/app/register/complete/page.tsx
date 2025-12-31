@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
+import Image from 'next/image';
 
 export default function CompletePage() {
   const router = useRouter();
@@ -93,7 +94,7 @@ export default function CompletePage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
           </div>
 
           {/* Step Indicator */}

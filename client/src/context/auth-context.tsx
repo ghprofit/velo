@@ -1,16 +1,25 @@
 // context/auth-context.tsx
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '@/lib/api-client';
 import type { User } from '@/types/auth';
+
+interface RegisterData {
+  email: string;
+  password: string;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  country: string;
+}
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ requiresTwoFactor?: boolean; tempToken?: string }>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   verify2FA: (tempToken: string, token: string) => Promise<void>;
@@ -23,38 +32,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state from localStorage
-  useEffect(() => {
-    initializeAuth();
-  }, []);
-
-  // Listen for token refresh events from axios interceptor
-  useEffect(() => {
-    const handleTokenRefresh = async (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const { accessToken, refreshToken } = customEvent.detail;
-
-      // Tokens are already updated in localStorage by the interceptor
-      // Just refresh the user data to sync Context state
-      try {
-        await refreshUser();
-      } catch (error) {
-        console.error('Failed to refresh user after token refresh:', error);
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('auth-token-refreshed', handleTokenRefresh);
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await authApi.getProfile();
+      const userData = response.data.data;
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      // If refresh fails, clear auth state
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      setUser(null);
     }
-
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('auth-token-refreshed', handleTokenRefresh);
-      }
-    };
   }, []);
 
-  const initializeAuth = async () => {
+  const initializeAuth = useCallback(async () => {
     try {
       const storedUser = localStorage.getItem('user');
       const accessToken = localStorage.getItem('accessToken');
@@ -73,7 +67,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [refreshUser]);
+
+  // Initialize auth state from localStorage
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  // Listen for token refresh events from axios interceptor
+  useEffect(() => {
+    const handleTokenRefresh = async () => {
+      // Tokens are already updated in localStorage by the interceptor
+      // Just refresh the user data to sync Context state
+      try {
+        await refreshUser();
+      } catch (error) {
+        console.error('Failed to refresh user after token refresh:', error);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('auth-token-refreshed', handleTokenRefresh);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('auth-token-refreshed', handleTokenRefresh);
+      }
+    };
+  }, [refreshUser]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -96,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
 
       return {};
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
       throw error;
     }
@@ -134,9 +156,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string) => {
+  const register = async (data: RegisterData) => {
     try {
-      const response = await authApi.register({ email, password });
+      const response = await authApi.register({
+        email: data.email,
+        password: data.password,
+        displayName: data.displayName,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        country: data.country,
+      });
       const { user: userData, tokens } = response.data.data;
 
       // Store tokens and user data
@@ -164,19 +193,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       setUser(null);
-    }
-  };
-
-  const refreshUser = async () => {
-    try {
-      const response = await authApi.getProfile();
-      const userData = response.data.data;
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-    } catch (error) {
-      console.error('Failed to refresh user:', error);
-      // If refresh fails, clear auth state
-      await logout();
     }
   };
 

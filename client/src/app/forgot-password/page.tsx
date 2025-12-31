@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { authApi } from '@/lib/api-client';
+import Image from 'next/image';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -20,11 +21,12 @@ export default function ForgotPasswordPage() {
     try {
       await authApi.forgotPassword(email);
       setSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Forgot password error:', err);
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
       const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
+        error.response?.data?.message ||
+        error.message ||
         'Unable to send reset email. Please check your connection and try again.';
       setError(errorMessage);
     } finally {
@@ -33,17 +35,17 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white md:bg-gradient-to-br md:from-indigo-50 md:via-white md:to-cyan-50 flex flex-col">
+    <main className="min-h-screen bg-linear-to-b from-gray-50 to-white md:bg-gradient-to-br md:from-indigo-50 md:via-white md:to-cyan-50 flex flex-col">
       {/* Mobile: Sticky Header */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 py-4 border-b border-gray-100 md:hidden">
-        <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8"/>
+        <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8"/>
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 py-6 md:py-12">
         <div className="w-full max-w-lg">
           {/* Logo (Desktop Only) */}
           <div className="hidden md:flex flex-col items-center mb-8">
-            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-10 mb-2"/>
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-10 mb-2"/>
             <p className="text-sm text-gray-500">Account recovery</p>
           </div>
 
@@ -55,7 +57,7 @@ export default function ForgotPasswordPage() {
                 Forgot Password?
               </h1>
               <p className="text-sm md:text-base text-gray-600">
-                Enter your registered email, and we'll send you a reset link.
+                Enter your registered email, and we&apos;ll send you a reset link.
               </p>
             </div>
 

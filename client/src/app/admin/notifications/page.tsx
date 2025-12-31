@@ -8,7 +8,7 @@ import AdminSidebar from '@/components/AdminSidebar';
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('notifications');
+  const [activeTab] = useState('notifications');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');

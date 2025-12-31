@@ -7,7 +7,7 @@ import LogoutModal from '@/components/LogoutModal';
 
 export default function PaymentsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('payments');
+  const [activeTab] = useState('payments');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [timeRange, setTimeRange] = useState('Monthly');

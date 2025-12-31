@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { JSX, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LogoutModal from '@/components/LogoutModal';

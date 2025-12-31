@@ -2,10 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function TicketSuccessPage() {
-  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const ticketId = '#VELOLink-12345';
 

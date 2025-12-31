@@ -3,6 +3,7 @@
 import { useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -47,7 +48,7 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
       <header className="bg-white border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center">
-            <img
+            <Image
               src="/assets/logo_svgs/Primary_Logo(black).svg"
               alt="Velo Link"
               className="h-7 sm:h-8 w-auto"

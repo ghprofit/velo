@@ -18,7 +18,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const dispatch = useDispatch();
   const [logoutUser] = useLogoutUserMutation();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const activeTab = 'dashboard';
   const [timePeriod, setTimePeriod] = useState<'7' | '30' | '90'>('30');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const refreshToken = useSelector((state: RootState) => state.auth.tokens?.refreshToken);
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
       if (refreshToken) {
         await logoutUser(refreshToken).unwrap();
       }
-    } catch (error) {
+    } catch {
       // Silently handle API errors - we'll clear state anyway
     } finally {
       // Always clear local state and redirect

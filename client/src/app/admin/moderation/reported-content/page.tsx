@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LogoutModal from '@/components/LogoutModal';
 import AdminSidebar from '@/components/AdminSidebar';
 
 export default function ReportedContentDetailPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('reported-content');
+  const [activeTab] = useState('reported-content');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [status, setStatus] = useState('Pending');
   const [internalNote, setInternalNote] = useState('');
@@ -102,7 +101,7 @@ export default function ReportedContentDetailPage() {
                 </div>
 
                 {/* Content Info */}
-                <h3 className="text-lg font-bold text-gray-900 mb-3">Exclusive Behind the Scenes – John's Studio Tour</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-3">Exclusive Behind the Scenes – John&apos;s Studio Tour</h3>
                 <div className="flex items-center gap-4 text-sm text-gray-600 mb-6">
                   <span>Creator: <span className="font-semibold text-gray-900">@johncreates</span></span>
                   <span>•</span>
@@ -153,7 +152,7 @@ export default function ReportedContentDetailPage() {
                   <div>
                     <p className="text-sm text-gray-600 mb-3">What the reporter shared</p>
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <p className="text-sm text-gray-900 italic">"This video contains unauthorized use of my song. Please review."</p>
+                      <p className="text-sm text-gray-900 italic">&quot;This video contains unauthorized use of my song. Please review.&quot;</p>
                     </div>
                   </div>
                 </div>

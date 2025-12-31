@@ -12,16 +12,31 @@ import { clearAuth } from '@/state/authSlice';
 import { RootState } from '@/app/redux';
 import AdminSidebar from '@/components/AdminSidebar';
 import LogoutModal from '@/components/LogoutModal';
+import Image from 'next/image';
+
+interface ContentItem {
+  id: string;
+  title: string;
+  status: string;
+  createdAt: string;
+}
+
+interface PayoutItem {
+  id: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+}
 
 export default function CreatorDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const dispatch = useDispatch();
   const creatorId = params.id as string;
-  
+
   const [logoutUser] = useLogoutUserMutation();
-  const [activeTab, setActiveTab] = useState('creator-details');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const activeTab = 'creators';
   const refreshToken = useSelector((state: RootState) => state.auth.tokens?.refreshToken);
 
   // Fetch creator details
@@ -33,7 +48,7 @@ export default function CreatorDetailsPage() {
       if (refreshToken) {
         await logoutUser(refreshToken).unwrap();
       }
-    } catch (error) {
+    } catch {
       // Silently handle API errors
     } finally {
       dispatch(clearAuth());
@@ -162,7 +177,7 @@ export default function CreatorDetailsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Creator Not Found</h2>
-            <p className="text-gray-600 mb-6">The creator you're looking for doesn't exist.</p>
+            <p className="text-gray-600 mb-6">The creator you&apos;re looking for doesn&apos;t exist.</p>
             <Link
               href="/admin/creators"
               className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors inline-block"
@@ -207,7 +222,7 @@ export default function CreatorDetailsPage() {
                 {/* Profile Picture */}
                 <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center overflow-hidden text-white text-3xl font-bold">
                   {creator.profileImage ? (
-                    <img src={creator.profileImage} alt={creator.name} className="w-full h-full object-cover" />
+                    <Image src={creator.profileImage} alt={creator.name} className="w-full h-full object-cover" />
                   ) : (
                     getInitials(creator.name)
                   )}
@@ -331,7 +346,7 @@ export default function CreatorDetailsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {creator.recentContent.map((content: any) => (
+                    {creator.recentContent.map((content: ContentItem) => (
                       <tr key={content.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-4 px-4 text-sm text-gray-900">{content.title || 'Untitled'}</td>
                         <td className="py-4 px-4">
@@ -380,7 +395,7 @@ export default function CreatorDetailsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {creator.recentPayouts.map((payout: any) => (
+                    {creator.recentPayouts.map((payout: PayoutItem) => (
                       <tr key={payout.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-4 px-4 text-sm font-medium text-gray-900">{payout.id.slice(0, 8).toUpperCase()}</td>
                         <td className="py-4 px-4 text-sm text-gray-900">{formatCurrency(Number(payout.amount))}</td>

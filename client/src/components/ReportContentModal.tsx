@@ -100,7 +100,7 @@ export default function ReportContentModal({
           {/* Content Being Reported */}
           <div className="bg-gray-50 border-l-4 border-indigo-500 rounded-lg p-4 mb-8">
             <div className="text-sm text-gray-600 mb-1">Reporting Content:</div>
-            <div className="font-bold text-gray-900 mb-1">"{contentTitle}"</div>
+            <div className="font-bold text-gray-900 mb-1">&quot;{contentTitle}&quot;</div>
             <div className="text-sm text-gray-500">
               {contentType}
               {contentDuration && ` • ${contentDuration}`}
@@ -195,7 +195,7 @@ export default function ReportContentModal({
                   />
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900">Refund/Quality Issue</div>
-                    <div className="text-sm text-gray-600">Content doesn't match description or is low quality</div>
+                    <div className="text-sm text-gray-600">Content doesn&apos;t match description or is low quality</div>
                   </div>
                 </label>
 

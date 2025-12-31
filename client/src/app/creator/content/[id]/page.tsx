@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { contentApi } from '@/lib/api-client';
+import Image from 'next/image';
 
 interface ContentItem {
   id: string;
@@ -61,9 +62,10 @@ export default function ContentDetailPage() {
         const response = await contentApi.getContentById(contentId);
         setContent(response.data.data);
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch content:', err);
-        setError(err.response?.data?.message || 'Content not found');
+        const error = err as { response?: { data?: { message?: string } } };
+        setError(error.response?.data?.message || 'Content not found');
       } finally {
         setLoading(false);
       }
@@ -79,9 +81,10 @@ export default function ContentDetailPage() {
       setDeleting(true);
       await contentApi.deleteContent(contentId);
       router.push('/creator/analytics');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete content:', err);
-      setError(err.response?.data?.message || 'Failed to delete content');
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to delete content');
       setDeleting(false);
       setShowDeleteModal(false);
     }
@@ -247,7 +250,7 @@ export default function ContentDetailPage() {
             {/* Thumbnail Preview */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="aspect-video bg-gray-100 relative">
-                <img
+                <Image
                   src={content.thumbnailUrl}
                   alt={content.title}
                   className="w-full h-full object-cover"

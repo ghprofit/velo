@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import ScrollReveal from './ScrollReveal';
 
 export default function HowItWorks() {
@@ -56,10 +57,11 @@ export default function HowItWorks() {
 
               {/* Main Mockup */}
               <div className="absolute inset-0 bg-linear-to-br from-indigo-400 to-purple-400 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-              <img
+              <Image
                 src="/assets/images/Mockups/Mockup_1.png"
                 alt="Smartphone showing file upload interface with pricing"
-                height={80}
+                width={450}
+                height={900}
                 className="relative z-10 w-full h-auto drop-shadow-2xl transform group-hover:scale-105 transition-transform duration-500"
               />
             </div>
@@ -114,9 +116,11 @@ export default function HowItWorks() {
 
               {/* Main Mockup */}
               <div className="absolute inset-0 bg-linear-to-br from-purple-400 to-pink-400 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-              <img
+              <Image
                 src="/assets/images/Mockups/Mockup_3.png"
                 alt="Smartphone showing secure link generation with padlock"
+                width={450}
+                height={900}
                 className="relative z-10 w-full h-auto drop-shadow-2xl transform group-hover:scale-105 transition-transform duration-500"
               />
             </div>
@@ -176,9 +180,11 @@ export default function HowItWorks() {
 
               {/* Main Mockup */}
               <div className="absolute inset-0 bg-linear-to-br from-pink-400 to-orange-400 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-              <img
+              <Image
                 src="/assets/images/Mockups/Mockup_4.PNG"
                 alt="Smartphone displaying social sharing interface"
+                width={450}
+                height={900}
                 className="relative z-10 w-full h-auto drop-shadow-2xl transform group-hover:scale-105 transition-transform duration-500"
               />
             </div>
@@ -238,9 +244,11 @@ export default function HowItWorks() {
 
               {/* Main Mockup */}
               <div className="absolute inset-0 bg-linear-to-br from-green-400 to-emerald-400 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-              <img
+              <Image
                 src="/assets/images/Mockups/Mockup_2.png"
                 alt="Smartphone wallet interface showing balance and earnings"
+                width={450}
+                height={900}
                 className="relative z-10 w-full h-auto drop-shadow-2xl transform group-hover:scale-105 transition-transform duration-500"
               />
             </div>

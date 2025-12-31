@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react';
 import { contentApi, veriffApi } from '@/lib/api-client';
 import UploadBlockedScreen from '@/components/UploadBlockedScreen';
+import NextImage from 'next/image';
 
 interface UploadedFile {
   file: File;
@@ -67,7 +68,7 @@ export default function UploadContentPage() {
       // Only allow upload if BOTH conditions met
       const allowed = data.emailVerified && data.verificationStatus === 'VERIFIED';
       setCanUpload(allowed);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to check verification:', err);
       setError('Failed to check verification status. Please refresh.');
     } finally {
@@ -260,9 +261,9 @@ export default function UploadContentPage() {
       setGeneratedLink(response.data.data.link);
       setShortId(response.data.data.shortId);
       setCurrentStep(4);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating content:', err);
-      setError(err.response?.data?.message || 'Failed to create content');
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to create content');
     } finally {
       setUploading(false);
     }
@@ -356,7 +357,7 @@ export default function UploadContentPage() {
 
           {/* Blocked Screen */}
           <UploadBlockedScreen
-            verificationStatus={verificationStatus as any}
+            verificationStatus={verificationStatus as never}
             emailVerified={emailVerified}
             onRefresh={checkVerificationStatus}
           />
@@ -486,7 +487,7 @@ export default function UploadContentPage() {
                     {uploadedFiles.map((uf) => (
                       <div key={uf.id} className="relative group">
                         <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                          <img
+                          <NextImage
                             src={uf.thumbnail}
                             alt={uf.file.name}
                             className="w-full h-full object-cover"
@@ -545,7 +546,7 @@ export default function UploadContentPage() {
                 {/* Preview Thumbnail */}
                 <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                    <img
+                    <NextImage
                       src={uploadedFiles[0]?.thumbnail}
                       alt="Preview"
                       className="w-full h-full object-cover"
@@ -610,7 +611,7 @@ export default function UploadContentPage() {
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1.5 sm:mt-2">
-                    You'll receive <span className="font-semibold text-gray-900">${price && !isNaN(parseFloat(price)) ? (parseFloat(price) * 0.90).toFixed(2) : '0.00'}</span> (90% of your price)
+                    You&apos;ll receive <span className="font-semibold text-gray-900">${price && !isNaN(parseFloat(price)) ? (parseFloat(price) * 0.90).toFixed(2) : '0.00'}</span> (90% of your price)
                   </p>
                 </div>
               </div>
@@ -653,7 +654,7 @@ export default function UploadContentPage() {
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
                 <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0 relative">
-                    <img
+                    <NextImage
                       src={uploadedFiles[0]?.thumbnail}
                       alt="Preview"
                       className="w-full h-full object-cover blur-sm"
@@ -883,7 +884,7 @@ export default function UploadContentPage() {
 
                 <div className="flex items-start gap-3 sm:gap-4">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                    <img
+                    <NextImage
                       src={uploadedFiles[0]?.thumbnail}
                       alt="Preview"
                       className="w-full h-full object-cover"

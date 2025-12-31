@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { payoutApi } from '@/lib/api-client';
+import Image from 'next/image';
 
 export default function PayoutSetupPage() {
   const router = useRouter();
@@ -49,7 +50,16 @@ export default function PayoutSetupPage() {
       }
 
       // Prepare payload - only send non-empty optional fields
-      const payload: any = {
+      const payload: {
+        bankAccountName: string;
+        bankName: string;
+        bankAccountNumber: string;
+        bankCountry: string;
+        bankCurrency: string;
+        bankRoutingNumber?: string;
+        bankSwiftCode?: string;
+        bankIban?: string;
+      } = {
         bankAccountName: formData.bankAccountName,
         bankName: formData.bankName,
         bankAccountNumber: formData.bankAccountNumber,
@@ -65,9 +75,10 @@ export default function PayoutSetupPage() {
 
       // Navigate to creator dashboard
       router.push('/creator');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Payout setup error:', err);
-      setError(err.response?.data?.message || 'Failed to setup payout account. Please try again.');
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to setup payout account. Please try again.');
       setIsLoading(false);
     }
   };
@@ -82,7 +93,7 @@ export default function PayoutSetupPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
           </div>
 
           {/* Mobile: Simplified Step Indicator (Dots) */}

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 
 // Mock data for the admin - will be replaced with API call
 const mockAdminData = {
@@ -82,7 +81,7 @@ const mockActivityLog = [
 ];
 
 export default function AdminAuditPage() {
-  const params = useParams();
+  // const params = useParams();
   const [dateFilter, setDateFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);

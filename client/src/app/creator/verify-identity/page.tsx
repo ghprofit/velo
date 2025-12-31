@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
 import { veriffApi } from '@/lib/api-client';
 import { useAppSelector } from '../../redux';
-import type { VeriffSessionResponse, VeriffStatusResponse } from '@/types/auth';
+import type { VeriffSessionResponse } from '@/types/auth';
 
 type VerificationStatusType = 'PENDING' | 'IN_PROGRESS' | 'VERIFIED' | 'REJECTED' | 'EXPIRED';
 
@@ -33,7 +33,7 @@ export default function CreatorVerifyIdentityPage() {
 
       setVerificationStatus(data.verificationStatus);
       setSessionId(data.veriffSessionId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch verification status:', err);
     } finally {
       setIsCheckingStatus(false);
@@ -61,9 +61,10 @@ export default function CreatorVerifyIdentityPage() {
       if (sessionData.verificationUrl) {
         window.open(sessionData.verificationUrl, '_blank');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Verification initiation error:', err);
-      setError(err.response?.data?.message || 'Failed to initiate verification. Please try again.');
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to initiate verification. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -84,9 +85,10 @@ export default function CreatorVerifyIdentityPage() {
       if (sessionData.verificationUrl) {
         window.open(sessionData.verificationUrl, '_blank');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Resubmission error:', err);
-      setError(err.response?.data?.message || 'Failed to resubmit verification.');
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to resubmit verification.');
     } finally {
       setIsLoading(false);
     }
@@ -207,7 +209,7 @@ export default function CreatorVerifyIdentityPage() {
                 Verification In Progress
               </h2>
               <p className="text-gray-700 mb-6">
-                Your verification is currently being reviewed. This usually takes a few minutes, but can take up to 24 hours. We'll send you an email notification once the review is complete.
+                Your verification is currently being reviewed. This usually takes a few minutes, but can take up to 24 hours. We&apos;ll send you an email notification once the review is complete.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
@@ -233,7 +235,7 @@ export default function CreatorVerifyIdentityPage() {
               {/* What you'll need */}
               <div className="bg-gray-50 rounded-xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">
-                  What you'll need:
+                  What you&apos;ll need:
                 </h2>
 
                 <div className="grid md:grid-cols-3 gap-4">
@@ -244,7 +246,7 @@ export default function CreatorVerifyIdentityPage() {
                       </svg>
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-1">Government ID</h3>
-                    <p className="text-sm text-gray-600">Passport, driver's license, or national ID</p>
+                    <p className="text-sm text-gray-600">Passport, driver&apos;s license, or national ID</p>
                   </div>
 
                   <div className="flex flex-col items-center text-center p-4 bg-white rounded-lg">

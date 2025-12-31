@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authApi, payoutApi } from '@/lib/api-client';
@@ -105,7 +105,7 @@ export default function SettingsPage() {
       try {
         const bankRes = await payoutApi.getBankAccountInfo();
         setBankAccount(bankRes.data.data);
-      } catch (err) {
+      } catch  {
         // Bank account might not be set up yet
         console.log('No bank account found');
       }
@@ -114,7 +114,7 @@ export default function SettingsPage() {
       const notifRes = await authApi.getNotificationPreferences();
       setNotifications(notifRes.data.data);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading user data:', err);
       setError('Failed to load settings');
     } finally {
@@ -140,8 +140,8 @@ export default function SettingsPage() {
       setSuccess('Profile updated successfully!');
       setIsEditingProfile(false);
       await loadUserData();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update profile');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -168,8 +168,8 @@ export default function SettingsPage() {
       await authApi.resendVerification(email);
       setVerificationMessage('Verification code sent! Please check your email.');
       setTimeout(() => setVerificationMessage(''), 5000);
-    } catch (err: any) {
-      setVerificationMessage(err.response?.data?.message || 'Failed to resend verification code. Please try again.');
+    } catch (err: unknown) {
+      setVerificationMessage((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to resend verification code. Please try again.');
       setTimeout(() => setVerificationMessage(''), 5000);
     } finally {
       setResendingVerification(false);
@@ -189,7 +189,16 @@ export default function SettingsPage() {
     }
 
     try {
-      const payload: any = {
+      const payload: {
+        bankAccountName: string;
+        bankName: string;
+        bankAccountNumber: string;
+        bankCountry: string;
+        bankCurrency: string;
+        bankRoutingNumber?: string;
+        bankSwiftCode?: string;
+        bankIban?: string;
+      } = {
         bankAccountName: bankFormData.bankAccountName,
         bankName: bankFormData.bankName,
         bankAccountNumber: bankFormData.bankAccountNumber,
@@ -216,8 +225,8 @@ export default function SettingsPage() {
       });
       setConfirmAccountNumber('');
       await loadUserData();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update bank account');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to update bank account');
     } finally {
       setSaving(false);
     }
@@ -244,8 +253,8 @@ export default function SettingsPage() {
         newPassword: '',
         confirmNewPassword: '',
       });
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to change password');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to change password');
     } finally {
       setSaving(false);
     }
@@ -265,8 +274,8 @@ export default function SettingsPage() {
       });
 
       setSuccess('Notification preferences updated!');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update notifications');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to update notifications');
     } finally {
       setSaving(false);
     }
@@ -286,8 +295,8 @@ export default function SettingsPage() {
       // Logout and redirect
       localStorage.clear();
       router.push('/login');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to deactivate account');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to deactivate account');
       setSaving(false);
     }
   };
@@ -311,8 +320,8 @@ export default function SettingsPage() {
       // Logout and redirect
       localStorage.clear();
       router.push('/login');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to delete account');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to delete account');
       setSaving(false);
     }
   };
@@ -858,7 +867,7 @@ export default function SettingsPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1">Payout updates</h4>
-                      <p className="text-xs sm:text-sm text-gray-600">Receive alerts when payouts are processed or there's a payment issue.</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Receive alerts when payouts are processed or there&apos;s a payment issue.</p>
                     </div>
                     <div className="flex-shrink-0">
                       <button

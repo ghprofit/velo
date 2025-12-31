@@ -8,7 +8,7 @@ import AdminSidebar from '@/components/AdminSidebar';
 
 export default function PayoutReportsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('payout-reports');
+  const [activeTab] = useState('payout-reports');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('Last 7 Days');

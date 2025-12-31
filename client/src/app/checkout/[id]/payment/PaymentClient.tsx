@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { buyerApi, stripeApi } from '@/lib/api-client';
-import { getBuyerSession, saveBuyerSession, getBrowserFingerprint, savePurchaseToken } from '@/lib/buyer-session';
+import { getBuyerSession, getBrowserFingerprint, savePurchaseToken } from '@/lib/buyer-session';
 import CheckoutForm from '@/components/CheckoutForm';
 import Footer from '@/components/Footer';
+import Image from 'next/image';
 
 interface ContentData {
   id: string;
@@ -28,7 +29,7 @@ export function PaymentClient({ id }: { id: string }) {
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
 
-  const [stripePromise, setStripePromise] = useState<any>(null);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [content, setContent] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,9 +105,10 @@ export function PaymentClient({ id }: { id: string }) {
         });
 
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Payment initialization error:', err);
-        const errorMessage = err.response?.data?.message || err.message || 'Failed to initialize payment';
+        const error = err as { response?: { data?: { message?: string } }; message?: string };
+        const errorMessage = error.response?.data?.message || error.message || 'Failed to initialize payment';
         setError(errorMessage);
       } finally {
         setLoading(false);
@@ -228,7 +230,7 @@ export function PaymentClient({ id }: { id: string }) {
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center">
-            <img
+            <Image
               src="/assets/logo_svgs/Primary_Logo(black).svg"
               alt="Velo Link"
               className="h-7 sm:h-8 w-auto"
@@ -285,7 +287,7 @@ export function PaymentClient({ id }: { id: string }) {
             {/* Left Column - Content Preview */}
             <div className="space-y-6">
               <div className="relative bg-white rounded-xl lg:rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-200 aspect-video">
-                <img
+                <Image
                   src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
                   alt={content.title}
                   className="w-full h-full object-cover blur-sm"
@@ -293,7 +295,7 @@ export function PaymentClient({ id }: { id: string }) {
                 <div className="absolute inset-0 bg-gradient-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
                   <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-5 shadow-2xl">
                     <div className="flex items-center gap-3">
-                      <img
+                      <Image
                         src="/assets/logo_svgs/Brand_Icon(black).svg"
                         alt="Lock"
                         className="w-7 h-7"

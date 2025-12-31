@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { buyerApi } from '@/lib/api-client';
 import { getBuyerSession, saveBuyerSession, getBrowserFingerprint, getPurchaseToken } from '@/lib/buyer-session';
 import Footer from '@/components/Footer';
+import Image from 'next/image';
 
 interface ContentData {
   id: string;
@@ -56,9 +57,10 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
         const response = await buyerApi.getContentDetails(id);
         setContent(response.data);
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch content:', err);
-        setError(err.response?.data?.message || 'Failed to load content');
+        const error = err as { response?: { data?: { message?: string } } };
+        setError(error.response?.data?.message || 'Failed to load content');
       } finally {
         setLoading(false);
       }
@@ -113,9 +115,10 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
       // Navigate only after session is confirmed
       router.push(`/checkout/${id}/payment?email=${encodeURIComponent(email)}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Checkout error:', err);
-      setError(err.message || 'Failed to proceed to payment');
+      const error = err as { message?: string };
+      setError(error.message || 'Failed to proceed to payment');
       setIsProcessing(false);
     }
   };
@@ -159,7 +162,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center">
-            <img
+            <Image
               src="/assets/logo_svgs/Primary_Logo(black).svg"
               alt="Velo Link"
               className="h-7 sm:h-8 w-auto"
@@ -188,7 +191,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
             {/* Left Column - Content Preview */}
             <div className="space-y-6">
               <div className="relative bg-white rounded-xl lg:rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-200 aspect-video">
-                <img
+                <Image
                   src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
                   alt={content.title}
                   className="w-full h-full object-cover blur-sm"
@@ -196,7 +199,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                 <div className="absolute inset-0 bg-gradient-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
                   <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-5 shadow-2xl">
                     <div className="flex items-center gap-3">
-                      <img
+                      <Image
                         src="/assets/logo_svgs/Brand_Icon(black).svg"
                         alt="Lock"
                         className="w-7 h-7"
@@ -263,7 +266,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                       placeholder="your@email.com"
                     />
                     <p className="mt-2 text-xs sm:text-sm text-gray-500">
-                      We'll send your purchase receipt and access link to this email
+                      We&apos;ll send your purchase receipt and access link to this email
                     </p>
                   </div>
 
@@ -329,7 +332,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                       <span className="font-medium">Secure payment • Instant access</span>
                     </div>
                     <div className="flex items-center justify-center gap-4 pt-1">
-                      <img src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" className="h-5" />
+                      <Image src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" className="h-5" />
                       <span className="text-xs font-medium text-gray-400">•</span>
                       <span className="text-xs font-medium text-gray-500">VISA</span>
                       <span className="text-xs font-medium text-gray-500">Mastercard</span>

@@ -4,6 +4,7 @@ import { use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Footer from '@/components/Footer';
+import Image from 'next/image';
 
 export default function PaymentFailedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -14,12 +15,12 @@ export default function PaymentFailedPage({ params }: { params: Promise<{ id: st
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex flex-col">
+    <div className="min-h-screen bg-linear-to-br from-red-50 via-white to-orange-50 flex flex-col">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-center">
           <Link href="/" className="flex items-center">
-            <img
+            <Image
               src="/assets/logo_svgs/Primary_Logo(black).svg"
               alt="Velo Link"
               className="h-8 w-auto"
@@ -44,14 +45,14 @@ export default function PaymentFailedPage({ params }: { params: Promise<{ id: st
           {/* Error Message */}
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Payment Failed</h1>
           <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-            We couldn't process your payment. This could be due to insufficient funds, an incorrect card number, or your bank declining the transaction.
+            We couldn&apos;t process your payment. This could be due to insufficient funds, an incorrect card number, or your bank declining the transaction.
           </p>
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <button
               onClick={handleTryAgain}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

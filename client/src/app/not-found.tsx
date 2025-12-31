@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function NotFound() {
@@ -6,7 +7,7 @@ export default function NotFound() {
       <div className="text-center max-w-2xl mx-auto">
         {/* Logo */}
         <div className="mb-8">
-          <img
+          <Image
             src="/assets/logo_svgs/Secondary_Logo(white).svg"
             alt="Velo"
             className="h-12 mx-auto"
@@ -21,7 +22,7 @@ export default function NotFound() {
           This page could not be found
         </h2>
         <p className="text-gray-400 text-lg mb-8">
-          The page you're looking for doesn't exist or has been moved.
+          The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
 
         {/* Action Button */}

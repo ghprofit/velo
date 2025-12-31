@@ -1,21 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LogoutModal from '@/components/LogoutModal';
 import AdminSidebar from '@/components/AdminSidebar';
 
 export default function SupportReportsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('support-reports');
+  const [activeTab] = useState('support-reports');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [issueType, setIssueType] = useState('All Types');
   const [status, setStatus] = useState('All Status');
   const [priority, setPriority] = useState('All Priorities');
   const [assignedTo, setAssignedTo] = useState('All Admins');
-  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [, setShowTicketModal] = useState(false);
 
 
   const tickets = [

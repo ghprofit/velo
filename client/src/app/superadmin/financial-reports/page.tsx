@@ -5,7 +5,6 @@ import {
   useGetFinancialOverviewQuery,
   useGetRevenueReportQuery,
   useGetPayoutReportQuery,
-  useGetRevenueAnalyticsQuery,
   useGetPayoutStatsQuery,
   useGetCreatorEarningsQuery,
 } from '@/state/api';

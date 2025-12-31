@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { buyerApi } from '@/lib/api-client';
 import { getBuyerSession, saveBuyerSession, getBrowserFingerprint, getPurchaseToken, savePurchaseToken } from '@/lib/buyer-session';
 import Footer from '@/components/Footer';
+import Image from 'next/image';
 
 interface ContentData {
   id: string;
@@ -27,6 +28,10 @@ interface ContentData {
 
 interface PurchasedContentData extends ContentData {
   s3Key: string;
+}
+
+interface AccessEligibility {
+  accessExpiresAt?: string;
   s3Bucket: string;
   contentItems: Array<{
     id: string;
@@ -52,7 +57,7 @@ export function ContentClient({ id }: { id: string }) {
   const [verificationEmail, setVerificationEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [currentFingerprint, setCurrentFingerprint] = useState<string | null>(null);
-  const [accessEligibility, setAccessEligibility] = useState<any>(null);
+  const [accessEligibility, setAccessEligibility] = useState<AccessEligibility | null>(null);
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
 
@@ -117,9 +122,10 @@ export function ContentClient({ id }: { id: string }) {
           setContent(response.data);
           setIsPurchased(false);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch content:', err);
-        setError(err.response?.data?.message || 'Failed to load content');
+        const error = err as { response?: { data?: { message?: string } } };
+        setError(error.response?.data?.message || 'Failed to load content');
         setIsPurchased(false);
       } finally {
         setLoading(false);
@@ -157,9 +163,10 @@ export function ContentClient({ id }: { id: string }) {
       });
 
       alert('Verification code sent to your email!');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to request verification:', err);
-      setVerificationError(err.response?.data?.message || 'Failed to send verification code');
+      const error = err as { response?: { data?: { message?: string } } };
+      setVerificationError(error.response?.data?.message || 'Failed to send verification code');
     } finally {
       setVerificationLoading(false);
     }
@@ -189,9 +196,10 @@ export function ContentClient({ id }: { id: string }) {
 
       setShowVerificationModal(false);
       window.location.reload();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to verify code:', err);
-      setVerificationError(err.response?.data?.message || 'Invalid verification code');
+      const error = err as { response?: { data?: { message?: string } } };
+      setVerificationError(error.response?.data?.message || 'Invalid verification code');
     } finally {
       setVerificationLoading(false);
     }
@@ -217,14 +225,14 @@ export function ContentClient({ id }: { id: string }) {
 
   if (error || (!content && !purchasedContent)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-950 to-purple-950 flex flex-col">
+      <div className="min-h-screen bg-linear-to-br from-gray-900 via-indigo-950 to-purple-950 flex flex-col">
         {/* Error Content */}
         <div className="h-screen flex items-center justify-center px-4 py-12">
           <div className="text-center max-w-lg mx-auto">
             <div className="relative inline-block mb-8">
               <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-3xl opacity-60"></div>
               <div className="relative bg-white/10 backdrop-blur-sm rounded-full p-8 shadow-2xl ring-1 ring-white/20">
-                <img
+                <Image
                   src="/assets/logo_svgs/Secondary_Logo(white).svg"
                   alt="Velo Link"
                   className="h-16 w-auto mx-auto"
@@ -271,7 +279,7 @@ export function ContentClient({ id }: { id: string }) {
         <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <Link href="/" className="flex items-center">
-              <img
+              <Image
                 src="/assets/logo_svgs/Primary_Logo(black).svg"
                 alt="Velo Link"
                 className="h-8 w-auto"
@@ -365,7 +373,7 @@ export function ContentClient({ id }: { id: string }) {
         <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <Link href="/" className="flex items-center">
-              <img
+              <Image
                 src="/assets/logo_svgs/Primary_Logo(black).svg"
                 alt="Velo Link"
                 className="h-7 sm:h-8 w-auto"
@@ -394,7 +402,7 @@ export function ContentClient({ id }: { id: string }) {
               {/* Left Column - Preview */}
               <div className="space-y-6">
                 <div className="relative bg-white rounded-xl lg:rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-200 aspect-video">
-                  <img
+                  <Image
                     src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
                     alt={content.title}
                     className="w-full h-full object-cover blur-sm"
@@ -402,7 +410,7 @@ export function ContentClient({ id }: { id: string }) {
                   <div className="absolute inset-0 bg-gradient-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
                     <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-5 shadow-2xl">
                       <div className="flex items-center gap-3">
-                        <img
+                        <Image
                           src="/assets/logo_svgs/Brand_Icon(black).svg"
                           alt="Lock"
                           className="w-7 h-7"
@@ -488,7 +496,7 @@ export function ContentClient({ id }: { id: string }) {
                       <span className="font-medium">Secure payment • Instant access</span>
                     </div>
                     <div className="flex items-center justify-center gap-4 pt-2">
-                      <img src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" className="h-5" />
+                      <Image src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" className="h-5" />
                       <span className="text-xs font-medium text-gray-400">•</span>
                       <span className="text-xs font-medium text-gray-500">VISA</span>
                       <span className="text-xs font-medium text-gray-500">Mastercard</span>

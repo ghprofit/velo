@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { JSX, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -10,7 +9,6 @@ interface AdminSidebarProps {
 }
 
 export default function AdminSidebar({ activeTab, onLogout }: AdminSidebarProps) {
-  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [

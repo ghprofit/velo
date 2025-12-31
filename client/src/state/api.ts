@@ -414,7 +414,7 @@ interface UpdateContentRequest {
     isPublished?: boolean;
 }
 
-interface ReviewContentRequest {
+interface SuperAdminReviewContentRequest {
     decision: 'APPROVED' | 'REJECTED' | 'FLAGGED';
     notes?: string;
     reason?: string;
@@ -495,6 +495,20 @@ interface AdminCreatorStatsResponse {
     };
 }
 
+interface RecentContentItem {
+    id: string;
+    title: string;
+    status: string;
+    createdAt: string;
+}
+
+interface RecentPayoutItem {
+    id: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+}
+
 interface AdminCreatorDetailsResponse {
     success: boolean;
     data: AdminCreator & {
@@ -503,8 +517,8 @@ interface AdminCreatorDetailsResponse {
         coverImage?: string;
         payoutStatus: string;
         policyStrikes: number;
-        recentContent: any[];
-        recentPayouts: any[];
+        recentContent: RecentContentItem[];
+        recentPayouts: RecentPayoutItem[];
     };
 }
 
@@ -554,13 +568,20 @@ interface AdminContentStatsResponse {
     };
 }
 
+interface RecentPurchaseItem {
+    id: string;
+    buyerEmail: string;
+    amount: number;
+    createdAt: string;
+}
+
 interface AdminContentDetailsResponse {
     success: boolean;
     data: AdminContent & {
         s3Key?: string;
         s3Bucket?: string;
         thumbnailUrl?: string;
-        recentPurchases: any[];
+        recentPurchases: RecentPurchaseItem[];
     };
 }
 
@@ -575,6 +596,43 @@ interface QueryAdminContentParams {
 interface ReviewContentRequest {
     status: 'APPROVED' | 'REJECTED';
     reason?: string;
+}
+
+// Admin Payout Types
+interface AdminPaymentStats {
+    totalRevenue: number;
+    totalPayouts: number;
+    pendingPayouts: number;
+    failedTransactions: number;
+}
+
+interface AdminPayout {
+    id: string;
+    creatorName: string;
+    creatorEmail: string;
+    amount: number;
+    currency: string;
+    paymentMethod: string | null;
+    status: string;
+    createdAt: string;
+    processedAt: string | null;
+}
+
+interface AdminPayoutsResponse {
+    data: AdminPayout[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+interface QueryPayoutsParams {
+    search?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
 }
 
 export const api = createApi({
@@ -780,7 +838,7 @@ export const api = createApi({
             }),
             invalidatesTags: ['Content'],
         }),
-        reviewContent: build.mutation<ContentResponse, { id: string; data: ReviewContentRequest }>({
+        superAdminReviewContent: build.mutation<ContentResponse, { id: string; data: SuperAdminReviewContentRequest }>({
             query: ({ id, data }) => ({
                 url: `/api/superadmin/content/${id}/review`,
                 method: 'POST',
@@ -941,13 +999,37 @@ export const api = createApi({
             }),
             invalidatesTags: ['Content'],
         }),
-        removeContent: build.mutation<{ success: boolean; message: string }, { id: string; reason: string }>({
+        adminRemoveContent: build.mutation<{ success: boolean; message: string }, { id: string; reason: string }>({
             query: ({ id, reason }) => ({
                 url: `/api/admin/content/${id}/remove`,
                 method: 'POST',
                 body: { reason },
             }),
             invalidatesTags: ['Content'],
+        }),
+
+        // Admin Payout endpoints
+        getPaymentStats: build.query<AdminPaymentStats, void>({
+            query: () => '/api/admin/payouts/stats',
+            providesTags: ['Dashboard'],
+        }),
+        getPayouts: build.query<AdminPayoutsResponse, QueryPayoutsParams>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.search) searchParams.append('search', params.search);
+                if (params.status) searchParams.append('status', params.status);
+                if (params.page) searchParams.append('page', params.page.toString());
+                if (params.limit) searchParams.append('limit', params.limit.toString());
+                return `/api/admin/payouts?${searchParams.toString()}`;
+            },
+            providesTags: ['Dashboard'],
+        }),
+        processPayout: build.mutation<{ success: boolean; message: string }, { payoutId: string }>({
+            query: ({ payoutId }) => ({
+                url: `/api/admin/payouts/${payoutId}/process`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['Dashboard'],
         }),
     }),
 });
@@ -983,7 +1065,7 @@ export const {
     useGetContentStatsQuery,
     useGetContentByIdQuery,
     useUpdateContentMutation,
-    useReviewContentMutation,
+    useSuperAdminReviewContentMutation,
     useRemoveContentMutation,
     // Superadmin financial reports hooks
     useGetFinancialOverviewQuery,
@@ -1011,9 +1093,13 @@ export const {
     useGetAdminContentQuery,
     useGetAdminContentStatsQuery,
     useGetAdminContentByIdQuery,
-    // useReviewContentMutation,
+    useReviewContentMutation,
     useFlagContentMutation,
-    // useRemoveContentMutation,
+    useAdminRemoveContentMutation,
+    // Admin payout hooks
+    useGetPaymentStatsQuery,
+    useGetPayoutsQuery,
+    useProcessPayoutMutation,
 } = api;
 
 export default api;

@@ -22,7 +22,7 @@ export default function SuperAdminSidebar() {
       if (refreshToken) {
         await logoutUser(refreshToken).unwrap();
       }
-    } catch (error) {
+    } catch {
       // Silently handle API errors - we'll clear state anyway
     } finally {
       // Always clear local state and redirect

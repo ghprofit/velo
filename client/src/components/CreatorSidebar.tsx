@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, JSX } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutModal from './LogoutModal';
+import Image from 'next/image';
 
 export default function CreatorSidebar(): JSX.Element {
   const pathname = usePathname();
@@ -135,7 +136,7 @@ export default function CreatorSidebar(): JSX.Element {
       <>
         {/* Mobile Top Header */}
         <div className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
+          <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
           <button
             onClick={() => setIsMobileMenuOpen(true)}
             className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
@@ -257,9 +258,9 @@ export default function CreatorSidebar(): JSX.Element {
         {/* Logo & Toggle */}
         <div className={`p-4 border-b border-gray-200 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isCollapsed ? (
-            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12" />
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12" />
           ) : (
-            <img src="/assets/logo_svgs/Brand_Icon(black).svg" alt="velo logo" className="h-8 w-8" />
+            <Image src="/assets/logo_svgs/Brand_Icon(black).svg" alt="velo logo" className="h-8 w-8" />
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}

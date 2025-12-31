@@ -4,6 +4,7 @@ import { useState, FormEvent, ChangeEvent } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { useLogin } from '@/hooks/useLogin';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const { login, isLoading, error: serverError, requiresTwoFactor, verify2FA } = useLogin();
@@ -39,7 +40,7 @@ export default function LoginPage() {
       <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white md:bg-gradient-to-br md:from-indigo-50 md:via-white md:to-cyan-50 flex flex-col md:flex-row md:items-center md:justify-center p-0 md:p-6">
         {/* Mobile: Sticky Header */}
         <header className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 py-4 border-b border-gray-100 md:hidden">
-          <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
+          <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
         </header>
 
         <div className="flex-1 flex items-center justify-center px-4 py-6 md:py-0">
@@ -48,7 +49,7 @@ export default function LoginPage() {
             <div className="hidden lg:flex flex-col space-y-8">
               {/* Logo */}
               <div className="flex items-center gap-6">
-                <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-20"/>
+                <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-20"/>
               </div>
 
               {/* Tagline */}
@@ -153,7 +154,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white md:bg-gradient-to-br md:from-indigo-50 md:via-white md:to-cyan-50 flex flex-col md:flex-row md:items-center md:justify-center p-0 md:p-6">
       {/* Mobile: Sticky Header */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 py-4 border-b border-gray-100 md:hidden">
-        <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
+        <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 py-6 md:py-0">
@@ -162,7 +163,7 @@ export default function LoginPage() {
           <div className="hidden lg:flex flex-col space-y-8">
             {/* Logo */}
             <div className="flex items-center gap-6">
-              <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-40"/>
+              <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-40"/>
             </div>
 
             {/* Tagline */}
@@ -278,7 +279,7 @@ export default function LoginPage() {
                 {/* Sign Up Link */}
                 <div className="text-center pt-2">
                   <p className="text-sm text-gray-600">
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <Link
                       href="/register"
                       className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"

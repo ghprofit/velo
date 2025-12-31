@@ -7,7 +7,7 @@ import LogoutModal from '@/components/LogoutModal';
 
 export default function AdminSettingsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('settings');
+  const [activeTab] = useState('settings');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
 

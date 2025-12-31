@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, JSX } from 'react';
 import Link from 'next/link';
 import { analyticsApi } from '@/lib/api-client';
+import Image from 'next/image';
 
 interface OverviewStats {
   totalRevenue: number;
@@ -332,7 +333,7 @@ export default function AnalyticsPage() {
     return { pathData, areaData, points, maxValue: actualMax, yAxisLabels };
   };
 
-  const { pathData, areaData, points, maxValue, yAxisLabels } = generateChartData();
+  const { pathData, areaData, points, yAxisLabels } = generateChartData();
 
   return (
     <>
@@ -572,7 +573,7 @@ export default function AnalyticsPage() {
                   {contentItems.map((item) => (
                     <div key={item.id} className="p-4">
                       <div className="flex items-start gap-3 mb-3">
-                        <img
+                        <Image
                           src={item.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                           alt={item.title}
                           className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
@@ -636,7 +637,7 @@ export default function AnalyticsPage() {
                         <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <img
+                              <Image
                                 src={item.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                                 alt={item.title}
                                 className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
@@ -787,7 +788,7 @@ export default function AnalyticsPage() {
                           <div className="text-sm text-gray-500 mb-4">
                             Total tracked views: {demographics.geographic.totalViews.toLocaleString()}
                           </div>
-                          {demographics.geographic.countries.map((country, index) => (
+                          {demographics.geographic.countries.map((country) => (
                             <div key={country.countryCode} className="flex items-center gap-4">
                               <div className="flex items-center gap-3 w-40">
                                 <span className="text-2xl">{getFlagEmoji(country.countryCode)}</span>

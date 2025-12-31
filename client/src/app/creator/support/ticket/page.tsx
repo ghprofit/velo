@@ -134,9 +134,9 @@ export default function SupportTicketPage() {
 
       // Redirect to success page on successful submission
       router.push('/creator/support/ticket/success');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to submit ticket:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to submit ticket. Please try again.';
+      const errorMessage = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to submit ticket. Please try again.';
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -150,7 +150,7 @@ export default function SupportTicketPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Submit a Support Ticket</h1>
-              <p className="text-sm text-gray-600 mt-1">Fill out the form below and we'll get back to you within 24 hours</p>
+              <p className="text-sm text-gray-600 mt-1">Fill out the form below and we&apos;ll get back to you within 24 hours</p>
             </div>
             <Link
               href="/creator/support"

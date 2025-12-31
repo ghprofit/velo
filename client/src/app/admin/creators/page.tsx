@@ -17,7 +17,7 @@ export default function CreatorManagementPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const [logoutUser] = useLogoutUserMutation();
-  const [activeTab, setActiveTab] = useState('creators');
+  const activeTab = 'creators';
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [kycFilter, setKycFilter] = useState('all');
   const [accountFilter, setAccountFilter] = useState('all');
@@ -56,7 +56,7 @@ export default function CreatorManagementPage() {
       if (refreshToken) {
         await logoutUser(refreshToken).unwrap();
       }
-    } catch (error) {
+    } catch {
       // Silently handle API errors
     } finally {
       dispatch(clearAuth());

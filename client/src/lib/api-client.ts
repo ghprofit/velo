@@ -15,11 +15,11 @@ export const apiClient: AxiosInstance = axios.create({
 // Track if we're currently refreshing the token
 let isRefreshing = false;
 let failedQueue: Array<{
-  resolve: (value?: any) => void;
-  reject: (reason?: any) => void;
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
 }> = [];
 
-const processQueue = (error: any = null, token: string | null = null) => {
+const processQueue = (error: unknown = null, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);

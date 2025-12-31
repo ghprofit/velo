@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { Logo, Button, CheckCircleIcon, ShieldCheckIcon, LockClosedIcon, LightningBoltIcon, CurrencyDollarIcon, GlobeIcon } from '@/components/ui';
 import Header from "./home/Header";
 import Hero from "./home/Hero";
 import ValueProposition from "./home/ValueProposition";

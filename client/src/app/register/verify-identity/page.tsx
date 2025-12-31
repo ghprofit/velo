@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
 import { veriffApi } from '@/lib/api-client';
 import { useAppSelector } from '../../redux';
 import type { VeriffSessionResponse } from '@/types/auth';
+import Image from 'next/image';
 
 export default function VerifyIdentityPage() {
   const router = useRouter();
@@ -35,9 +36,10 @@ export default function VerifyIdentityPage() {
       if (sessionData.verificationUrl) {
         window.open(sessionData.verificationUrl, '_blank');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Verification initiation error:', err);
-      setError(err.response?.data?.message || 'Failed to initiate verification. Please try again.');
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to initiate verification. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -54,7 +56,7 @@ export default function VerifyIdentityPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
           </div>
 
           {/* Mobile: Simplified Step Indicator (Dots) */}
@@ -141,7 +143,7 @@ export default function VerifyIdentityPage() {
             {/* What you'll need */}
             <div className="bg-gray-50 rounded-xl p-6 space-y-4">
               <h2 className="text-lg font-bold text-gray-900 mb-4">
-                What you'll need:
+                What you&apos;ll need:
               </h2>
 
               <div className="space-y-3">
@@ -152,7 +154,7 @@ export default function VerifyIdentityPage() {
                   </div>
                   <div>
                     <span className="font-semibold text-gray-900">Government-issued ID</span>
-                    <p className="text-gray-700 text-sm mt-1">Valid passport, driver's license, or national ID card</p>
+                    <p className="text-gray-700 text-sm mt-1">Valid passport, driver&apos;s license, or national ID card</p>
                   </div>
                 </div>
 
@@ -221,7 +223,7 @@ export default function VerifyIdentityPage() {
                       onClick={handleContinue}
                       className="text-base py-3.5"
                     >
-                      I'll Complete This Later
+                      I&apos;ll Complete This Later
                     </Button>
                   </div>
                 )}
@@ -243,7 +245,7 @@ export default function VerifyIdentityPage() {
               <ol className="space-y-2 text-sm text-gray-700">
                 <li className="flex gap-2">
                   <span className="font-semibold">1.</span>
-                  <span>Click "Start Verification" to open a secure verification window</span>
+                  <span>Click &quot;Start Verification&quot; to open a secure verification window</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="font-semibold">2.</span>
@@ -255,7 +257,7 @@ export default function VerifyIdentityPage() {
                 </li>
                 <li className="flex gap-2">
                   <span className="font-semibold">4.</span>
-                  <span>You'll receive an email notification once your identity is verified</span>
+                  <span>You&apos;ll receive an email notification once your identity is verified</span>
                 </li>
               </ol>
             </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 
 // Mock data for the creator
 const mockCreatorData = {
@@ -80,7 +79,7 @@ const mockAuditLog = [
 ];
 
 export default function CreatorAuditPage() {
-  const params = useParams();
+  // const params = useParams();
   const creator = mockCreatorData;
 
   const getActionColor = (action: string) => {

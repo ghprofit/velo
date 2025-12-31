@@ -4,6 +4,7 @@ import { useState, useRef, KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api-client';
 import { useAppSelector } from '../../redux';
+import Image from 'next/image';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -72,9 +73,10 @@ export default function VerifyEmailPage() {
       setTimeout(() => {
         router.push('/register/verify-identity');
       }, 1000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Email verification error:', err);
-      setError(err.response?.data?.message || 'Invalid verification code. Please try again.');
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Invalid verification code. Please try again.');
       setIsLoading(false);
     }
   };
@@ -95,8 +97,9 @@ export default function VerifyEmailPage() {
       // Clear the code inputs
       setCode(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to resend verification code.');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to resend verification code.');
     } finally {
       setIsResending(false);
     }
@@ -108,7 +111,7 @@ export default function VerifyEmailPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
           </div>
 
           {/* Mobile: Simplified Step Indicator (Dots) */}
@@ -172,7 +175,7 @@ export default function VerifyEmailPage() {
                 Verify Your Email
               </h1>
               <p className="text-sm text-gray-600 max-w-md mx-auto">
-                We've sent a 6-digit verification code to <strong>{user?.email}</strong>. Please enter the code below.
+                We&apos;ve sent a 6-digit verification code to <strong>{user?.email}</strong>. Please enter the code below.
               </p>
             </div>
 
@@ -229,7 +232,7 @@ export default function VerifyEmailPage() {
             {/* Resend Code */}
             <div className="text-center space-y-2">
               <p className="text-sm text-gray-600">
-                Didn't receive the code?
+                Didn&apos;t receive the code?
               </p>
               <button
                 type="button"
@@ -249,7 +252,7 @@ export default function VerifyEmailPage() {
                 </svg>
                 <div>
                   <p className="text-xs text-gray-600">
-                    The verification code will expire in 24 hours. If you don't see the email, check your spam or junk folder.
+                    The verification code will expire in 24 hours. If you don&apos;t see the email, check your spam or junk folder.
                   </p>
                 </div>
               </div>

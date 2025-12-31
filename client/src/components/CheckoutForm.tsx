@@ -7,7 +7,7 @@ interface CheckoutFormProps {
   onSuccess: (purchaseId: string, accessToken: string, paymentIntentId: string) => void;
   onError: (error: string) => void;
   amount: number;
-  paymentElementOptions?: any;
+  paymentElementOptions?: Record<string, unknown>;
   purchaseId: string;
   accessToken: string;
   contentId: string;
@@ -43,9 +43,10 @@ export default function CheckoutForm({ onSuccess, onError, amount, paymentElemen
         // Payment successful - use props instead of metadata
         onSuccess(purchaseId, accessToken, paymentIntent.id);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Payment error:', err);
-      onError(err.message || 'An unexpected error occurred');
+      const error = err as { message?: string };
+      onError(error.message || 'An unexpected error occurred');
       setIsProcessing(false);
     }
   };

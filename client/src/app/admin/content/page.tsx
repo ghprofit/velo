@@ -19,8 +19,8 @@ export default function ContentManagementPage() {
   const dispatch = useDispatch();
   const [logoutUser] = useLogoutUserMutation();
   const [reviewContent] = useReviewContentMutation();
-  
-  const [activeTab, setActiveTab] = useState('content');
+
+  const activeTab = 'content';
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,7 +61,7 @@ export default function ContentManagementPage() {
       if (refreshToken) {
         await logoutUser(refreshToken).unwrap();
       }
-    } catch (error) {
+    } catch {
       // Silently handle API errors
     } finally {
       dispatch(clearAuth());

@@ -55,8 +55,9 @@ export default function TwoFactorAuthPage() {
         manualEntryKey: data.manualEntryKey,
       });
       setShowSetup(true);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to setup 2FA');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to setup 2FA');
     } finally {
       setLoading(false);
     }
@@ -83,8 +84,9 @@ export default function TwoFactorAuthPage() {
       setShowSetup(false);
       setVerificationCode('');
       await load2FAStatus();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to enable 2FA');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to enable 2FA');
     } finally {
       setLoading(false);
     }
@@ -101,8 +103,9 @@ export default function TwoFactorAuthPage() {
       setSuccess('2FA disabled successfully');
       setDisableCode('');
       await load2FAStatus();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to disable 2FA');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to disable 2FA');
     } finally {
       setLoading(false);
     }
@@ -120,8 +123,9 @@ export default function TwoFactorAuthPage() {
       const response = await authApi.regenerateBackupCodes(token);
       setBackupCodes(response.data.data.backupCodes);
       setSuccess('Backup codes regenerated successfully!');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to regenerate backup codes');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to regenerate backup codes');
     } finally {
       setLoading(false);
     }
@@ -254,7 +258,7 @@ export default function TwoFactorAuthPage() {
                 Step 2: Manual Entry (Optional)
               </h3>
               <p className="text-gray-600 mb-4">
-                If you can't scan the QR code, enter this key manually:
+                If you can&apos;t scan the QR code, enter this key manually:
               </p>
               <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
                 <code className="flex-1 font-mono text-sm text-gray-900">
@@ -351,7 +355,7 @@ export default function TwoFactorAuthPage() {
                 onClick={() => setBackupCodes([])}
                 variant="secondary"
               >
-                I've Saved Them
+                I&apos;ve Saved Them
               </Button>
             </div>
           </div>
@@ -364,8 +368,7 @@ export default function TwoFactorAuthPage() {
               Disable Two-Factor Authentication
             </h2>
             <p className="text-gray-600 mb-6">
-              Disabling 2FA will make your account less secure. Enter your current 2FA code to
-              disable.
+              Disabling 2FA will make your account less secure. Enter your current 2FA code to disable.
             </p>
             <form onSubmit={handleDisable2FA} className="space-y-4">
               <input

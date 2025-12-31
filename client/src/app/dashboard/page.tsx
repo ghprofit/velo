@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { JSX, useState } from 'react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -187,7 +187,7 @@ export default function DashboardPage() {
               Welcome back, Velo_User
             </h1>
             <p className="text-gray-600">
-              Here's an overview of your content performance.
+              Here&apos;s an overview of your content performance.
             </p>
           </div>
 

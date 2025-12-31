@@ -77,9 +77,9 @@ export const useLogin = (): UseLoginReturn => {
         const redirectPath = getRoleRedirectPath(user.role);
         router.push(redirectPath);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
-        err.response?.data?.message || 'Login failed. Please check your credentials.';
+        (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Login failed. Please check your credentials.';
       setError(errorMessage);
       dispatch(setAuthError(errorMessage));
       throw new Error(errorMessage);
@@ -117,9 +117,9 @@ export const useLogin = (): UseLoginReturn => {
         const redirectPath = getRoleRedirectPath(user.role);
         router.push(redirectPath);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
-        err.response?.data?.message || 'Invalid 2FA code. Please try again.';
+        (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Invalid 2FA code. Please try again.';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

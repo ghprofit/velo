@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import { useState, useRef, DragEvent, ChangeEvent, JSX } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui';
 import LogoutModal from '@/components/LogoutModal';
+import Image from 'next/image';
 
 export default function UploadContentPage() {
   const router = useRouter();
@@ -347,7 +347,7 @@ export default function UploadContentPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Preview Content</h2>
 
               <div className="relative rounded-lg overflow-hidden bg-gray-100">
-                <img
+                <Image
                   src="https://via.placeholder.com/600x400/E5E7EB/9CA3AF?text=Map+Preview"
                   alt="Content Preview"
                   className="w-full h-64 object-cover blur-sm"
@@ -386,7 +386,7 @@ export default function UploadContentPage() {
                   >
                     Generate My Link
                   </button>
-                  <p className="text-sm text-gray-600">We'll create a secure pay-per-view link.</p>
+                  <p className="text-sm text-gray-600">We&apos;ll create a secure pay-per-view link.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -430,7 +430,7 @@ export default function UploadContentPage() {
                   {showSuccess && (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                       <p className="text-sm text-green-900">
-                        Success message: "Your link has been generated!" with soft fade-in confetti burst.
+                        Success message: &quot;Your link has been generated!&quot; with soft fade-in confetti burst.
                       </p>
                     </div>
                   )}

@@ -38,7 +38,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Confirm Logout</h2>
           <p className="text-gray-600 leading-relaxed">
             Are you sure you want to log out from your admin session?<br />
-            You'll need to sign in again to continue managing the platform.
+            You&apos;ll need to sign in again to continue managing the platform.
           </p>
         </div>
 

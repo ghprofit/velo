@@ -18,12 +18,12 @@ const roleToEnum: Record<string, 'FINANCIAL_ADMIN' | 'CONTENT_ADMIN' | 'SUPPORT_
   'Analytics Admin': 'ANALYTICS_ADMIN',
 };
 
-const enumToRole: Record<string, string> = {
-  'FINANCIAL_ADMIN': 'Financial Admin',
-  'CONTENT_ADMIN': 'Content Admin',
-  'SUPPORT_SPECIALIST': 'Support Specialist',
-  'ANALYTICS_ADMIN': 'Analytics Admin',
-};
+// const enumToRole: Record<string, string> = {
+//   'FINANCIAL_ADMIN': 'Financial Admin',
+//   'CONTENT_ADMIN': 'Content Admin',
+//   'SUPPORT_SPECIALIST': 'Support Specialist',
+//   'ANALYTICS_ADMIN': 'Analytics Admin',
+// };
 
 const roleColors: Record<string, string> = {
   'Financial Admin': 'bg-orange-100 text-orange-700 border-orange-300',

@@ -1,13 +1,13 @@
 // middleware.ts (Next.js App Router)
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+// import type { NextRequest } from 'next/server';
 
 // Define protected and public routes
-const protectedRoutes = ['/dashboard', '/settings', '/profile'];
-const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+// const protectedRoutes = ['/dashboard', '/settings', '/profile'];
+// const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export function middleware() {
+  // const { pathname } = _request.nextUrl;
 
   // Get access token from cookies or check if exists in the client
   // Note: Since we're using localStorage, we can't check on server-side middleware
@@ -15,12 +15,12 @@ export function middleware(request: NextRequest) {
   // The actual auth check will be done client-side in the components
 
   // Check if the current route is protected
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  // const isProtectedRoute = protectedRoutes.some((route) =>
+  //   pathname.startsWith(route)
+  // );
 
   // Check if the current route is an auth route
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+  // const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
 
   // Add security headers
   const response = NextResponse.next();

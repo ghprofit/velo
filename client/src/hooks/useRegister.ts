@@ -57,13 +57,14 @@ export const useRegister = (): UseRegisterReturn => {
 
       // Navigate to email verification step
       router.push('/register/verify');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Registration error:', err);
-      console.error('Error response:', err.response);
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      console.error('Error response:', error.response);
 
       const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
+        error.response?.data?.message ||
+        error.message ||
         'Registration failed. Please try again.';
 
       setError(errorMessage);

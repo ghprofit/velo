@@ -5,13 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { useVerifyEmailMutation } from '@/state/api';
+import Image from 'next/image';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
-  const [verifyEmail, { isLoading }] = useVerifyEmailMutation();
+  const [verifyEmail] = useVerifyEmailMutation();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error' | 'no-token'>('verifying');
   const [message, setMessage] = useState('');
 
@@ -48,7 +49,7 @@ export default function VerifyEmailPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
           </div>
 
           {/* Status Icon */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { JSX, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import RequestPayoutModal from '@/components/RequestPayoutModal';
@@ -13,7 +13,6 @@ export default function EarningsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All Types');
   const [contentFilter, setContentFilter] = useState('All Content');
-  const [currentPage, setCurrentPage] = useState(1);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 

@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LogoutModal from '@/components/LogoutModal';
 import AdminSidebar from '@/components/AdminSidebar';
 
 export default function ReportsAnalyticsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('reports');
+  const [activeTab] = useState('reports');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [timeRange, setTimeRange] = useState('This Month');
   const [metricsFilter, setMetricsFilter] = useState('All Metrics');

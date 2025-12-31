@@ -1,9 +1,7 @@
 import * as React from "react"
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
-
 const Select = React.forwardRef<HTMLDivElement, { value?: string; onValueChange?: (value: string) => void; children: React.ReactNode }>(
-  ({ value, onValueChange, children, ...props }, ref) => {
+  ({ value, onValueChange, children }, ref) => {
     const [isOpen, setIsOpen] = React.useState(false)
     const [currentValue, setCurrentValue] = React.useState(value || '')
 
@@ -17,7 +15,7 @@ const Select = React.forwardRef<HTMLDivElement, { value?: string; onValueChange?
       <div ref={ref} className="relative">
         {React.Children.map(children, child => {
           if (React.isValidElement(child)) {
-            return React.cloneElement(child as React.ReactElement<any>, {
+            return React.cloneElement(child as React.ReactElement<Record<string, unknown>>, {
               isOpen,
               setIsOpen,
               currentValue,
@@ -42,7 +40,7 @@ const SelectTrigger = React.forwardRef<
     setCurrentValue?: (value: string) => void;
     onValueChange?: (value: string) => void;
   }
->(({ className = "", children, isOpen, setIsOpen, currentValue, setCurrentValue, onValueChange, ...props }, ref) => {
+>(({ className = "", children, isOpen, setIsOpen, ...props }, ref) => {
   return (
     <button
       ref={ref}
@@ -98,7 +96,7 @@ const SelectContent = React.forwardRef<
       <div className="p-1">
         {React.Children.map(children, child => {
           if (React.isValidElement(child)) {
-            return React.cloneElement(child as React.ReactElement<any>, {
+            return React.cloneElement(child as React.ReactElement<Record<string, unknown>>, {
               setIsOpen,
               onValueChange,
               setCurrentValue,
@@ -114,16 +112,13 @@ SelectContent.displayName = "SelectContent"
 
 const SelectItem = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & { 
+  React.HTMLAttributes<HTMLDivElement> & {
     value: string;
     setIsOpen?: (open: boolean) => void;
     onValueChange?: (value: string) => void;
     setCurrentValue?: (value: string) => void;
   }
 >(({ className = "", value, children, setIsOpen, onValueChange, setCurrentValue, ...props }, ref) => {
-  // Filter out internal props
-  const divProps = { ...props }
-  
   return (
     <div
       ref={ref}
@@ -133,7 +128,7 @@ const SelectItem = React.forwardRef<
         onValueChange?.(value)
         setIsOpen?.(false)
       }}
-      {...divProps}
+      {...props}
     >
       {children}
     </div>

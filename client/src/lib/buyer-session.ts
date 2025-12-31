@@ -79,7 +79,7 @@ export function clearBuyerSession(): void {
 /**
  * Get or create buyer session
  */
-export async function getOrCreateSession(email?: string): Promise<string> {
+export async function getOrCreateSession(): Promise<string> {
   // Check for existing session
   const existingSession = getBuyerSession();
   if (existingSession) {
@@ -87,7 +87,7 @@ export async function getOrCreateSession(email?: string): Promise<string> {
   }
 
   // Create new session
-  const fingerprint = await getBrowserFingerprint();
+  // const fingerprint = await getBrowserFingerprint();
 
   // This would make an API call to create the session
   // For now, we'll return null to indicate the calling code should make the API call

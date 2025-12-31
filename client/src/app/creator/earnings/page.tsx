@@ -5,6 +5,48 @@ import Link from 'next/link';
 import RequestPayoutModal from '@/components/RequestPayoutModal';
 import { earningsApi, contentApi } from '@/lib/api-client';
 
+interface Balance {
+  availableBalance: number;
+  pendingBalance: number;
+  lifetimeEarnings: number;
+  totalPayouts: number;
+}
+
+interface Payout {
+  id: string;
+  status: string;
+  paymentMethod?: string;
+  createdAt: string;
+  amount: number;
+}
+
+interface PayoutsData {
+  payouts: Payout[];
+}
+
+interface Transaction {
+  id: string;
+  type: string;
+  contentTitle?: string;
+  description?: string;
+  buyerEmail?: string;
+  recipient?: string;
+  amount: number;
+  paymentMethod?: string;
+  date: string;
+}
+
+interface TransactionsData {
+  transactions: Transaction[];
+  total: number;
+  totalPages: number;
+}
+
+interface ContentItem {
+  id: string;
+  title: string;
+}
+
 export default function EarningsPage() {
   const [timePeriod, setTimePeriod] = useState('Last 30 Days');
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,12 +56,11 @@ export default function EarningsPage() {
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
 
   // Data state
-  const [balance, setBalance] = useState<any>(null);
-  const [payouts, setPayouts] = useState<any>(null);
-  const [transactions, setTransactions] = useState<any>(null);
-  const [contentItems, setContentItems] = useState<any[]>([]);
+  const [balance, setBalance] = useState<Balance | null>(null);
+  const [payouts, setPayouts] = useState<PayoutsData | null>(null);
+  const [transactions, setTransactions] = useState<TransactionsData | null>(null);
+  const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Fetch balance data
   useEffect(() => {
@@ -27,9 +68,8 @@ export default function EarningsPage() {
       try {
         const response = await earningsApi.getBalance();
         setBalance(response.data.data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching balance:', err);
-        setError(err.response?.data?.message || 'Failed to load balance data');
       }
     };
 
@@ -42,7 +82,7 @@ export default function EarningsPage() {
       try {
         const response = await contentApi.getMyContent();
         setContentItems(response.data.data || []);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching content items:', err);
       }
     };
@@ -56,7 +96,7 @@ export default function EarningsPage() {
       try {
         const response = await earningsApi.getPayouts(1, 3);
         setPayouts(response.data.data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching payouts:', err);
       }
     };
@@ -84,9 +124,8 @@ export default function EarningsPage() {
           search
         );
         setTransactions(response.data.data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching transactions:', err);
-        setError(err.response?.data?.message || 'Failed to load transactions');
       } finally {
         setLoading(false);
       }
@@ -192,7 +231,7 @@ export default function EarningsPage() {
       return transactions.transactions;
     }
 
-    return transactions.transactions.filter((transaction: any) =>
+    return transactions.transactions.filter((transaction: Transaction) =>
       transaction.contentTitle === contentFilter
     );
   }, [transactions, contentFilter]);
@@ -316,7 +355,7 @@ export default function EarningsPage() {
                   <p>No payout activity yet</p>
                 </div>
               ) : (
-                payouts.payouts.map((payout: any) => {
+                payouts.payouts.map((payout: Payout) => {
                   const styles = getPayoutStatusStyles(payout.status);
                   return (
                     <div key={payout.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
@@ -421,7 +460,7 @@ export default function EarningsPage() {
                   No transactions found
                 </div>
               ) : (
-                filteredTransactions.map((transaction: any) => {
+                filteredTransactions.map((transaction: Transaction) => {
                   const styles = getTransactionTypeStyles(transaction.type);
                   return (
                     <div key={transaction.id} className="p-4 hover:bg-gray-50 transition-colors">
@@ -503,7 +542,7 @@ export default function EarningsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredTransactions.map((transaction: any) => {
+                    filteredTransactions.map((transaction: Transaction) => {
                       const styles = getTransactionTypeStyles(transaction.type);
                       return (
                         <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { JSX, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LogoutModal from '@/components/LogoutModal';
+import Image from 'next/image';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -173,7 +174,7 @@ export default function SettingsPage() {
                 {/* Profile Photo */}
                 <div className="flex items-start gap-6">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center overflow-hidden">
-                    <img
+                    <Image
                       src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=200&h=200&fit=crop"
                       alt="Profile"
                       className="w-full h-full object-cover"
@@ -605,7 +606,7 @@ export default function SettingsPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 mb-1">Payout updates</h4>
-                      <p className="text-sm text-gray-600">Receive alerts when payouts are processed or there's a payment issue.</p>
+                      <p className="text-sm text-gray-600">Receive alerts when payouts are processed or there&apos;s a payment issue.</p>
                     </div>
                     <div className="ml-6">
                       <div className="w-12 h-6 bg-green-500 rounded-full relative cursor-pointer">
@@ -668,7 +669,7 @@ export default function SettingsPage() {
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
                 <p className="text-sm text-blue-900">
-                  <strong>Auto-save enabled:</strong> Your notification preferences are automatically saved when you make changes. Use the "Save Changes" button at the top to apply all settings changes across your account.
+                  <strong>Auto-save enabled:</strong> Your notification preferences are automatically saved when you make changes. Use the &quot;Save Changes&quot; button at the top to apply all settings changes across your account.
                 </p>
               </div>
             </div>

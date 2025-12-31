@@ -23,8 +23,9 @@ export default function SessionsPage() {
     try {
       const response = await authApi.getSessions();
       setSessions(response.data.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load sessions');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to load sessions');
     } finally {
       setLoading(false);
     }
@@ -39,8 +40,9 @@ export default function SessionsPage() {
       await authApi.revokeSession(sessionId);
       setSuccess('Session revoked successfully');
       await loadSessions();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to revoke session');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to revoke session');
     } finally {
       setRevokingId(null);
     }
@@ -59,8 +61,9 @@ export default function SessionsPage() {
       await authApi.revokeAllSessions();
       setSuccess('All sessions revoked successfully. You will remain logged in on this device.');
       await loadSessions();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to revoke all sessions');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to revoke all sessions');
     } finally {
       setRevokingAll(false);
     }
@@ -120,7 +123,7 @@ export default function SessionsPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-3">Active Sessions</h1>
           <p className="text-lg text-gray-600">
-            Manage your active sessions and see where you're logged in.
+            Manage your active sessions and see where you&apos;re logged in.
           </p>
         </div>
 
@@ -229,8 +232,7 @@ export default function SessionsPage() {
         {/* Info Note */}
         <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
           <p className="text-sm text-blue-800">
-            <strong>Note:</strong> Revoking a session will log you out from that device. If you
-            revoke the current session, you'll need to log in again.
+            <strong>Note:</strong> Revoking a session will log you out from that device. If you revoke the current session, you&apos;ll need to log in again.
           </p>
         </div>
       </div>

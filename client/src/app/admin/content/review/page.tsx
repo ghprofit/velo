@@ -8,7 +8,7 @@ import LogoutModal from '@/components/LogoutModal';
 
 export default function ContentReviewPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('content-review');
+  const [activeTab] = useState('content-review');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [reviewComments, setReviewComments] = useState('');
 
@@ -158,7 +158,7 @@ export default function ContentReviewPage() {
                   <div className="space-y-4">
                     <div>
                       <p className="text-xs text-gray-600 mb-1">Title</p>
-                      <p className="text-sm font-medium text-gray-900">"A Day in Paris"</p>
+                      <p className="text-sm font-medium text-gray-900">&quot;A Day in Paris&quot;</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-600 mb-1">Category</p>

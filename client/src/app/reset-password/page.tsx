@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui';
 import { authApi } from '@/lib/api-client';
+import Image from 'next/image';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -87,15 +88,16 @@ export default function ResetPasswordPage() {
         setTimeout(() => {
           router.push('/login?reset=success');
         }, 1500);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Reset password error:', err);
+        const error = err as { response?: { data?: { message?: string } }; message?: string };
 
         let errorMessage = 'Unable to reset password. Please try again.';
 
-        if (err.response?.data?.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.message) {
-          errorMessage = err.message;
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
         }
 
         setError(errorMessage);
@@ -152,14 +154,14 @@ export default function ResetPasswordPage() {
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white md:bg-gradient-to-br md:from-indigo-50 md:via-white md:to-cyan-50 flex flex-col">
       {/* Mobile: Sticky Header */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 py-4 border-b border-gray-100 md:hidden">
-        <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8"/>
+        <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8"/>
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 py-6 md:py-12">
         <div className="w-full max-w-lg">
           {/* Logo (Desktop Only) */}
           <div className="hidden md:flex flex-col items-center mb-8">
-            <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-10 mb-2"/>
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-10 mb-2"/>
             <p className="text-sm text-gray-500">Secure password reset</p>
           </div>
 
@@ -363,7 +365,7 @@ export default function ResetPasswordPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 <p className="text-xs md:text-sm text-blue-900 leading-relaxed">
-                  After resetting your password, you'll be redirected to the login page. Use your new password to sign in.
+                  After resetting your password, you&apos;ll be redirected to the login page. Use your new password to sign in.
                 </p>
               </div>
               </fieldset>

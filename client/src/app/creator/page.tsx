@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, JSX } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import VerificationStatusBanner from '@/components/VerificationStatusBanner';
 import { authApi, analyticsApi } from '@/lib/api-client';
+import Image from 'next/image';
 
 interface CreatorProfile {
   totalViews: number;
@@ -58,9 +59,10 @@ export default function CreatorDashboardPage() {
         const response = await authApi.getProfile();
         setProfile(response.data.data);
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch profile:', err);
-        setError(err.response?.data?.message || 'Failed to load profile data');
+        const error = err as { response?: { data?: { message?: string } } };
+        setError(error.response?.data?.message || 'Failed to load profile data');
       } finally {
         setLoading(false);
       }
@@ -258,7 +260,7 @@ export default function CreatorDashboardPage() {
                   Welcome back, {profile.displayName || 'Creator'}
                 </h1>
                 <p className="text-gray-600 text-sm sm:text-base">
-                  Here's an overview of your content performance.
+                  Here&apos;s an overview of your content performance.
                 </p>
               </div>
 
@@ -505,7 +507,7 @@ export default function CreatorDashboardPage() {
                           className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
                         >
                           <div className="flex items-start gap-3 mb-3">
-                            <img
+                            <Image
                               src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                               alt={content.title}
                               className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
@@ -569,7 +571,7 @@ export default function CreatorDashboardPage() {
                             >
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center gap-3">
-                                  <img
+                                  <Image
                                     src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                                     alt={content.title}
                                     className="w-12 h-12 rounded-lg object-cover flex-shrink-0"

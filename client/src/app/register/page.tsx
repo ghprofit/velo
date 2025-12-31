@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { useRegister } from '@/hooks/useRegister';
+import Image from 'next/image';
 
 const COUNTRIES = [
   { code: 'AF', name: 'Afghanistan' },
@@ -368,7 +369,7 @@ export default function RegisterPage() {
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white md:bg-gradient-to-br md:from-indigo-50 md:via-white md:to-cyan-50 flex flex-col py-0 md:py-12 px-0 md:px-6">
       {/* Mobile: Sticky Header */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 py-4 border-b border-gray-100 md:hidden">
-        <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
+        <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 py-6 md:py-0">
@@ -377,7 +378,7 @@ export default function RegisterPage() {
           <div className="bg-white md:rounded-2xl md:shadow-xl p-6 md:p-10 lg:p-12 border-0 md:border md:border-gray-100">
             {/* Logo (Desktop Only) */}
             <div className="hidden md:flex justify-center mb-8">
-              <img src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-15"/>
+              <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-15"/>
             </div>
 
             {/* Title */}

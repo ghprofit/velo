@@ -7,6 +7,9 @@ import { buyerApi } from '@/lib/api-client';
 import { getBuyerSession, saveBuyerSession, getBrowserFingerprint, getPurchaseToken, savePurchaseToken } from '@/lib/buyer-session';
 import Footer from '@/components/Footer';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { buttonTap } from '@/lib/animations';
+import FloatingLogo from '@/components/FloatingLogo';
 
 interface ContentData {
   id: string;
@@ -274,7 +277,15 @@ export function ContentClient({ id }: { id: string }) {
   // Render purchased content view
   if (isPurchased && purchasedContent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50/30 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50/30 flex flex-col relative">
+        {/* Floating Brand Logo */}
+        <FloatingLogo
+          position="top-right"
+          size={100}
+          animation="orbit"
+          opacity={0.12}
+        />
+
         {/* Header */}
         <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -368,7 +379,49 @@ export function ContentClient({ id }: { id: string }) {
   // Render preview/purchase view
   if (!isPurchased && content) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col relative overflow-hidden">
+        {/* Floating Decorative Elements */}
+        <motion.div
+          className="absolute top-20 right-10 w-40 h-40 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"
+          animate={{
+            x: [0, -60, 40, 0],
+            y: [0, 40, -30, 0],
+            scale: [1, 1.3, 0.8, 1],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        <motion.div
+          className="absolute bottom-40 left-20 w-32 h-32 bg-gradient-to-br from-blue-400/8 to-cyan-400/8 rounded-full blur-2xl"
+          animate={{
+            x: [0, 50, -35, 0],
+            y: [0, -45, 25, 0],
+            scale: [1, 0.9, 1.2, 1],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+        />
+        <motion.div
+          className="absolute top-1/2 left-1/4 w-24 h-24 bg-gradient-to-br from-indigo-400/6 to-purple-400/6 rounded-full blur-xl"
+          animate={{
+            x: [0, -25, 20, 0],
+            y: [0, 30, -15, 0],
+            scale: [1, 1.1, 0.9, 1],
+          }}
+          transition={{
+            duration: 9,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2
+          }}
+        />
         {/* Header */}
         <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -477,15 +530,31 @@ export function ContentClient({ id }: { id: string }) {
                   )}
 
                   {/* Purchase Button */}
-                  <button
+                  <motion.button
                     onClick={handlePurchase}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 flex items-center justify-center gap-2"
+                    className="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-purple-500/40 flex items-center justify-center gap-2 relative overflow-hidden group"
+                    variants={buttonTap}
+                    whileHover={{ 
+                      scale: 1.02,
+                      boxShadow: "0 20px 40px rgba(99, 102, 241, 0.3)"
+                    }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                    <motion.svg 
+                      className="w-5 h-5 relative z-10" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                    </svg>
-                    Unlock Content Now
-                  </button>
+                    </motion.svg>
+                    <span className="relative z-10">
+                      Unlock Content Now ✨
+                    </span>
+                  </motion.button>
 
                   {/* Payment Info */}
                   <div className="mt-6 space-y-3">

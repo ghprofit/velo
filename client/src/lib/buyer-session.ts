@@ -27,6 +27,61 @@ export async function getBrowserFingerprint(): Promise<string> {
 }
 
 /**
+ * Cache the fingerprint in sessionStorage for the current checkout session
+ */
+export function cacheBuyerFingerprint(fingerprint: string): void {
+  try {
+    sessionStorage.setItem('velo_checkout_fingerprint', fingerprint);
+  } catch (error) {
+    console.warn('Failed to cache fingerprint:', error);
+  }
+}
+
+/**
+ * Get the cached fingerprint from sessionStorage
+ * Returns null if not found or expired
+ */
+export function getCachedBuyerFingerprint(): string | null {
+  try {
+    return sessionStorage.getItem('velo_checkout_fingerprint');
+  } catch (error) {
+    console.warn('Failed to get cached fingerprint:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear the cached fingerprint (call after successful purchase or checkout timeout)
+ */
+export function clearCachedBuyerFingerprint(): void {
+  try {
+    sessionStorage.removeItem('velo_checkout_fingerprint');
+  } catch (error) {
+    console.warn('Failed to clear cached fingerprint:', error);
+  }
+}
+
+/**
+ * Get or generate browser fingerprint - uses cached value if available
+ * This ensures consistency across the checkout flow
+ */
+export async function getOrGenerateBrowserFingerprint(): Promise<string> {
+  // Try to get cached fingerprint first
+  const cached = getCachedBuyerFingerprint();
+  if (cached) {
+    return cached;
+  }
+
+  // Generate new fingerprint
+  const fingerprint = await getBrowserFingerprint();
+
+  // Cache it for future use
+  cacheBuyerFingerprint(fingerprint);
+
+  return fingerprint;
+}
+
+/**
  * Get current buyer session from localStorage
  */
 export function getBuyerSession(): BuyerSession | null {

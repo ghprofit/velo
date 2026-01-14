@@ -19,6 +19,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { StripeModule } from './stripe/stripe.module';
 import { SuperadminModule } from './superadmin/superadmin.module';
 import { AdminModule } from './admin/admin.module';
+import { WaitlistModule } from './waitlist/waitlist.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -27,20 +28,20 @@ import { AppService } from './app.service';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    // Redis Cache Module - Temporarily disabled for development
-    // CacheModule.registerAsync({
-    //   isGlobal: true,
-    //   imports: [ConfigModule],
-    //   inject: [ConfigService],
-    //   useFactory: async (config: ConfigService) => ({
-    //     store: redisStore,
-    //     host: config.get('REDIS_HOST') || 'localhost',
-    //     port: config.get('REDIS_PORT') || 6379,
-    //     password: config.get('REDIS_PASSWORD') || undefined,
-    //     db: config.get('REDIS_DB') || 0,
-    //     ttl: 600, // 10 minutes default
-    //   }),
-    // }),
+    // Redis Cache Module
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => ({
+        store: redisStore,
+        host: config.get('REDIS_HOST') || 'localhost',
+        port: config.get('REDIS_PORT') || 6379,
+        password: config.get('REDIS_PASSWORD') || undefined,
+        db: config.get('REDIS_DB') || 0,
+        ttl: 600, // 10 minutes default
+      }),
+    }),
     // Throttler Module for Rate Limiting
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -70,6 +71,7 @@ import { AppService } from './app.service';
     NotificationsModule,
     SuperadminModule,
     AdminModule,
+    WaitlistModule,
   ],
   controllers: [AppController],
   providers: [AppService],

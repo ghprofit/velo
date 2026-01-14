@@ -2,18 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import LogoutModal from '@/components/LogoutModal';
 import AdminSidebar from '@/components/AdminSidebar';
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function PayoutReportsPage() {
-  const router = useRouter();
   const [activeTab] = useState('payout-reports');
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('Last 7 Days');
   const [statusFilter, setStatusFilter] = useState('All Statuses');
-
 
   const payouts = [
     { date: 'Oct 23, 2025', creator: '@jvelo user', amount: '$150', status: 'Completed', statusColor: 'bg-green-100 text-green-700', method: 'Bank', settlementId: 'PAY-12345' },
@@ -21,11 +17,30 @@ export default function PayoutReportsPage() {
     { date: 'Oct 21, 2025', creator: '@travelguy', amount: '$200', status: 'Failed', statusColor: 'bg-red-100 text-red-700', method: 'Bank', settlementId: 'PAY-12343' },
   ];
 
+  // Sample data for payout trends chart
+  const payoutTrendsData = [
+    { week: 'Week 1', amount: 2400 },
+    { week: 'Week 2', amount: 3200 },
+    { week: 'Week 3', amount: 4100 },
+    { week: 'Week 4', amount: 3800 },
+    { week: 'Week 5', amount: 5200 },
+    { week: 'Week 6', amount: 4900 },
+    { week: 'Week 7', amount: 6200 },
+    { week: 'Week 8', amount: 7100 },
+  ];
+
+  // Sample data for payout distribution chart
+  const payoutDistributionData = [
+    { name: 'Bank Transfer', value: 60, color: '#6366f1' },
+    { name: 'PayPal', value: 25, color: '#8b5cf6' },
+    { name: 'Stripe', value: 15, color: '#a78bfa' },
+  ];
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto bg-gray-50 lg:ml-0">
@@ -227,37 +242,38 @@ export default function PayoutReportsPage() {
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">Payout Trends (8 Weeks)</h2>
 
               {/* Chart Area */}
-              <div className="h-64 border border-gray-200 rounded-lg bg-gray-50 relative">
-                <svg className="w-full h-full" viewBox="0 0 400 250">
-                  {/* Grid lines */}
-                  <line x1="0" y1="50" x2="400" y2="50" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4" />
-                  <line x1="0" y1="100" x2="400" y2="100" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4" />
-                  <line x1="0" y1="150" x2="400" y2="150" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4" />
-                  <line x1="0" y1="200" x2="400" y2="200" stroke="#e5e7eb" strokeWidth="1" />
-
-                  {/* Purple trend line */}
-                  <polyline
-                    points="40,180 90,160 140,140 190,150 240,120 290,130 340,100"
-                    fill="none"
-                    stroke="#8b5cf6"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-
-                  {/* Data points */}
-                  <circle cx="40" cy="180" r="4" fill="#8b5cf6" />
-                  <circle cx="90" cy="160" r="4" fill="#8b5cf6" />
-                  <circle cx="140" cy="140" r="4" fill="#8b5cf6" />
-                  <circle cx="190" cy="150" r="4" fill="#8b5cf6" />
-                  <circle cx="240" cy="120" r="4" fill="#8b5cf6" />
-                  <circle cx="290" cy="130" r="4" fill="#8b5cf6" />
-                  <circle cx="340" cy="100" r="4" fill="#8b5cf6" />
-                </svg>
-
-                <div className="absolute bottom-2 left-4 text-xs text-gray-500">
-                  Line chart placeholder — Purple line with subtle grid, X: Week, Y: Amount
-                </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={payoutTrendsData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis
+                      dataKey="week"
+                      tick={{ fontSize: 12 }}
+                      stroke="#9ca3af"
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      stroke="#9ca3af"
+                      tickFormatter={(value) => `$${value}`}
+                    />
+                    <Tooltip
+                      formatter={(value) => [`$${value}`, 'Amount']}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="amount"
+                      stroke="#8b5cf6"
+                      strokeWidth={3}
+                      dot={{ fill: '#8b5cf6', r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -266,18 +282,30 @@ export default function PayoutReportsPage() {
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">Payout Distribution</h2>
 
               {/* Chart Area */}
-              <div className="h-64 border border-gray-200 rounded-lg bg-gray-50 relative flex items-center justify-center">
-                <div className="text-center">
-                  <svg className="w-32 h-32 mx-auto mb-4" viewBox="0 0 100 100">
-                    {/* Pie chart segments */}
-                    <circle cx="50" cy="50" r="40" fill="#6366f1" />
-                    <path d="M50 50 L50 10 A40 40 0 0 1 86.6 65 Z" fill="#8b5cf6" />
-                    <path d="M50 50 L86.6 65 A40 40 0 0 1 50 90 Z" fill="#a78bfa" />
-                  </svg>
-                  <p className="text-sm text-gray-600">
-                    Pie chart placeholder — Bank (60%), PayPal (25%), Stripe (15%) + legend right
-                  </p>
-                </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={payoutDistributionData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {payoutDistributionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value}%`} />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -294,16 +322,6 @@ export default function PayoutReportsPage() {
           </div>
         </div>
       </main>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
-          setShowLogoutModal(false);
-          router.push('/login');
-        }}
-      />
     </div>
   );
 }

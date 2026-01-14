@@ -3,19 +3,27 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import * as bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true, // Enable raw body for webhook signature verification
   });
 
+  // Cookie Parser - Must be before routes
+  app.use(cookieParser());
+
   // Stripe webhook needs raw body for signature verification
   // Use raw body parser for webhook endpoint
   app.use('/api/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
 
-  // Increase payload size limit for base64 images (30MB for support attachments)
-  app.use(bodyParser.json({ limit: '30mb' }));
-  app.use(bodyParser.urlencoded({ limit: '30mb', extended: true }));
+  // Veriff webhook needs raw body for HMAC signature verification
+  app.use('/api/webhooks/veriff', bodyParser.raw({ type: 'application/json' }));
+
+  // Increase payload size limit for base64-encoded content uploads
+  // Video uploads: 500MB max file size → ~750MB with base64 overhead (33%) + metadata
+  app.use(bodyParser.json({ limit: '750mb' }));
+  app.use(bodyParser.urlencoded({ limit: '750mb', extended: true }));
 
   // Security Headers
   app.use(helmet());

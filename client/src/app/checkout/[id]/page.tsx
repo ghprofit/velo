@@ -4,9 +4,14 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { buyerApi } from '@/lib/api-client';
-import { getBuyerSession, saveBuyerSession, getBrowserFingerprint, getPurchaseToken } from '@/lib/buyer-session';
+import { getBuyerSession, saveBuyerSession, getOrGenerateBrowserFingerprint, getPurchaseToken } from '@/lib/buyer-session';
 import Footer from '@/components/Footer';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { PageTransition } from '@/components/ui/PageTransition';
+import { staggerContainer, staggerItem, fadeInUp } from '@/lib/animations';
+import { useCurrencyCountUp } from '@/hooks/useCountUp';
+import FloatingLogo from '@/components/FloatingLogo';
 
 interface ContentData {
   id: string;
@@ -15,6 +20,7 @@ interface ContentData {
   price: number;
   thumbnailUrl: string;
   contentType: string;
+  itemCount?: number;
 }
 
 export default function CheckoutPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,6 +31,11 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Animated price counts
+  const contentPrice = useCurrencyCountUp(content?.price || 0, '$', 1000);
+  const platformFee = useCurrencyCountUp((content?.price || 0) * 0.10, '$', 1000);
+  const totalPrice = useCurrencyCountUp((content?.price || 0) * 1.10, '$', 1000);
 
   useEffect(() => {
     // Check if already purchased
@@ -42,7 +53,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
         let session = getBuyerSession();
         if (!session) {
           try {
-            const fingerprint = await getBrowserFingerprint();
+            const fingerprint = await getOrGenerateBrowserFingerprint();
             const response = await buyerApi.createSession({ fingerprint });
             session = response.data;
             if (session) {
@@ -84,7 +95,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
       while (!session && retries < 3) {
         try {
-          const fingerprint = await getBrowserFingerprint();
+          const fingerprint = await getOrGenerateBrowserFingerprint();
           const response = await buyerApi.createSession({ fingerprint, email });
           session = response.data;
 
@@ -157,7 +168,22 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
   if (!content) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col">
+    <PageTransition>
+      <div className="min-h-screen bg-gradient-playful-1 flex flex-col relative">
+      {/* Floating Brand Logos */}
+      <FloatingLogo
+        position="top-left"
+        size={90}
+        animation="float-rotate"
+        opacity={0.10}
+      />
+      <FloatingLogo
+        position="bottom-right"
+        size={70}
+        animation="pulse"
+        opacity={0.08}
+      />
+
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -168,50 +194,89 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
               className="h-7 sm:h-8 w-auto"
             />
           </Link>
-          <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
-            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <motion.div
+            className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <motion.svg
+              className="w-4 h-4 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+            </motion.svg>
             <span className="text-xs sm:text-sm font-medium hidden sm:inline">Secure Checkout</span>
             <span className="hidden md:inline text-gray-400">•</span>
             <span className="text-xs sm:text-sm text-gray-500 hidden md:inline">Encrypted</span>
-          </div>
+          </motion.div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1 py-4 sm:py-8 lg:py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <motion.div
+          className="max-w-7xl mx-auto px-4 sm:px-6"
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+        >
           {/* Mobile Title - Shows above thumbnail on mobile only */}
-          <div className="lg:hidden mb-4">
+          <motion.div variants={staggerItem} className="lg:hidden mb-4">
             <h1 className="text-xl font-bold text-gray-900 px-2">{content.title}</h1>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
             {/* Left Column - Content Preview */}
-            <div className="space-y-6">
-              <div className="relative bg-white rounded-xl lg:rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-200 aspect-video">
+            <motion.div variants={staggerItem} className="space-y-6">
+              <motion.div
+                className="relative bg-white rounded-xl lg:rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-200 aspect-video"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                whileHover={{ scale: 1.02 }}
+              >
                 <Image
                   src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
                   alt={content.title}
-                  className="w-full h-full object-cover blur-sm"
+                  fill
+                  className="object-cover blur-sm"
                 />
+                {/* Item Count Badge */}
+                {content.itemCount && content.itemCount > 0 && (
+                  <div className="z-10 absolute top-3 right-3 bg-black/75 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-semibold shadow-lg">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {content.itemCount} {content.itemCount === 1 ? 'item' : 'items'}
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
                   <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-5 shadow-2xl">
                     <div className="flex items-center gap-3">
                       <Image
                         src="/assets/logo_svgs/Brand_Icon(black).svg"
                         alt="Lock"
+                        width={28}
+                        height={28}
                         className="w-7 h-7"
                       />
                       <span className="text-gray-900 font-bold text-lg">Locked Content</span>
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Features Grid - Desktop */}
-              <div className="hidden lg:grid grid-cols-2 gap-4">
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="hidden lg:grid grid-cols-2 gap-4"
+              >
                 <div className="bg-white rounded-xl p-4 shadow-sm ring-1 ring-gray-100">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
@@ -238,11 +303,11 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
             {/* Right Column - Checkout Form */}
-            <div className="space-y-6">
+            <motion.div variants={staggerItem} className="space-y-6">
               <div className="bg-white rounded-xl lg:rounded-2xl shadow-lg ring-1 ring-gray-200 p-6 sm:p-8">
                 <h1 className="hidden lg:block text-2xl sm:text-3xl font-bold text-gray-900 mb-6">{content.title}</h1>
 
@@ -308,19 +373,24 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                   <div className="space-y-3 pt-6 border-t border-gray-200">
                     <div className="flex justify-between text-gray-600 text-sm">
                       <span>Content Price:</span>
-                      <span className="font-medium">${content.price.toFixed(2)}</span>
+                      <span className="font-medium">{contentPrice}</span>
                     </div>
                     <div className="flex justify-between text-gray-600 text-sm">
                       <span>Platform Fee (10%):</span>
-                      <span className="font-medium">${(content.price * 0.10).toFixed(2)}</span>
+                      <span className="font-medium">{platformFee}</span>
                     </div>
                     <div className="border-t border-gray-200 pt-3 mt-3"></div>
-                    <div className="flex justify-between text-lg font-bold text-gray-900">
+                    <motion.div
+                      className="flex justify-between text-lg font-bold text-gray-900"
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.5, duration: 0.4 }}
+                    >
                       <span>Total:</span>
                       <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                        ${(content.price * 1.10).toFixed(2)}
+                        {totalPrice}
                       </span>
-                    </div>
+                    </motion.div>
                   </div>
 
                   {/* Payment Info */}
@@ -341,12 +411,13 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                   </div>
                 </form>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </main>
 
       <Footer />
     </div>
+    </PageTransition>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import SuccessConfetti from '@/components/SuccessConfetti';
 
 export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -44,6 +45,9 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Success Confetti Animation */}
+      <SuccessConfetti />
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

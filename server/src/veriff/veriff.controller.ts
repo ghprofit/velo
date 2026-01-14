@@ -11,7 +11,10 @@ import {
   Logger,
   BadRequestException,
   Headers,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { VeriffService } from './veriff.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VerificationStatus } from '@prisma/client';
@@ -136,90 +139,126 @@ export class VeriffController {
   /**
    * Webhook endpoint for Veriff decision callbacks
    * POST /veriff/webhooks/decision
+   *
+   * SECURITY: Uses raw body for HMAC signature verification
+   * Requires mandatory signature validation and idempotency checks
    */
   @Post('webhooks/decision')
   @HttpCode(HttpStatus.OK)
-  async handleWebhook(
-    @Body() webhookData: WebhookDecisionDto,
-    @Headers('x-hmac-signature') signature: string,
-  ): Promise<{ received: boolean }> {
+  async handleWebhook(@Req() request: Request): Promise<{ received: boolean }> {
     this.logger.log('Received Veriff webhook');
 
     try {
-      // Verify webhook signature if signature is provided
-      if (signature) {
-        const rawBody = JSON.stringify(webhookData);
-        const isValid = this.veriffService.verifyWebhookSignature(
-          rawBody,
-          signature,
-        );
+      // 1. MANDATORY signature verification
+      const signature = request.headers['x-hmac-signature'] as string;
 
-        if (!isValid) {
-          this.logger.error('Invalid webhook signature');
-          throw new BadRequestException('Invalid webhook signature');
-        }
-      } else {
-        this.logger.warn('Webhook received without signature');
+      if (!signature) {
+        this.logger.error('Webhook received without signature - REJECTED');
+        throw new UnauthorizedException('Missing webhook signature');
       }
 
-      // Process webhook
-      this.logger.log(
-        `Webhook received for session: ${webhookData.verification.id}`,
-      );
-      this.logger.log(`Verification status: ${webhookData.verification.status}`);
-      this.logger.log(
-        `Verification code: ${webhookData.verification.code}`,
+      // 2. Use raw body for signature verification (configured in main.ts)
+      const rawBody = request.body as Buffer;
+
+      if (!Buffer.isBuffer(rawBody)) {
+        this.logger.error('Raw body not available - check main.ts configuration');
+        throw new BadRequestException('Raw body parser not configured');
+      }
+
+      const isValid = this.veriffService.verifyWebhookSignature(
+        rawBody,
+        signature,
       );
 
-      // Update creator profile based on verification result
+      if (!isValid) {
+        this.logger.error('Invalid webhook signature - REJECTED');
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
+
+      this.logger.log('Webhook signature verified successfully');
+
+      // 3. Parse body AFTER signature verification
+      const webhookData: WebhookDecisionDto = JSON.parse(rawBody.toString('utf-8'));
+
+      // 4. Check idempotency - prevent duplicate processing
+      const webhookId = webhookData.verification.id;
+
+      const existingWebhook = await this.prisma.processedWebhook.findUnique({
+        where: { webhookId },
+      });
+
+      if (existingWebhook) {
+        this.logger.log(`Webhook already processed: ${webhookId}`);
+        return { received: true };
+      }
+
+      // Log webhook details
+      this.logger.log(`Processing webhook for session: ${webhookData.verification.id}`);
+      this.logger.log(`Verification status: ${webhookData.verification.status}`);
+      this.logger.log(`Verification code: ${webhookData.verification.code}`);
+
       const sessionId = webhookData.verification.id;
       const status = webhookData.verification.status;
       const code = webhookData.verification.code;
 
-      // Find creator profile by session ID
-      const creatorProfile = await this.prisma.creatorProfile.findUnique({
-        where: { veriffSessionId: sessionId },
-      });
+      // 5. Process webhook in transaction
+      await this.prisma.$transaction(async (tx) => {
+        // Mark webhook as processed
+        await tx.processedWebhook.create({
+          data: {
+            webhookId,
+            provider: 'VERIFF',
+            eventType: `${status}_${code}`,
+            payload: webhookData as any,
+          },
+        });
 
-      if (!creatorProfile) {
-        this.logger.warn(`No creator profile found for session: ${sessionId}`);
-        return { received: true };
-      }
+        // Find creator profile by session ID
+        const creatorProfile = await tx.creatorProfile.findUnique({
+          where: { veriffSessionId: sessionId },
+        });
 
-      let verificationStatus: VerificationStatus;
-      let verifiedAt: Date | null = null;
+        if (!creatorProfile) {
+          this.logger.warn(`No creator profile found for session: ${sessionId}`);
+          return;
+        }
 
-      // Handle different verification statuses
-      if (status === 'approved' && code === 9001) {
-        this.logger.log('Verification approved');
-        verificationStatus = VerificationStatus.VERIFIED;
-        verifiedAt = new Date();
-      } else if (status === 'declined' && code === 9103) {
+        let verificationStatus: VerificationStatus;
+        let verifiedAt: Date | null = null;
+
+        // Handle different verification statuses
+        if (status === 'approved' && code === 9001) {
+          this.logger.log('Verification approved');
+          verificationStatus = VerificationStatus.VERIFIED;
+          verifiedAt = new Date();
+        } else if (status === 'declined' && code === 9103) {
+          this.logger.log(
+            `Verification declined: ${webhookData.verification.reason}`,
+          );
+          verificationStatus = VerificationStatus.REJECTED;
+        } else if (code === 9102) {
+          this.logger.log('Verification requires resubmission');
+          verificationStatus = VerificationStatus.IN_PROGRESS;
+        } else {
+          this.logger.log(`Unknown status/code: ${status}/${code}`);
+          // Still mark as processed to prevent retries
+          return;
+        }
+
+        // Update creator profile
+        await tx.creatorProfile.update({
+          where: { id: creatorProfile.id },
+          data: {
+            verificationStatus,
+            verifiedAt,
+            veriffDecisionId: sessionId,
+          },
+        });
+
         this.logger.log(
-          `Verification declined: ${webhookData.verification.reason}`,
+          `Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`,
         );
-        verificationStatus = VerificationStatus.REJECTED;
-      } else if (code === 9102) {
-        this.logger.log('Verification requires resubmission');
-        verificationStatus = VerificationStatus.IN_PROGRESS;
-      } else {
-        this.logger.log(`Unknown status/code: ${status}/${code}`);
-        return { received: true };
-      }
-
-      // Update creator profile
-      await this.prisma.creatorProfile.update({
-        where: { id: creatorProfile.id },
-        data: {
-          verificationStatus,
-          verifiedAt,
-          veriffDecisionId: sessionId,
-        },
       });
-
-      this.logger.log(
-        `Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`,
-      );
 
       return { received: true };
     } catch (error) {

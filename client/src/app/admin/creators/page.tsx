@@ -2,28 +2,19 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDispatch, useSelector } from 'react-redux';
 import {
-  useLogoutUserMutation,
   useGetAdminCreatorsQuery,
   useGetAdminCreatorStatsQuery,
 } from '@/state/api';
-import { clearAuth } from '@/state/authSlice';
-import { RootState } from '@/app/redux';
 import AdminSidebar from '@/components/AdminSidebar';
-import LogoutModal from '@/components/LogoutModal';
 
 export default function CreatorManagementPage() {
   const router = useRouter();
-  const dispatch = useDispatch();
-  const [logoutUser] = useLogoutUserMutation();
   const activeTab = 'creators';
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [kycFilter, setKycFilter] = useState('all');
   const [accountFilter, setAccountFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const refreshToken = useSelector((state: RootState) => state.auth.tokens?.refreshToken);
   const creatorsPerPage = 20;
 
   // Fetch creators and stats
@@ -49,20 +40,6 @@ export default function CreatorManagementPage() {
     kycPending: 0,
     kycVerified: 0,
     kycFailed: 0,
-  };
-
-  const handleLogout = async () => {
-    try {
-      if (refreshToken) {
-        await logoutUser(refreshToken).unwrap();
-      }
-    } catch {
-      // Silently handle API errors
-    } finally {
-      dispatch(clearAuth());
-      router.push('/login');
-      setShowLogoutModal(false);
-    }
   };
 
   const getKycStatusColor = (status: string) => {
@@ -132,7 +109,7 @@ export default function CreatorManagementPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto lg:ml-0">
@@ -390,13 +367,6 @@ export default function CreatorManagementPage() {
           </div>
         </div>
       </main>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={handleLogout}
-      />
     </div>
   );
 }

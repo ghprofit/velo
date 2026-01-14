@@ -7,6 +7,8 @@ export interface BalanceResponse {
   availableBalance: number;
   totalPayouts: number;
   currency: string;
+  lockedBonus?: number;       // Waitlist bonus that's locked until 5 sales
+  salesToUnlock?: number;     // Number of sales needed to unlock bonus
 }
 
 export interface Transaction {
@@ -61,22 +63,12 @@ export class EarningsService {
   async getBalance(userId: string): Promise<BalanceResponse> {
     const creatorProfile = await this.getCreatorProfile(userId);
 
-    // Calculate lifetime earnings from completed purchases
-    const purchasesAggregation = await this.prisma.purchase.aggregate({
-      where: {
-        content: {
-          creatorId: creatorProfile.id,
-        },
-        status: 'COMPLETED',
-      },
-      _sum: {
-        amount: true,
-      },
-    });
+    // Use totalEarnings from profile (correctly tracks 90%/85% of purchases)
+    // This is maintained by Stripe webhook handlers when purchases are completed
+    const lifetimeEarnings = creatorProfile.totalEarnings || 0;
 
-    const lifetimeEarnings = purchasesAggregation._sum.amount || 0;
-
-    // Calculate pending balance (purchases within last 7 days)
+    // Calculate pending balance (recent earnings within last 7 days)
+    // Note: We approximate with 85% multiplier since we don't track per-purchase earnings
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -95,7 +87,8 @@ export class EarningsService {
       },
     });
 
-    const pendingBalance = pendingPurchasesAggregation._sum.amount || 0;
+    // Apply 85% multiplier to approximate creator earnings (conservative estimate)
+    const pendingBalance = (pendingPurchasesAggregation._sum.amount || 0) * 0.85;
 
     // Calculate total completed payouts
     const payoutsAggregation = await this.prisma.payout.aggregate({
@@ -111,7 +104,20 @@ export class EarningsService {
     const totalPayouts = payoutsAggregation._sum.amount || 0;
 
     // Calculate available balance
-    const availableBalance = lifetimeEarnings - pendingBalance - totalPayouts;
+    let availableBalance = lifetimeEarnings - pendingBalance - totalPayouts;
+
+    // Check if waitlist bonus is locked
+    let lockedBonus = 0;
+    let salesToUnlock = 0;
+
+    if (creatorProfile.waitlistBonus > 0 && !creatorProfile.bonusWithdrawn) {
+      if (creatorProfile.totalPurchases < 5) {
+        // Bonus is locked - subtract from available balance
+        lockedBonus = creatorProfile.waitlistBonus;
+        salesToUnlock = 5 - creatorProfile.totalPurchases;
+        availableBalance = Math.max(0, availableBalance - lockedBonus);
+      }
+    }
 
     return {
       lifetimeEarnings,
@@ -119,6 +125,8 @@ export class EarningsService {
       availableBalance: Math.max(0, availableBalance), // Ensure non-negative
       totalPayouts,
       currency: 'USD',
+      lockedBonus: lockedBonus > 0 ? lockedBonus : undefined,
+      salesToUnlock: salesToUnlock > 0 ? salesToUnlock : undefined,
     };
   }
 

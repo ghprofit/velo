@@ -4,6 +4,7 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } fro
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import { nanoid } from 'nanoid';
+import { Readable } from 'stream';
 
 @Injectable()
 export class S3Service {
@@ -61,6 +62,9 @@ export class S3Service {
       const key = `${folder}/${uniqueFileName}`;
 
       // Upload to S3
+      // Make thumbnails publicly accessible, but keep content private
+      const isPublic = folder === 'thumbnails';
+
       const upload = new Upload({
         client: this.s3Client,
         params: {
@@ -68,8 +72,7 @@ export class S3Service {
           Key: key,
           Body: fileBuffer,
           ContentType: contentType,
-          // Note: ACL removed - modern S3 buckets have ACLs disabled by default
-          // Configure bucket policy for public access if needed
+          ACL: isPublic ? 'public-read' : undefined,
         },
       });
 
@@ -77,11 +80,72 @@ export class S3Service {
 
       // Construct the S3 URL
       const region = this.configService.get<string>('AWS_REGION') || 'us-east-1';
-      const url = `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
+      let url: string;
+
+      if (isPublic) {
+        // Public URL for thumbnails
+        url = `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
+      } else {
+        // Signed URL for private content (24-hour expiry)
+        url = await this.getSignedUrl(key, 86400); // 24 hours
+      }
 
       return { key, url };
     } catch (error) {
       console.error('Error uploading file to S3:', error);
+      throw new InternalServerErrorException('Failed to upload file to S3');
+    }
+  }
+
+  /**
+   * Upload a file stream to S3 (for multipart uploads)
+   * @param fileStream - Readable stream or Buffer from multer
+   * @param fileName - Original file name
+   * @param contentType - MIME type of the file
+   * @param folder - Optional folder path in S3 bucket
+   * @returns S3 key (path) and URL of the uploaded file
+   */
+  async uploadFileStream(
+    fileStream: Buffer | Readable,
+    fileName: string,
+    contentType: string,
+    folder: string = 'content',
+  ): Promise<{ key: string; url: string }> {
+    try {
+      // Generate unique file name
+      const fileExtension = fileName.split('.').pop() || 'bin';
+      const uniqueFileName = `${nanoid(16)}.${fileExtension}`;
+      const key = `${folder}/${uniqueFileName}`;
+
+      // Make thumbnails publicly accessible, but keep content private
+      const isPublic = folder === 'thumbnails';
+
+      const upload = new Upload({
+        client: this.s3Client,
+        params: {
+          Bucket: this.bucketName,
+          Key: key,
+          Body: fileStream, // Accepts Buffer or Stream
+          ContentType: contentType,
+          ACL: isPublic ? 'public-read' : undefined,
+        },
+      });
+
+      await upload.done();
+
+      // Construct the S3 URL
+      const region = this.configService.get<string>('AWS_REGION') || 'us-east-1';
+      let url: string;
+
+      if (isPublic) {
+        url = `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
+      } else {
+        url = await this.getSignedUrl(key, 86400); // 24 hours
+      }
+
+      return { key, url };
+    } catch (error) {
+      console.error('Error uploading file stream to S3:', error);
       throw new InternalServerErrorException('Failed to upload file to S3');
     }
   }

@@ -2,14 +2,18 @@
 
 import { JSX, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { useLogout } from '@/hooks/useLogout';
+import LogoutModal from './LogoutModal';
 
 interface AdminSidebarProps {
   activeTab: string;
-  onLogout: () => void;
 }
 
-export default function AdminSidebar({ activeTab, onLogout }: AdminSidebarProps) {
+export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { logout, isLoggingOut } = useLogout();
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/admin/dashboard' },
@@ -17,6 +21,7 @@ export default function AdminSidebar({ activeTab, onLogout }: AdminSidebarProps)
     { id: 'creators', label: 'Creators', icon: 'creator', href: '/admin/creators', isSubmenu: true },
     { id: 'content', label: 'Content', icon: 'content', href: '/admin/content', isSubmenu: true },
     { id: 'payments', label: 'Payments', icon: 'payments', href: '/admin/payments', isSubmenu: true },
+    { id: 'payouts', label: 'Payout Requests', icon: 'payouts', href: '/admin/payouts', isSubmenu: true },
     { id: 'reports', label: 'Reports & Analytics', icon: 'reports', href: '/admin/reports', isSubmenu: true },
     { id: 'support', label: 'Support', icon: 'support', href: '/admin/support' },
     { id: 'notifications', label: 'Notifications', icon: 'notifications', href: '/admin/notifications' },
@@ -48,6 +53,11 @@ export default function AdminSidebar({ activeTab, onLogout }: AdminSidebarProps)
       payments: (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      ),
+      payouts: (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       ),
       reports: (
@@ -119,15 +129,15 @@ export default function AdminSidebar({ activeTab, onLogout }: AdminSidebarProps)
 
         {/* Logo */}
         <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
-              <rect x="8" y="14" width="16" height="12" rx="2" fill="black"/>
-              <path d="M11 14V10C11 7.23858 13.2386 5 16 5C18.7614 5 21 7.23858 21 10V14" stroke="black" strokeWidth="2" fill="none"/>
-              <circle cx="16" cy="20" r="1.5" fill="white"/>
-            </svg>
-            <span className="text-xl font-bold text-gray-900">
-              Velo<span className="font-normal">Link</span>
-            </span>
+          <div className="flex items-center justify-center">
+            <Image
+              src="/assets/logo_svgs/Primary_Logo(black).svg"
+              alt="VeloLink Admin"
+              width={150}
+              height={40}
+              className="h-10 w-auto"
+              priority
+            />
           </div>
         </div>
 
@@ -188,7 +198,7 @@ export default function AdminSidebar({ activeTab, onLogout }: AdminSidebarProps)
         {/* Logout */}
         <div className="p-4 border-t border-gray-200">
           <button
-            onClick={onLogout}
+            onClick={() => setShowLogoutModal(true)}
             className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors w-full"
           >
             {renderIcon('logout')}
@@ -196,6 +206,17 @@ export default function AdminSidebar({ activeTab, onLogout }: AdminSidebarProps)
           </button>
         </div>
       </aside>
+
+      {/* Logout Modal */}
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={async () => {
+          await logout();
+          setShowLogoutModal(false);
+        }}
+        isLoading={isLoggingOut}
+      />
     </>
   );
 }

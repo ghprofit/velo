@@ -68,20 +68,20 @@ enum PayoutRequestStatus {
   REJECTED
   PROCESSING
   COMPLETED
-  FAILED
+  CANCELLED
 }
 
 // User Models
 model User {
-  id                String              @id @default(cuid())
-  email             String              @unique
-  password          String
-  role              UserRole            @default(CREATOR)
-  isActive          Boolean             @default(true)
-  emailVerified     Boolean             @default(false)
-  lastLogin         DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  role          UserRole  @default(CREATOR)
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // 2FA Fields
   twoFactorEnabled    Boolean   @default(false)
@@ -94,25 +94,26 @@ model User {
   lockedUntil         DateTime?
 
   // Profile Fields
-  displayName       String?
-  firstName         String?
-  lastName          String?
+  displayName    String?
+  firstName      String?
+  lastName       String?
+  profilePicture String?
 
   // Notification Preferences
-  notifyPayoutUpdates      Boolean @default(true)
-  notifyContentEngagement  Boolean @default(true)
+  notifyPayoutUpdates         Boolean @default(true)
+  notifyContentEngagement     Boolean @default(true)
   notifyPlatformAnnouncements Boolean @default(true)
-  notifyMarketingEmails    Boolean @default(false)
+  notifyMarketingEmails       Boolean @default(false)
 
   // Relations
-  creatorProfile    CreatorProfile?
-  adminProfile      AdminProfile?
-  refreshTokens     RefreshToken[]
-  adminActions      AdminAction[]
-  supportTickets    SupportTicket[]
-  notifications     Notification[]
+  creatorProfile         CreatorProfile?
+  adminProfile           AdminProfile?
+  refreshTokens          RefreshToken[]
+  adminActions           AdminAction[]
+  supportTickets         SupportTicket[]
+  notifications          Notification[]
   emailVerificationToken EmailVerificationToken?
-  passwordResetTokens PasswordResetToken[]
+  passwordResetTokens    PasswordResetToken[]
 
   @@index([email])
   @@map("users")
@@ -120,30 +121,30 @@ model User {
 
 // Admin Profile for staff members
 model AdminProfile {
-  id                    String              @id @default(cuid())
-  userId                String              @unique
-  fullName              String
-  adminRole             AdminRole
-  status                AdminStatus         @default(INVITED)
+  id        String      @id @default(cuid())
+  userId    String      @unique
+  fullName  String
+  adminRole AdminRole
+  status    AdminStatus @default(INVITED)
 
   // Permissions
-  permDashboard         Boolean             @default(true)
-  permCreatorManagement Boolean             @default(false)
-  permContentReview     Boolean             @default(false)
-  permFinancialReports  Boolean             @default(false)
-  permSystemSettings    Boolean             @default(false)
-  permSupportTickets    Boolean             @default(false)
+  permDashboard         Boolean @default(true)
+  permCreatorManagement Boolean @default(false)
+  permContentReview     Boolean @default(false)
+  permFinancialReports  Boolean @default(false)
+  permSystemSettings    Boolean @default(false)
+  permSupportTickets    Boolean @default(false)
 
   // Security
-  twoFactorEnabled      Boolean             @default(false)
-  lastPasswordReset     DateTime?
-  mustChangePassword    Boolean             @default(true)
+  twoFactorEnabled   Boolean   @default(false)
+  lastPasswordReset  DateTime?
+  mustChangePassword Boolean   @default(true)
 
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([adminRole])
@@ -153,18 +154,16 @@ model AdminProfile {
 
 // Email Verification
 model EmailVerificationToken {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  code            String   // 6-digit code (100000-999999)
-  expiresAt       DateTime // 15 minutes from creation
-  resendCount     Int      @default(0)
-  lastResendAt    DateTime?
-  createdAt       DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   // Relations
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([code])
+  @@index([token])
   @@map("email_verification_tokens")
 }
 
@@ -178,7 +177,7 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
@@ -186,59 +185,64 @@ model PasswordResetToken {
 }
 
 model CreatorProfile {
-  id                    String              @id @default(cuid())
-  userId                String              @unique
-  displayName           String
-  profileImage          String?
-  coverImage            String?
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  displayName  String
+  bio          String?
+  profileImage String?
+  coverImage   String?
 
   // Profile Visibility
-  allowBuyerProfileView Boolean             @default(false) // Whether buyers can view creator profile
+  allowBuyerProfileView Boolean @default(false) // Whether buyers can view creator profile
 
   // Verification
-  verificationStatus    VerificationStatus  @default(PENDING)
-  veriffSessionId       String?             @unique
-  veriffDecisionId      String?
-  verifiedAt            DateTime?
-  verificationNotes     String?
+  verificationStatus VerificationStatus @default(PENDING)
+  veriffSessionId    String?            @unique
+  veriffDecisionId   String?
+  verifiedAt         DateTime?
+  verificationNotes  String?
 
   // KYC Info
-  firstName             String?
-  lastName              String?
-  dateOfBirth           DateTime?
-  country               String?
+  firstName   String?
+  lastName    String?
+  dateOfBirth DateTime?
+  country     String?
 
   // Payout Info - Bank Account
-  bankAccountName       String?
-  bankName              String?
-  bankAccountNumber     String?
-  bankRoutingNumber     String?             // For US banks (ABA routing number)
-  bankSwiftCode         String?             // For international transfers
-  bankIban              String?             // For European banks
-  bankCountry           String?
-  bankCurrency          String?             @default("USD")
-  payoutSetupCompleted  Boolean             @default(false)
+  bankAccountName      String?
+  bankName             String?
+  bankAccountNumber    String?
+  bankRoutingNumber    String? // For US banks (ABA routing number)
+  bankSwiftCode        String? // For international transfers
+  bankIban             String? // For European banks
+  bankCountry          String?
+  bankCurrency         String?      @default("USD")
+  payoutSetupCompleted Boolean      @default(false)
   // Payout Info
-  paypalEmail           String?
-  stripeAccountId       String?
-  payoutStatus          PayoutStatus        @default(ACTIVE)
+  paypalEmail          String?
+  stripeAccountId      String?
+  payoutStatus         PayoutStatus @default(ACTIVE)
 
   // Policy
-  policyStrikes         Int                 @default(0)
+  policyStrikes Int @default(0)
 
   // Stats
-  totalEarnings         Float               @default(0)
-  totalViews            Int                 @default(0)
-  totalPurchases        Int                 @default(0)
+  totalEarnings  Float @default(0)
+  totalViews     Int   @default(0)
+  totalPurchases Int   @default(0)
 
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  // Waitlist bonus tracking
+  waitlistBonus  Float   @default(0)    // Amount of bonus received ($50)
+  bonusWithdrawn Boolean @default(false) // Whether bonus has been withdrawn
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content               Content[]
-  payouts               Payout[]
-  payoutRequests        PayoutRequest[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content        Content[]
+  payouts        Payout[]
+  payoutRequests PayoutRequest[]
 
   @@index([userId])
   @@index([verificationStatus])
@@ -248,44 +252,44 @@ model CreatorProfile {
 
 // Content Models
 model Content {
-  id                    String              @id @default(cuid())
-  creatorId             String
-  title                 String
-  description           String?
-  price                 Float
-  thumbnailUrl          String
-  contentType           String              // VIDEO, IMAGE, GALLERY
+  id           String  @id @default(cuid())
+  creatorId    String
+  title        String
+  description  String?
+  price        Float
+  thumbnailUrl String
+  contentType  String // VIDEO, IMAGE, GALLERY
 
   // AWS Storage
-  s3Key                 String              @unique
-  s3Bucket              String
-  fileSize              Int                 // in bytes
-  duration              Int?                // for videos in seconds
+  s3Key    String @unique
+  s3Bucket String
+  fileSize Int // in bytes
+  duration Int? // for videos in seconds
 
   // Status
-  status                ContentStatus       @default(PENDING_REVIEW)
-  isPublished           Boolean             @default(false)
-  publishedAt           DateTime?
+  status      ContentStatus @default(PENDING_REVIEW)
+  isPublished Boolean       @default(false)
+  publishedAt DateTime?
 
   // Compliance
-  complianceStatus      ComplianceCheckStatus @default(PENDING)
-  complianceCheckedAt   DateTime?
-  complianceNotes       String?
+  complianceStatus    ComplianceCheckStatus @default(PENDING)
+  complianceCheckedAt DateTime?
+  complianceNotes     String?
 
   // Stats
-  viewCount             Int                 @default(0)
-  purchaseCount         Int                 @default(0)
-  totalRevenue          Float               @default(0)
+  viewCount     Int   @default(0)
+  purchaseCount Int   @default(0)
+  totalRevenue  Float @default(0)
 
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  creator               CreatorProfile      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  complianceLogs        ComplianceLog[]
-  purchases             Purchase[]
-  contentItems          ContentItem[]       // For galleries with multiple items
-  contentViews          ContentView[]       // View tracking with demographics
+  creator        CreatorProfile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  complianceLogs ComplianceLog[]
+  purchases      Purchase[]
+  contentItems   ContentItem[] // For galleries with multiple items
+  contentViews   ContentView[] // View tracking with demographics
 
   @@index([creatorId])
   @@index([status])
@@ -295,35 +299,35 @@ model Content {
 }
 
 model ContentItem {
-  id                    String              @id @default(cuid())
-  contentId             String
-  s3Key                 String              @unique
-  s3Bucket              String
-  fileSize              Int
-  order                 Int                 @default(0)
-  createdAt             DateTime            @default(now())
+  id        String   @id @default(cuid())
+  contentId String
+  s3Key     String   @unique
+  s3Bucket  String
+  fileSize  Int
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
 
   // Relations
-  content               Content             @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
   @@index([contentId])
   @@map("content_items")
 }
 
 model ComplianceLog {
-  id                    String              @id @default(cuid())
-  contentId             String
-  checkType             String              // AWS_REKOGNITION, MANUAL_REVIEW
-  status                ComplianceCheckStatus
-  confidence            Float?
-  flaggedReasons        String[]            @default([])
-  moderationLabels      Json?               // AWS Rekognition labels
-  reviewedBy            String?             // Admin user ID
-  notes                 String?
-  createdAt             DateTime            @default(now())
+  id               String                @id @default(cuid())
+  contentId        String
+  checkType        String // AWS_REKOGNITION, MANUAL_REVIEW
+  status           ComplianceCheckStatus
+  confidence       Float?
+  flaggedReasons   String[]              @default([])
+  moderationLabels Json? // AWS Rekognition labels
+  reviewedBy       String? // Admin user ID
+  notes            String?
+  createdAt        DateTime              @default(now())
 
   // Relations
-  content               Content             @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
   @@index([contentId])
   @@index([status])
@@ -332,18 +336,18 @@ model ComplianceLog {
 
 // Anonymous Buyer Tracking
 model BuyerSession {
-  id                    String              @id @default(cuid())
-  sessionToken          String              @unique
-  fingerprint           String?             // Browser fingerprint
-  ipAddress             String?
-  userAgent             String?
-  email                 String?             // For checkout receipts and access recovery
-  lastActive            DateTime            @default(now())
-  expiresAt             DateTime
-  createdAt             DateTime            @default(now())
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  fingerprint  String? // Browser fingerprint
+  ipAddress    String?
+  userAgent    String?
+  email        String? // For checkout receipts and access recovery
+  lastActive   DateTime @default(now())
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
 
   // Relations
-  purchases             Purchase[]
+  purchases Purchase[]
 
   @@index([sessionToken])
   @@index([fingerprint])
@@ -351,69 +355,123 @@ model BuyerSession {
 }
 
 model Purchase {
-  id                    String              @id @default(cuid())
-  contentId             String
-  buyerSessionId        String
+  id             String @id @default(cuid())
+  contentId      String
+  buyerSessionId String
 
   // Payment Info
-  amount                Float               // Total amount buyer pays (110% of basePrice)
-  basePrice             Float?              // Creator's set price (100%) - nullable for migration
-  currency              String              @default("USD")
-  paymentProvider       String              // STRIPE, PAYPAL
-  paymentIntentId       String?             @unique
-  transactionId         String?             @unique
+  amount          Float
+  currency        String  @default("USD")
+  paymentProvider String // STRIPE, PAYPAL
+  paymentIntentId String? @unique
+  transactionId   String? @unique
 
   // Status
-  status                String              @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
+  status String @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
 
   // Access
-  accessToken           String              @unique // Unique token for viewing purchased content
-  accessExpiresAt       DateTime?           // Optional expiration
-  viewCount             Int                 @default(0)
-  lastViewedAt          DateTime?
+  accessToken     String    @unique // Unique token for viewing purchased content
+  accessExpiresAt DateTime? // Optional expiration
+  viewCount       Int       @default(0)
+  lastViewedAt    DateTime?
 
   // Time-Based Access Control
-  accessWindowStartedAt DateTime?           // First access timestamp
-  firstAccessIpAddress  String?             // IP during first access
+  accessWindowStartedAt DateTime? // First access timestamp
+  firstAccessIpAddress  String? // IP during first access
 
   // Device Fingerprinting
-  purchaseFingerprint   String?             // Fingerprint during purchase
-  trustedFingerprints   String[]            @default([]) // Max 3 devices
-  purchaseIpAddress     String?             // IP during purchase
+  purchaseFingerprint String? // Fingerprint during purchase
+  trustedFingerprints String[] @default([]) // Max 3 devices
+  purchaseIpAddress   String? // IP during purchase
 
   // Email Verification for Devices
-  deviceVerificationCodes Json?             // Array of {code, fingerprint, expiresAt}
+  deviceVerificationCodes Json? // Array of {code, fingerprint, expiresAt}
 
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  // Idempotency tracking (Bug #1, #10)
+  completionIdempotencyKey String?   @unique
+  completedBy              String? // 'CLIENT' | 'WEBHOOK'
+  completedAt              DateTime?
+  webhookProcessedAt       DateTime?
+
+  // Refund tracking (Bug #7)
+  refundedAmount      Float?
+  isFullyRefunded     Boolean   @default(false)
+  isPartiallyRefunded Boolean   @default(false)
+  refundedAt          DateTime?
+
+  // Access window buffer (Bug #8)
+  accessBufferMinutes Int @default(30)
+
+  // Pricing (Bug #12)
+  basePrice Float? // Creator's original price before markup
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  content               Content             @relation(fields: [contentId], references: [id])
-  buyerSession          BuyerSession        @relation(fields: [buyerSessionId], references: [id])
+  content      Content      @relation(fields: [contentId], references: [id])
+  buyerSession BuyerSession @relation(fields: [buyerSessionId], references: [id])
 
   @@index([contentId])
   @@index([buyerSessionId])
   @@index([accessToken])
-  @@index([accessExpiresAt])
   @@map("purchases")
+}
+
+// Device Verification for Anonymous Buyers
+model DeviceVerification {
+  id          String    @id @default(cuid())
+  purchaseId  String
+  code        String // 6-digit verification code
+  fingerprint String // Device fingerprint requesting verification
+  email       String // Email to send code to
+  verified    Boolean   @default(false)
+  verifiedAt  DateTime?
+  expiresAt   DateTime // Code expiration
+  createdAt   DateTime  @default(now())
+
+  // Rate limiting fields (Bug #15)
+  failedAttempts Int       @default(0)
+  lastAttemptAt  DateTime?
+  lockedUntil    DateTime?
+
+  @@index([purchaseId])
+  @@index([code])
+  @@index([fingerprint])
+  @@map("device_verifications")
+}
+
+// Webhook Idempotency Tracking
+model ProcessedWebhook {
+  id         String   @id @default(cuid())
+  webhookId  String   @unique // External webhook ID from provider
+  provider   String // VERIFF, STRIPE, etc.
+  eventType  String // Event type for logging
+  payload    Json // Store full payload for debugging
+  processedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([webhookId])
+  @@index([provider])
+  @@map("processed_webhooks")
 }
 
 // Authentication
 model RefreshToken {
-  id                    String              @id @default(cuid())
-  userId                String
-  token                 String              @unique
-  expiresAt             DateTime
-  createdAt             DateTime            @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   // Session Metadata
-  deviceName            String?
-  ipAddress             String?
-  userAgent             String?
-  lastUsedAt            DateTime            @default(now())
+  deviceName String?
+  ipAddress  String?
+  userAgent  String?
+  lastUsedAt DateTime @default(now())
 
   // Relations
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
@@ -422,21 +480,21 @@ model RefreshToken {
 
 // Payouts
 model Payout {
-  id                    String              @id @default(cuid())
-  creatorId             String
-  amount                Float
-  currency              String              @default("USD")
-  status                String              @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
-  paymentMethod         String              // PAYPAL, STRIPE
-  paymentId             String?
-  processedAt           DateTime?
-  notes                 String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  id            String    @id @default(cuid())
+  creatorId     String
+  amount        Float
+  currency      String    @default("USD")
+  status        String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  paymentMethod String // PAYPAL, STRIPE
+  paymentId     String?
+  processedAt   DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Relations
-  creator               CreatorProfile      @relation(fields: [creatorId], references: [id])
-  payoutRequest         PayoutRequest?
+  creator       CreatorProfile @relation(fields: [creatorId], references: [id])
+  payoutRequest PayoutRequest?
 
   @@index([creatorId])
   @@index([status])
@@ -445,25 +503,25 @@ model Payout {
 
 // Payout Requests
 model PayoutRequest {
-  id                String              @id @default(cuid())
-  creatorId         String
-  requestedAmount   Float
-  availableBalance  Float
-  currency          String              @default("USD")
-  status            PayoutRequestStatus @default(PENDING)
-  emailVerifiedAt   DateTime?
-  kycVerifiedAt     DateTime?
-  bankSetupAt       DateTime?
-  reviewedBy        String?
-  reviewedAt        DateTime?
-  reviewNotes       String?
-  payoutId          String?             @unique
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id              String              @id @default(cuid())
+  creatorId       String
+  requestedAmount Float
+  // Removed availableBalance - calculate dynamically from creatorProfile.totalEarnings (Bug #4)
+  currency        String              @default("USD")
+  status          PayoutRequestStatus @default(PENDING)
+  emailVerifiedAt DateTime?
+  kycVerifiedAt   DateTime?
+  bankSetupAt     DateTime?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?
+  payoutId        String?             @unique
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   // Relations
-  creator           CreatorProfile      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  payout            Payout?             @relation(fields: [payoutId], references: [id])
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  payout  Payout?        @relation(fields: [payoutId], references: [id])
 
   @@index([creatorId])
   @@index([status])
@@ -472,17 +530,17 @@ model PayoutRequest {
 
 // Admin Actions Log
 model AdminAction {
-  id                    String              @id @default(cuid())
-  adminId               String
-  action                String              // APPROVE_CONTENT, REJECT_CONTENT, SUSPEND_USER, etc.
-  targetType            String              // USER, CONTENT, PURCHASE
-  targetId              String
-  reason                String?
-  metadata              Json?
-  createdAt             DateTime            @default(now())
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String // APPROVE_CONTENT, REJECT_CONTENT, SUSPEND_USER, etc.
+  targetType String // USER, CONTENT, PURCHASE
+  targetId   String
+  reason     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
 
   // Relations
-  admin                 User                @relation(fields: [adminId], references: [id])
+  admin User @relation(fields: [adminId], references: [id])
 
   @@index([adminId])
   @@index([targetType, targetId])
@@ -491,21 +549,21 @@ model AdminAction {
 
 // Support System
 model SupportTicket {
-  id                    String              @id @default(cuid())
-  userId                String?             // Optional for authenticated users
-  email                 String
-  subject               String
-  message               String
-  status                String              @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
-  priority              String              @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  assignedTo            String?
-  resolvedAt            DateTime?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  id         String    @id @default(cuid())
+  userId     String? // Optional for authenticated users
+  email      String
+  subject    String
+  message    String
+  status     String    @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  priority   String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  assignedTo String?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   // Relations
-  user                  User?               @relation(fields: [userId], references: [id])
-  attachments           SupportAttachment[]
+  user        User?               @relation(fields: [userId], references: [id])
+  attachments SupportAttachment[]
 
   @@index([userId])
   @@index([status])
@@ -514,24 +572,24 @@ model SupportTicket {
 
 // Support Ticket Attachments
 model SupportAttachment {
-  id                    String              @id @default(cuid())
-  ticketId              String
+  id       String @id @default(cuid())
+  ticketId String
 
   // AWS S3 Storage
-  s3Key                 String              @unique
-  s3Bucket              String
+  s3Key    String @unique
+  s3Bucket String
 
   // File Metadata
-  fileName              String
-  fileSize              Int
-  contentType           String
+  fileName    String
+  fileSize    Int
+  contentType String
 
   // Tracking
-  order                 Int                 @default(0)
-  createdAt             DateTime            @default(now())
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
 
   // Relations
-  ticket                SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
   @@map("support_attachments")
@@ -539,17 +597,17 @@ model SupportAttachment {
 
 // Notifications
 model Notification {
-  id                    String              @id @default(cuid())
-  userId                String
-  type                  String              // VERIFICATION_APPROVED, CONTENT_APPROVED, PAYOUT_SENT, etc.
-  title                 String
-  message               String
-  isRead                Boolean             @default(false)
-  metadata              Json?
-  createdAt             DateTime            @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // VERIFICATION_APPROVED, CONTENT_APPROVED, PAYOUT_SENT, etc.
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
 
   // Relations
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isRead])
@@ -558,48 +616,62 @@ model Notification {
 
 // Content Views - Track view events with geographic data
 model ContentView {
-  id                    String              @id @default(cuid())
-  contentId             String
+  id        String @id @default(cuid())
+  contentId String
 
   // Geographic Data (from IP lookup)
-  country               String?
-  countryCode           String?
-  region                String?
-  city                  String?
+  country     String?
+  countryCode String?
+  region      String?
+  city        String?
 
   // Device Info
-  deviceType            String?             // desktop, mobile, tablet
-  browser               String?
-  os                    String?
+  deviceType String? // desktop, mobile, tablet
+  browser    String?
+  os         String?
 
   // Session Info
-  ipAddress             String?
-  userAgent             String?
-  referrer              String?
+  ipAddress String?
+  userAgent String?
+  referrer  String?
 
-  createdAt             DateTime            @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  content               Content             @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
   @@index([contentId])
   @@index([country])
   @@index([createdAt])
   @@map("content_views")
 }
+
 // Platform Settings
 model PlatformSettings {
-  id                    String              @id @default(cuid())
-  key                   String              @unique
-  value                 String
-  description           String?
-  category              String              @default("general") // general, payments, content, security
-  isPublic              Boolean             @default(false)
-  updatedBy             String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  category    String   @default("general") // general, payments, content, security
+  isPublic    Boolean  @default(false)
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([category])
   @@index([key])
   @@map("platform_settings")
+}
+
+// Waitlist
+model Waitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  country   String?
+  age       Int?
+  heardFrom String?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@map("waitlist")
 }

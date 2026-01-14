@@ -41,6 +41,11 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
 
+    // Increase timeout for content upload endpoints (large video files with base64 encoding)
+    if (config.url?.includes('/content') && config.method === 'post') {
+      config.timeout = 300000; // 5 minutes for video/image uploads
+    }
+
     // Increase timeout for payment-related endpoints
     if (
       config.url?.includes('/purchase') ||
@@ -319,6 +324,15 @@ export const contentApi = {
   }) =>
     apiClient.post('/content', data),
 
+  // Create new content using multipart/form-data (streaming)
+  createContentMultipart: (formData: FormData) =>
+    apiClient.post('/content/multipart', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 600000, // 10 minutes for large uploads
+    }),
+
   // Get creator's content
   getMyContent: () =>
     apiClient.get('/content/my-content'),
@@ -423,8 +437,16 @@ export const earningsApi = {
     apiClient.get('/earnings/transactions', { params: { page, limit, type, search } }),
 
   // Request payout
-  requestPayout: (data: { amount: number; paymentMethod: string }) =>
-    apiClient.post('/earnings/request-payout', data),
+  requestPayout: (amount: number, notes?: string) =>
+    apiClient.post('/creators/payout/request', { amount, notes }),
+
+  // Get payout requests
+  getPayoutRequests: () =>
+    apiClient.get('/creators/payout/requests'),
+
+  // Get payout request by ID
+  getPayoutRequestById: (id: string) =>
+    apiClient.get(`/creators/payout/requests/${id}`),
 };
 
 // Notifications API
@@ -515,6 +537,27 @@ export const stripeApi = {
   // Get Stripe publishable key
   getConfig: () =>
     apiClient.get('/stripe/config'),
+};
+
+// Admin API
+export const adminApi = {
+  // Payout request management
+  getPayoutRequests: (query?: {
+    status?: string;
+    creatorId?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    apiClient.get('/admin/payments/payout-requests', { params: query }),
+
+  getPayoutRequestDetails: (requestId: string) =>
+    apiClient.get(`/admin/payments/payout-requests/${requestId}`),
+
+  approvePayoutRequest: (data: { requestId: string; reviewNotes?: string }) =>
+    apiClient.post('/admin/payments/payout-requests/approve', data),
+
+  rejectPayoutRequest: (data: { requestId: string; reviewNotes: string }) =>
+    apiClient.post('/admin/payments/payout-requests/reject', data),
 };
 
 export default apiClient;

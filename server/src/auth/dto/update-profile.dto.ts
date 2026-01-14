@@ -22,4 +22,8 @@ export class UpdateProfileDto {
   @IsEmail()
   @IsOptional()
   email?: string;
+
+  @IsString()
+  @IsOptional()
+  profilePicture?: string;
 }

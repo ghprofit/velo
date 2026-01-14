@@ -140,3 +140,475 @@ body {
   );
   background-size: 1000px 100%;
 }
+
+/* ============================================
+   NEW ANIMATION UTILITIES - FRAMER MOTION ENHANCEMENTS
+   ============================================ */
+
+/* 3D Transform System */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.perspective-1500 {
+  perspective: 1500px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+/* Enhanced Shadows for Depth */
+.shadow-3d {
+  box-shadow:
+    0 10px 25px -5px rgba(99, 102, 241, 0.1),
+    0 20px 35px -10px rgba(99, 102, 241, 0.15),
+    0 0 60px -15px rgba(99, 102, 241, 0.2);
+}
+
+.shadow-3d-purple {
+  box-shadow:
+    0 10px 25px -5px rgba(139, 92, 246, 0.1),
+    0 20px 35px -10px rgba(139, 92, 246, 0.15),
+    0 0 60px -15px rgba(139, 92, 246, 0.2);
+}
+
+.shadow-3d-pink {
+  box-shadow:
+    0 10px 25px -5px rgba(236, 72, 153, 0.1),
+    0 20px 35px -10px rgba(236, 72, 153, 0.15),
+    0 0 60px -15px rgba(236, 72, 153, 0.2);
+}
+
+.shadow-3d-cyan {
+  box-shadow:
+    0 10px 25px -5px rgba(6, 182, 212, 0.1),
+    0 20px 35px -10px rgba(6, 182, 212, 0.15),
+    0 0 60px -15px rgba(6, 182, 212, 0.2);
+}
+
+/* Gradient Background Patterns - ENHANCED BOLDER VERSIONS */
+.bg-gradient-playful-1 {
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.12) 0%,
+    rgba(168, 85, 247, 0.15) 50%,
+    rgba(236, 72, 153, 0.12) 100%);
+}
+
+.bg-gradient-playful-2 {
+  background: linear-gradient(135deg,
+    rgba(6, 182, 212, 0.10) 0%,
+    rgba(99, 102, 241, 0.14) 50%,
+    rgba(168, 85, 247, 0.10) 100%);
+}
+
+.bg-gradient-playful-3 {
+  background: linear-gradient(135deg,
+    rgba(168, 85, 247, 0.12) 0%,
+    rgba(236, 72, 153, 0.16) 50%,
+    rgba(99, 102, 241, 0.12) 100%);
+}
+
+.bg-gradient-mesh {
+  background:
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(6, 182, 212, 0.15) 0px, transparent 50%);
+}
+
+/* Animated Gradient Background */
+.bg-gradient-animated {
+  background: linear-gradient(
+    -45deg,
+    rgba(99, 102, 241, 0.12),
+    rgba(168, 85, 247, 0.15),
+    rgba(236, 72, 153, 0.12),
+    rgba(6, 182, 212, 0.10)
+  );
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Playful Animations */
+@keyframes bounce-playful {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.02);
+  }
+}
+
+.animate-bounce-playful {
+  animation: bounce-playful 2s ease-in-out infinite;
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
+}
+
+.animate-wiggle {
+  animation: wiggle 0.8s ease-in-out;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+@keyframes pulse-scale {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-scale {
+  animation: pulse-scale 2s ease-in-out infinite;
+}
+
+/* Hover Effects */
+.tilt-hover {
+  transition: transform 0.3s ease;
+}
+
+.tilt-hover:hover {
+  transform: perspective(1000px) rotateX(5deg) rotateY(-5deg) scale(1.02);
+}
+
+.lift-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lift-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.glow-on-hover {
+  transition: box-shadow 0.3s ease;
+}
+
+.glow-on-hover:hover {
+  box-shadow:
+    0 0 20px rgba(99, 102, 241, 0.4),
+    0 0 40px rgba(99, 102, 241, 0.2);
+}
+
+.glow-purple:hover {
+  box-shadow:
+    0 0 20px rgba(168, 85, 247, 0.4),
+    0 0 40px rgba(168, 85, 247, 0.2);
+}
+
+.glow-pink:hover {
+  box-shadow:
+    0 0 20px rgba(236, 72, 153, 0.4),
+    0 0 40px rgba(236, 72, 153, 0.2);
+}
+
+.glow-cyan:hover {
+  box-shadow:
+    0 0 20px rgba(6, 182, 212, 0.4),
+    0 0 40px rgba(6, 182, 212, 0.2);
+}
+
+/* Focus Glow Effect */
+.focus-glow:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+/* ============================================
+   ENHANCED PLAYFUL INTERACTION STYLES
+   ============================================ */
+
+/* Enhanced Button Interactions */
+.btn-playful {
+  @apply transition-all duration-300 ease-out;
+  @apply hover:scale-105 hover:shadow-2xl;
+  @apply active:scale-98;
+  @apply relative overflow-hidden;
+}
+
+.btn-playful::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-playful:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Card Interactions */
+.card-playful {
+  @apply transition-all duration-300;
+  @apply hover:scale-[1.02] hover:-translate-y-1;
+}
+
+.card-playful:hover {
+  box-shadow:
+    0 10px 25px -5px rgba(99, 102, 241, 0.1),
+    0 20px 35px -10px rgba(99, 102, 241, 0.15),
+    0 0 60px -15px rgba(99, 102, 241, 0.2);
+}
+
+/* Input Focus Glow */
+.input-playful {
+  @apply transition-all duration-300;
+  @apply focus:ring-4 focus:ring-indigo-500/30;
+  @apply focus:border-indigo-500;
+  @apply focus:shadow-lg focus:shadow-indigo-500/20;
+}
+
+/* Wiggle Animation for Icons */
+@keyframes wiggle-playful {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+.animate-wiggle-playful {
+  animation: wiggle-playful 0.5s ease-in-out;
+}
+
+/* Bounce on Hover for CTAs */
+@keyframes bounce-cta {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.hover-bounce:hover {
+  animation: bounce-cta 0.6s ease-in-out infinite;
+}
+
+/* Gradient Text */
+.text-gradient {
+  background: linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #EC4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Backdrop Blur Utilities */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-md {
+  backdrop-filter: blur(8px);
+}
+
+.backdrop-blur-lg {
+  backdrop-filter: blur(16px);
+}
+
+/* ============================================
+   3D ICONS & TAB ENHANCEMENTS
+   ============================================ */
+
+/* 3D Icon Base - Combines Gradient + Neumorphic */
+.icon-3d {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Neumorphic Container Background */
+.icon-3d-container {
+  position: relative;
+  border-radius: 1rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Neumorphic effect - soft shadows */
+  box-shadow:
+    6px 6px 12px rgba(0, 0, 0, 0.08),
+    -6px -6px 12px rgba(255, 255, 255, 0.9),
+    inset 0 0 0 rgba(255, 255, 255, 0.5);
+}
+
+.icon-3d-container:hover {
+  /* Enhanced neumorphic on hover */
+  box-shadow:
+    8px 8px 16px rgba(0, 0, 0, 0.12),
+    -8px -8px 16px rgba(255, 255, 255, 1),
+    inset 0 0 4px rgba(255, 255, 255, 0.7);
+  transform: translateY(-2px);
+}
+
+/* Gradient Icon Variations */
+.icon-3d-blue {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+  box-shadow:
+    0 4px 12px rgba(37, 99, 235, 0.3),
+    0 8px 24px rgba(37, 99, 235, 0.15),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+.icon-3d-green {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+  box-shadow:
+    0 4px 12px rgba(22, 163, 74, 0.3),
+    0 8px 24px rgba(22, 163, 74, 0.15),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+.icon-3d-purple {
+  background: linear-gradient(135deg, #c084fc 0%, #a855f7 50%, #9333ea 100%);
+  box-shadow:
+    0 4px 12px rgba(147, 51, 234, 0.3),
+    0 8px 24px rgba(147, 51, 234, 0.15),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+.icon-3d-indigo {
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%);
+  box-shadow:
+    0 4px 12px rgba(79, 70, 229, 0.3),
+    0 8px 24px rgba(79, 70, 229, 0.15),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+.icon-3d-cyan {
+  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 50%, #0891b2 100%);
+  box-shadow:
+    0 4px 12px rgba(8, 145, 178, 0.3),
+    0 8px 24px rgba(8, 145, 178, 0.15),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+.icon-3d-pink {
+  background: linear-gradient(135deg, #f472b6 0%, #ec4899 50%, #db2777 100%);
+  box-shadow:
+    0 4px 12px rgba(219, 39, 119, 0.3),
+    0 8px 24px rgba(219, 39, 119, 0.15),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+/* Icon Hover Enhancement */
+.icon-3d-blue:hover,
+.icon-3d-green:hover,
+.icon-3d-purple:hover,
+.icon-3d-indigo:hover,
+.icon-3d-cyan:hover,
+.icon-3d-pink:hover {
+  transform: translateY(-3px) scale(1.05);
+  filter: brightness(1.1);
+}
+
+/* 3D Tab Base - Multi-layered Animation */
+.tab-3d {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* Gradient Pulse Background */
+.tab-3d::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.1),
+    rgba(168, 85, 247, 0.15),
+    rgba(236, 72, 153, 0.1)
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  border-radius: inherit;
+  background-size: 200% 200%;
+}
+
+/* Active Tab State - Scale + Shadow + Gradient */
+.tab-3d.active {
+  transform: translateY(-4px) scale(1.08);
+  box-shadow:
+    0 8px 20px -4px rgba(99, 102, 241, 0.25),
+    0 12px 32px -8px rgba(99, 102, 241, 0.15),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  z-index: 10;
+}
+
+.tab-3d.active::before {
+  opacity: 1;
+  animation: gradient-pulse 2s ease-in-out infinite;
+}
+
+/* Gradient Pulse Animation */
+@keyframes gradient-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    background-position: 0% 50%;
+  }
+  50% {
+    opacity: 1;
+    background-position: 100% 50%;
+  }
+}
+
+/* Tab Hover State (for inactive tabs) */
+.tab-3d:not(.active):hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow:
+    0 4px 12px -2px rgba(99, 102, 241, 0.15),
+    0 6px 16px -4px rgba(99, 102, 241, 0.1);
+}
+
+.tab-3d:not(.active):hover::before {
+  opacity: 0.3;
+}
+
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

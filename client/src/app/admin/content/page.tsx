@@ -2,26 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDispatch, useSelector } from 'react-redux';
 import {
-  useLogoutUserMutation,
   useGetAdminContentQuery,
   useGetAdminContentStatsQuery,
   useReviewContentMutation,
 } from '@/state/api';
-import { clearAuth } from '@/state/authSlice';
-import { RootState } from '@/app/redux';
 import AdminSidebar from '@/components/AdminSidebar';
-import LogoutModal from '@/components/LogoutModal';
 
 export default function ContentManagementPage() {
   const router = useRouter();
-  const dispatch = useDispatch();
-  const [logoutUser] = useLogoutUserMutation();
   const [reviewContent] = useReviewContentMutation();
 
   const activeTab = 'content';
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,8 +21,7 @@ export default function ContentManagementPage() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewAction, setReviewAction] = useState<'APPROVED' | 'REJECTED' | null>(null);
   const [reviewReason, setReviewReason] = useState('');
-  
-  const refreshToken = useSelector((state: RootState) => state.auth.tokens?.refreshToken);
+
   const contentPerPage = 20;
 
   // Fetch content and stats
@@ -54,20 +45,6 @@ export default function ContentManagementPage() {
     approved: 0,
     rejected: 0,
     flagged: 0,
-  };
-
-  const handleLogout = async () => {
-    try {
-      if (refreshToken) {
-        await logoutUser(refreshToken).unwrap();
-      }
-    } catch {
-      // Silently handle API errors
-    } finally {
-      dispatch(clearAuth());
-      router.push('/login');
-      setShowLogoutModal(false);
-    }
   };
 
   const handleReview = async () => {
@@ -137,7 +114,7 @@ export default function ContentManagementPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto lg:ml-0">
@@ -456,13 +433,6 @@ export default function ContentManagementPage() {
           </div>
         </div>
       )}
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={handleLogout}
-      />
     </div>
   );
 }

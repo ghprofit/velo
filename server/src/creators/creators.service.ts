@@ -1,6 +1,9 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { VeriffService } from '../veriff/veriff.service';
+import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/create-notification.dto';
 import { CreateSessionDto } from '../veriff/dto';
 import { VerificationStatus } from '@prisma/client';
 import { SetupBankAccountDto, BankAccountResponseDto } from './dto/bank-account.dto';
@@ -12,6 +15,8 @@ export class CreatorsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly veriffService: VeriffService,
+    private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -47,9 +52,11 @@ export class CreatorsService {
       }
 
       // Prepare Veriff session data
+      // IMPORTANT: callback must point to API webhook endpoint, NOT frontend
+      const apiUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:8000';
       const sessionData: CreateSessionDto = {
         verification: {
-          callback: `${process.env.APP_URL}/api/veriff/webhooks/decision`,
+          callback: `${apiUrl}/api/veriff/webhooks/decision`,
           person: {
             firstName: user.creatorProfile.firstName || undefined,
             lastName: user.creatorProfile.lastName || undefined,
@@ -124,6 +131,7 @@ export class CreatorsService {
       // Find creator profile by session ID
       const creatorProfile = await this.prisma.creatorProfile.findUnique({
         where: { veriffSessionId: sessionId },
+        include: { user: true },
       });
 
       if (!creatorProfile) {
@@ -163,8 +171,25 @@ export class CreatorsService {
 
       this.logger.log(`Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`);
 
-      // TODO: Send notification email to creator
-      // await this.emailService.sendVerificationStatusEmail(creatorProfile.userId, verificationStatus);
+      // Send verification status email
+      const emailSubject = verificationStatus === VerificationStatus.VERIFIED
+        ? 'Identity Verification Approved'
+        : 'Identity Verification Update';
+
+      const emailMessage = verificationStatus === VerificationStatus.VERIFIED
+        ? `Congratulations! Your identity has been verified. You can now upload content.`
+        : `Your identity verification status has been updated to: ${verificationStatus}`;
+
+      try {
+        await this.emailService.sendEmail({
+          to: creatorProfile.user.email,
+          subject: emailSubject,
+          html: emailMessage,
+        });
+        this.logger.log(`Verification status email sent to ${creatorProfile.user.email}`);
+      } catch (error) {
+        this.logger.error('Failed to send verification email:', error);
+      }
 
     } catch (error) {
       this.logger.error(`Failed to process webhook for session ${sessionId}:`, error);
@@ -269,66 +294,148 @@ export class CreatorsService {
     try {
       this.logger.log(`Payout request initiated by user: ${userId} for amount: ${requestedAmount}`);
 
-      // Get user with creator profile
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: { creatorProfile: true },
-      });
+      // Wrap entire operation in transaction to prevent race conditions
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          // Get user with creator profile (within transaction)
+          const user = await tx.user.findUnique({
+            where: { id: userId },
+            include: { creatorProfile: true },
+          });
 
-      if (!user || !user.creatorProfile) {
-        throw new NotFoundException('Creator profile not found');
-      }
+          if (!user || !user.creatorProfile) {
+            throw new NotFoundException('Creator profile not found');
+          }
 
-      // Validate minimum payout amount
-      if (requestedAmount < 100) {
-        throw new BadRequestException('Minimum payout amount is $100');
-      }
+          // Validate minimum payout amount
+          if (requestedAmount < 100) {
+            throw new BadRequestException('Minimum payout amount is $100');
+          }
 
-      // Validate available balance
-      const availableBalance = user.creatorProfile.totalEarnings;
-      if (requestedAmount > availableBalance) {
-        throw new BadRequestException(
-          `Insufficient balance. Available: $${availableBalance.toFixed(2)}, Requested: $${requestedAmount.toFixed(2)}`,
+          // Calculate available balance considering waitlist bonus restrictions
+          let availableBalance = user.creatorProfile.totalEarnings;
+
+          // Check if waitlist bonus is locked
+          if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
+            if (user.creatorProfile.totalPurchases < 5) {
+              // Bonus is locked - exclude from available balance
+              availableBalance = availableBalance - user.creatorProfile.waitlistBonus;
+
+              // Inform user they need more sales to unlock bonus
+              if (requestedAmount > availableBalance) {
+                const remainingSales = 5 - user.creatorProfile.totalPurchases;
+                throw new BadRequestException(
+                  `You need ${remainingSales} more sale${remainingSales > 1 ? 's' : ''} to unlock your $${user.creatorProfile.waitlistBonus.toFixed(2)} sign-up bonus. Available balance (excluding bonus): $${availableBalance.toFixed(2)}`,
+                );
+              }
+            }
+            // If totalPurchases >= 5, bonus is withdrawable
+          }
+
+          // Validate available balance (locked within transaction)
+          if (requestedAmount > availableBalance) {
+            throw new BadRequestException(
+              `Insufficient balance. Available: $${availableBalance.toFixed(2)}, Requested: $${requestedAmount.toFixed(2)}`,
+            );
+          }
+
+          // Check if there's already a pending payout request (within transaction)
+          const existingPendingRequest = await tx.payoutRequest.findFirst({
+            where: {
+              creatorId: user.creatorProfile.id,
+              status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
+            },
+          });
+
+          if (existingPendingRequest) {
+            throw new BadRequestException('You already have a pending payout request');
+          }
+
+          // Create payout request with verification timestamps (within transaction)
+          const payoutRequest = await tx.payoutRequest.create({
+            data: {
+              creatorId: user.creatorProfile.id,
+              requestedAmount,
+              // Removed availableBalance - calculate dynamically (Bug #4)
+              currency: user.creatorProfile.bankCurrency || 'USD',
+              status: 'PENDING',
+              emailVerifiedAt: user.emailVerified ? new Date() : null,
+              kycVerifiedAt: user.creatorProfile.verificationStatus === VerificationStatus.VERIFIED
+                ? user.creatorProfile.verifiedAt
+                : null,
+              bankSetupAt: user.creatorProfile.payoutSetupCompleted ? new Date() : null,
+            },
+          });
+
+          this.logger.log(`Payout request created: ${payoutRequest.id} for user ${userId}`);
+
+          return {
+            payoutRequest,
+            user,
+            availableBalance,
+          };
+        },
+        { maxWait: 5000, timeout: 10000 },
+      );
+
+      // Notify all admins about new payout request (outside transaction)
+      try {
+        // Null check for TypeScript (should never happen as transaction logic requires it)
+        if (!result.user.creatorProfile) {
+          throw new Error('Creator profile not found after transaction');
+        }
+
+        await this.notificationsService.notifyAdmins(
+          NotificationType.PAYOUT_REQUEST,
+          'New Payout Request',
+          `${result.user.creatorProfile.displayName} has requested a payout of $${requestedAmount.toFixed(2)}`,
+          {
+            requestId: result.payoutRequest.id,
+            creatorId: result.user.creatorProfile.id,
+            creatorName: result.user.creatorProfile.displayName,
+            amount: requestedAmount,
+            availableBalance: result.availableBalance,
+          },
         );
+
+        // Get all admin and superadmin emails
+        const admins = await this.prisma.user.findMany({
+          where: {
+            role: { in: ['ADMIN', 'SUPER_ADMIN'] },
+            isActive: true,
+          },
+          select: { email: true },
+        });
+
+        // Send email alert to each admin
+        const emailData = {
+          creator_name: result.user.creatorProfile.displayName,
+          amount: `${requestedAmount.toFixed(2)}`,
+          request_id: result.payoutRequest.id,
+          available_balance: `${result.availableBalance.toFixed(2)}`,
+        };
+
+        for (const admin of admins) {
+          try {
+            await this.emailService.sendAdminPayoutAlert(admin.email, emailData);
+          } catch (emailError) {
+            this.logger.error(`Failed to send payout alert email to ${admin.email}:`, emailError);
+          }
+        }
+
+        this.logger.log(`Admin notifications sent for payout request: ${result.payoutRequest.id}`);
+      } catch (notificationError) {
+        // Log notification error but don't fail the payout request
+        this.logger.error(`Failed to send admin notifications for payout request ${result.payoutRequest.id}:`, notificationError);
       }
-
-      // Check if there's already a pending payout request
-      const existingPendingRequest = await this.prisma.payoutRequest.findFirst({
-        where: {
-          creatorId: user.creatorProfile.id,
-          status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
-        },
-      });
-
-      if (existingPendingRequest) {
-        throw new BadRequestException('You already have a pending payout request');
-      }
-
-      // Create payout request with verification timestamps
-      const payoutRequest = await this.prisma.payoutRequest.create({
-        data: {
-          creatorId: user.creatorProfile.id,
-          requestedAmount,
-          availableBalance,
-          currency: user.creatorProfile.bankCurrency || 'USD',
-          status: 'PENDING',
-          emailVerifiedAt: user.emailVerified ? new Date() : null,
-          kycVerifiedAt: user.creatorProfile.verificationStatus === VerificationStatus.VERIFIED
-            ? user.creatorProfile.verifiedAt
-            : null,
-          bankSetupAt: user.creatorProfile.payoutSetupCompleted ? new Date() : null,
-        },
-      });
-
-      this.logger.log(`Payout request created: ${payoutRequest.id} for user ${userId}`);
 
       return {
-        id: payoutRequest.id,
-        requestedAmount: payoutRequest.requestedAmount,
-        availableBalance: payoutRequest.availableBalance,
-        currency: payoutRequest.currency,
-        status: payoutRequest.status,
-        createdAt: payoutRequest.createdAt,
+        id: result.payoutRequest.id,
+        requestedAmount: result.payoutRequest.requestedAmount,
+        availableBalance: result.availableBalance,
+        currency: result.payoutRequest.currency,
+        status: result.payoutRequest.status,
+        createdAt: result.payoutRequest.createdAt,
         message: 'Payout request submitted successfully. It will be reviewed by our team.',
       };
     } catch (error) {
@@ -367,10 +474,13 @@ export class CreatorsService {
         },
       });
 
+      // Calculate current available balance from totalEarnings (Bug #4 fix)
+      const currentBalance = user.creatorProfile.totalEarnings;
+
       return requests.map(request => ({
         id: request.id,
         requestedAmount: request.requestedAmount,
-        availableBalance: request.availableBalance,
+        availableBalance: currentBalance, // Use current balance, not stale snapshot
         currency: request.currency,
         status: request.status,
         reviewedAt: request.reviewedAt,
@@ -421,10 +531,13 @@ export class CreatorsService {
         throw new NotFoundException('Payout request not found');
       }
 
+      // Calculate current available balance from totalEarnings (Bug #4 fix)
+      const currentBalance = user.creatorProfile.totalEarnings;
+
       return {
         id: request.id,
         requestedAmount: request.requestedAmount,
-        availableBalance: request.availableBalance,
+        availableBalance: currentBalance, // Use current balance, not stale snapshot
         currency: request.currency,
         status: request.status,
         emailVerifiedAt: request.emailVerifiedAt,

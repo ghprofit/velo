@@ -4,6 +4,8 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
 import Image from 'next/image';
+import FloatingLogo from '@/components/FloatingLogo';
+import SuccessConfetti from '@/components/SuccessConfetti';
 
 export default function CompletePage() {
   const router = useRouter();
@@ -89,7 +91,18 @@ export default function CompletePage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12 px-6">
+    <main className="min-h-screen bg-gray-50 py-12 px-6 relative">
+      {/* Success Confetti */}
+      <SuccessConfetti />
+
+      {/* Floating Brand Logo */}
+      <FloatingLogo
+        position="bottom-right"
+        size={95}
+        animation="orbit"
+        opacity={0.08}
+      />
+
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Logo */}

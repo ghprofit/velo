@@ -196,7 +196,7 @@ export default function ForgotPasswordPage() {
       {/* Mobile: Sticky Footer */}
       <footer className="sticky bottom-0 bg-white border-t border-gray-100 px-4 py-3 md:static md:border-0">
         <p className="text-xs md:text-sm text-gray-500 text-center">
-          © 2025 Velo. All rights reserved.
+          © 2025 Velolink. All rights reserved.
         </p>
       </footer>
     </main>

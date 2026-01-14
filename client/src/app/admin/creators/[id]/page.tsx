@@ -2,16 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
-import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'next/navigation';
 import {
-  useLogoutUserMutation,
   useGetAdminCreatorByIdQuery,
 } from '@/state/api';
-import { clearAuth } from '@/state/authSlice';
-import { RootState } from '@/app/redux';
 import AdminSidebar from '@/components/AdminSidebar';
-import LogoutModal from '@/components/LogoutModal';
 import Image from 'next/image';
 
 interface ContentItem {
@@ -29,33 +24,14 @@ interface PayoutItem {
 }
 
 export default function CreatorDetailsPage() {
-  const router = useRouter();
   const params = useParams();
-  const dispatch = useDispatch();
   const creatorId = params.id as string;
 
-  const [logoutUser] = useLogoutUserMutation();
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const activeTab = 'creators';
-  const refreshToken = useSelector((state: RootState) => state.auth.tokens?.refreshToken);
 
   // Fetch creator details
   const { data: creatorResponse, isLoading, error } = useGetAdminCreatorByIdQuery(creatorId);
   const creator = creatorResponse?.data;
-
-  const handleLogout = async () => {
-    try {
-      if (refreshToken) {
-        await logoutUser(refreshToken).unwrap();
-      }
-    } catch {
-      // Silently handle API errors
-    } finally {
-      dispatch(clearAuth());
-      router.push('/login');
-      setShowLogoutModal(false);
-    }
-  };
 
   const getKycStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
@@ -156,7 +132,7 @@ export default function CreatorDetailsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex">
-        <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+        <AdminSidebar activeTab={activeTab} />
         <main className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -170,7 +146,7 @@ export default function CreatorDetailsPage() {
   if (error || !creator) {
     return (
       <div className="min-h-screen bg-gray-50 flex">
-        <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+        <AdminSidebar activeTab={activeTab} />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,7 +168,7 @@ export default function CreatorDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto lg:ml-0">
@@ -426,13 +402,6 @@ export default function CreatorDetailsPage() {
           </div>
         </div>
       </main>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={handleLogout}
-      />
     </div>
   );
 }

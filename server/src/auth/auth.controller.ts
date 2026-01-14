@@ -7,6 +7,7 @@ import {
   Param,
   UseGuards,
   Req,
+  Res,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { VerifyEmailCodeDto } from './dto/verify-email-code.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -25,7 +27,6 @@ import { Enable2FADto } from './dto/enable-2fa.dto';
 import { Verify2FADto } from './dto/verify-2fa.dto';
 import { Disable2FADto } from './dto/disable-2fa.dto';
 import { VerifyBackupCodeDto } from './dto/verify-backup-code.dto';
-import { VerifyEmailCodeDto } from './dto/verify-email-code.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { TwofactorService } from '../twofactor/twofactor.service';
 
@@ -35,6 +36,55 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly twofactorService: TwofactorService,
   ) {}
+
+  /**
+   * Set HTTP-only cookies for access and refresh tokens
+   */
+  private setAuthCookies(res: any, accessToken: string, refreshToken: string, rememberMe = false) {
+    const accessTokenMaxAge = 15 * 60 * 1000; // 15 minutes
+    const refreshTokenMaxAge = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000 // 30 days
+      : 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    // Set access token cookie
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: accessTokenMaxAge,
+      path: '/',
+    });
+
+    // Set refresh token cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: refreshTokenMaxAge,
+      path: '/',
+    });
+  }
+
+  /**
+   * Clear authentication cookies
+   */
+  private clearAuthCookies(res: any) {
+    res.cookie('accessToken', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 0,
+      path: '/',
+    });
+
+    res.cookie('refreshToken', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 0,
+      path: '/',
+    });
+  }
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -49,10 +99,16 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Req() req: any) {
+  async login(@Body() dto: LoginDto, @Req() req: any, @Res({ passthrough: true }) res: any) {
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'];
     const result = await this.authService.login(dto, ipAddress, userAgent);
+
+    // If not requiring 2FA, set HTTP-only cookies
+    if (!result.requiresTwoFactor && result.tokens) {
+      this.setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken, dto.rememberMe);
+    }
+
     return {
       success: true,
       message: result.requiresTwoFactor
@@ -64,8 +120,12 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@Body() dto: RefreshTokenDto) {
+  async refresh(@Body() dto: RefreshTokenDto, @Res({ passthrough: true }) res: any) {
     const result = await this.authService.refresh(dto);
+
+    // Update cookies with new tokens
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+
     return {
       success: true,
       message: 'Token refreshed successfully.',
@@ -75,8 +135,12 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(@Body() dto: LogoutDto) {
+  async logout(@Body() dto: LogoutDto, @Res({ passthrough: true }) res: any) {
     const result = await this.authService.logout(dto);
+
+    // Clear authentication cookies
+    this.clearAuthCookies(res);
+
     return {
       success: true,
       message: result.message,
@@ -106,10 +170,9 @@ export class AuthController {
 
   @Post('verify-email-code')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
-  async verifyEmailCode(@Req() req: any, @Body() dto: VerifyEmailCodeDto) {
-    const result = await this.authService.verifyEmailCode(req.user.id, dto.code);
+  async verifyEmailCode(@Body() dto: VerifyEmailCodeDto) {
+    const result = await this.authService.verifyEmail({ token: dto.code });
     return {
       success: true,
       message: result.message,
@@ -203,8 +266,15 @@ export class AuthController {
   @Post('2fa/verify')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 300000 } }) // 5 attempts per 5 minutes
-  async verify2FA(@Body() dto: Verify2FADto) {
+  async verify2FA(@Body() dto: Verify2FADto, @Res({ passthrough: true }) res: any) {
     const result = await this.authService.verify2FALogin(dto);
+
+    // Set HTTP-only cookies with tokens
+    if (result.tokens) {
+      // Note: rememberMe preference would be preserved in the refresh token expiry from service
+      this.setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+    }
+
     return {
       success: true,
       message: 'Login successful with 2FA.',
@@ -258,8 +328,15 @@ export class AuthController {
   @Post('2fa/verify-backup')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 300000 } }) // 5 attempts per 5 minutes
-  async verifyBackupCode(@Body() dto: VerifyBackupCodeDto) {
+  async verifyBackupCode(@Body() dto: VerifyBackupCodeDto, @Res({ passthrough: true }) res: any) {
     const result = await this.authService.verifyBackupCodeLogin(dto);
+
+    // Set HTTP-only cookies with tokens
+    if (result.tokens) {
+      // Note: rememberMe preference would be preserved in the refresh token expiry from service
+      this.setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+    }
+
     return {
       success: true,
       message: result.message || 'Login successful with backup code.',

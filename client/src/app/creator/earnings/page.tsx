@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import RequestPayoutModal from '@/components/RequestPayoutModal';
 import { earningsApi, contentApi } from '@/lib/api-client';
+import FloatingLogo from '@/components/FloatingLogo';
 
 interface Balance {
   availableBalance: number;
@@ -47,6 +48,22 @@ interface ContentItem {
   title: string;
 }
 
+interface PayoutRequest {
+  id: string;
+  requestedAmount: number;
+  availableBalance: number;
+  currency: string;
+  status: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  createdAt: string;
+  payout?: {
+    id: string;
+    amount: number;
+    status: string;
+  };
+}
+
 export default function EarningsPage() {
   const [timePeriod, setTimePeriod] = useState('Last 30 Days');
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,6 +77,8 @@ export default function EarningsPage() {
   const [payouts, setPayouts] = useState<PayoutsData | null>(null);
   const [transactions, setTransactions] = useState<TransactionsData | null>(null);
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch balance data
@@ -102,6 +121,20 @@ export default function EarningsPage() {
     };
 
     fetchPayouts();
+  }, []);
+
+  // Fetch payout requests data
+  const fetchPayoutRequests = async () => {
+    try {
+      const response = await earningsApi.getPayoutRequests();
+      setPayoutRequests(response.data.data || []);
+    } catch (err: unknown) {
+      console.error('Error fetching payout requests:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayoutRequests();
   }, []);
 
   // Reset to page 1 when filters change
@@ -258,7 +291,15 @@ export default function EarningsPage() {
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8 relative">
+          {/* Floating Brand Logo */}
+          <FloatingLogo
+            position="top-left"
+            size={100}
+            animation="float"
+            opacity={0.08}
+          />
+
           {/* Balance Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {/* Available Balance */}
@@ -307,8 +348,8 @@ export default function EarningsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
-                  <p className="text-xs font-medium text-yellow-900">7-Day Buffer Rule</p>
-                  <p className="text-xs text-yellow-700 mt-0.5 sm:mt-1">Funds from new purchases clear in 7 days</p>
+                  <p className="text-xs font-medium text-yellow-900">24-Working Hour Buffer Rule</p>
+                  <p className="text-xs text-yellow-700 mt-0.5 sm:mt-1">Funds from new purchases clear in 24 working hours</p>
                 </div>
               </div>
             </div>
@@ -645,6 +686,7 @@ export default function EarningsPage() {
         isOpen={isPayoutModalOpen}
         onClose={() => setIsPayoutModalOpen(false)}
         availableBalance={balance?.availableBalance || 0}
+        onSuccess={fetchPayoutRequests}
       />
     </>
   );

@@ -8,6 +8,7 @@ import { veriffApi } from '@/lib/api-client';
 import { useAppSelector } from '../../redux';
 import type { VeriffSessionResponse } from '@/types/auth';
 import Image from 'next/image';
+import FloatingLogo from '@/components/FloatingLogo';
 
 export default function VerifyIdentityPage() {
   const router = useRouter();
@@ -51,7 +52,15 @@ export default function VerifyIdentityPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12 px-6">
+    <main className="min-h-screen bg-gray-50 py-12 px-6 relative">
+      {/* Floating Brand Logo */}
+      <FloatingLogo
+        position="top-left"
+        size={85}
+        animation="rotate"
+        opacity={0.07}
+      />
+
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Logo */}

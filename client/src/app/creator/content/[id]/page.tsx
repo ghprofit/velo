@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { contentApi } from '@/lib/api-client';
 import Image from 'next/image';
+import FloatingLogo from '@/components/FloatingLogo';
 
 interface ContentItem {
   id: string;
@@ -243,7 +244,15 @@ export default function ContentDetailPage() {
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8 relative">
+        {/* Floating Brand Logo */}
+        <FloatingLogo
+          position="bottom-right"
+          size={90}
+          animation="float"
+          opacity={0.07}
+        />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column - Content Preview & Details */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">

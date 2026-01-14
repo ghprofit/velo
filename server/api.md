@@ -579,13 +579,10 @@ See `.env.example` for all required environment variables.
 
 **Optional (for features):**
 - `VERIFF_API_KEY` - Veriff API key
-- `AWS_REGION` - AWS region (required for SES)
-- `AWS_ACCESS_KEY_ID` - AWS access key (required for SES and S3)
-- `AWS_SECRET_ACCESS_KEY` - AWS secret key (required for SES and S3)
-- `SES_FROM_EMAIL` - Sender email address for notifications
-- `SES_FROM_NAME` - Sender name for email notifications
+- `AWS_*` - AWS credentials for S3/Rekognition
 - `STRIPE_*` - Stripe payment integration
 - `PAYPAL_*` - PayPal payment integration
+- `SENDGRID_API_KEY` - Email notifications
 
 ---
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Footer from '@/components/Footer';
 import Image from 'next/image';
+import FloatingLogo from '@/components/FloatingLogo';
 
 export default function PaymentFailedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -15,7 +16,15 @@ export default function PaymentFailedPage({ params }: { params: Promise<{ id: st
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-red-50 via-white to-orange-50 flex flex-col">
+    <div className="min-h-screen bg-linear-to-br from-red-50 via-white to-orange-50 flex flex-col relative">
+      {/* Floating Logo */}
+      <FloatingLogo
+        position="top-right"
+        size={100}
+        animation="float"
+        opacity={0.08}
+      />
+
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-center">

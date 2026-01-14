@@ -1,33 +1,68 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
-import LogoutModal from '@/components/LogoutModal';
+import { useGetAdminTransactionsQuery, useGetPaymentStatsQuery } from '@/state/api';
 
 export default function PaymentsPage() {
-  const router = useRouter();
   const [activeTab] = useState('payments');
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [timeRange, setTimeRange] = useState('Monthly');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 
-  const transactions = [
-    { id: '#TXN1023', creator: 'Afedi Designs', buyer: 'John D.', amount: '$75.00', method: 'Stripe Card', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 23 2025' },
-    { id: '#TXN1022', creator: 'Velo Films', buyer: 'Anna K.', amount: '$90.00', method: 'Apple Pay', status: 'Pending', statusColor: 'bg-yellow-100 text-yellow-700', date: 'Oct 22 2025' },
-    { id: '#TXN1021', creator: 'Studio Nova', buyer: 'Chris P.', amount: '$42.50', method: 'Google Pay', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 21 2025' },
-    { id: '#TXN1020', creator: 'Pixel House', buyer: 'Maya L.', amount: '$18.00', method: 'PayPal', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 20 2025' },
-    { id: '#TXN1019', creator: 'Afedi Designs', buyer: 'Noah P.', amount: '$64.10', method: 'Apple Pay', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 19 2025' },
-    { id: '#TXN1018', creator: 'Velo Films', buyer: 'Leo C.', amount: '$22.50', method: 'Google Pay', status: 'Failed', statusColor: 'bg-red-100 text-red-700', date: 'Oct 18 2025' },
-    { id: '#TXN1017', creator: 'Nova Labs', buyer: 'Ola R.', amount: '$260.00', method: 'Stripe Card', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 17 2025' },
-    { id: '#TXN1016', creator: 'Motion Co', buyer: 'Nora T.', amount: '$45.50', method: 'Google Pay', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 16 2025' },
-    { id: '#TXN1015', creator: 'Lens Hub', buyer: 'Liam G.', amount: '$18.00', method: 'Apple Pay', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 15 2025' },
-    { id: '#TXN1014', creator: 'Afedi Designs', buyer: 'John D.', amount: '$75.00', method: 'Stripe Card', status: 'Paid', statusColor: 'bg-green-100 text-green-700', date: 'Oct 14 2025' },
-  ];
+  // Fetch transactions with pagination and filters
+  const { data: transactionsData, isLoading: transactionsLoading, error: transactionsError } = useGetAdminTransactionsQuery({
+    search: searchQuery || undefined,
+    status: statusFilter,
+    page: currentPage,
+    limit: 10,
+  });
+
+  // Fetch payment stats
+  const { data: statsData, isLoading: statsLoading } = useGetPaymentStatsQuery();
+
+  const transactions = transactionsData?.data || [];
+  const pagination = transactionsData?.pagination;
+
+  // Helper function to get status color
+  const getStatusColor = (status: string) => {
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
+      case 'PAID':
+        return 'bg-green-100 text-green-700';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'FAILED':
+        return 'bg-red-100 text-red-700';
+      case 'REFUNDED':
+        return 'bg-gray-100 text-gray-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  // Format currency
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+    }).format(amount);
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto bg-gray-50 lg:ml-0">
@@ -105,7 +140,9 @@ export default function PaymentsPage() {
                 </div>
                 <span className="text-sm text-gray-600">Total Revenue</span>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-2">$124,580</p>
+              <p className="text-3xl font-bold text-gray-900 mb-2">
+                {statsLoading ? 'Loading...' : formatCurrency(statsData?.totalRevenue || 0)}
+              </p>
               <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
             </div>
 
@@ -119,7 +156,9 @@ export default function PaymentsPage() {
                 </div>
                 <span className="text-sm text-gray-600">Total Payouts</span>
               </div>
-              <p className="text-3xl font-bold text-green-600 mb-2">$98,300</p>
+              <p className="text-3xl font-bold text-green-600 mb-2">
+                {statsLoading ? 'Loading...' : formatCurrency(statsData?.totalPayouts || 0)}
+              </p>
               <div className="h-1 bg-green-500 rounded-full"></div>
             </div>
 
@@ -133,7 +172,9 @@ export default function PaymentsPage() {
                 </div>
                 <span className="text-sm text-gray-600">Pending Payouts</span>
               </div>
-              <p className="text-3xl font-bold text-yellow-600 mb-2">$6,270</p>
+              <p className="text-3xl font-bold text-yellow-600 mb-2">
+                {statsLoading ? 'Loading...' : formatCurrency(statsData?.pendingPayouts || 0)}
+              </p>
               <div className="h-1 bg-yellow-500 rounded-full"></div>
             </div>
 
@@ -147,7 +188,9 @@ export default function PaymentsPage() {
                 </div>
                 <span className="text-sm text-gray-600">Failed Transactions</span>
               </div>
-              <p className="text-3xl font-bold text-red-600 mb-2">5</p>
+              <p className="text-3xl font-bold text-red-600 mb-2">
+                {statsLoading ? 'Loading...' : (statsData?.failedTransactions || 0)}
+              </p>
               <div className="h-1 bg-red-500 rounded-full"></div>
             </div>
           </div>
@@ -249,73 +292,105 @@ export default function PaymentsPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">Transactions</h2>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Transaction ID</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Creator Name</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Buyer Name</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Amount (USD)</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Payment Method</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Date</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((transaction) => (
-                    <tr key={transaction.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{transaction.id}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.creator}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.buyer}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.amount}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.method}</td>
-                      <td className="py-4 px-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${transaction.statusColor}`}>
-                          {transaction.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{transaction.date}</td>
-                      <td className="py-4 px-4">
-                        <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline">
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-6">
-              <p className="text-sm text-gray-600">Showing 1-10 of 250 transactions</p>
-              <div className="flex items-center gap-2">
-                <button className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">
-                  1
-                </button>
-                <button className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium">
-                  2
-                </button>
-                <button className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium">
-                  3
-                </button>
+            {transactionsLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="text-gray-600">Loading transactions...</div>
               </div>
-            </div>
+            ) : transactionsError ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="text-red-600">Error loading transactions. Please try again.</div>
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="text-gray-600">No transactions found.</div>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Transaction ID</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Creator Name</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Buyer Email</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Amount</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Payment Method</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Status</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Date</th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.map((transaction) => (
+                        <tr key={transaction.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-4 px-4 text-sm font-medium text-gray-900">#{transaction.id.slice(0, 8)}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900">{transaction.creatorName}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900">{transaction.buyerEmail}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900">{formatCurrency(transaction.amount, transaction.currency)}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900">{transaction.paymentMethod}</td>
+                          <td className="py-4 px-4">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(transaction.status)}`}>
+                              {transaction.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-900">{formatDate(transaction.createdAt)}</td>
+                          <td className="py-4 px-4">
+                            <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline">
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {pagination && (
+                  <div className="flex items-center justify-between mt-6">
+                    <p className="text-sm text-gray-600">
+                      Showing {((pagination.page - 1) * pagination.limit) + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} transactions
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      {[...Array(Math.min(5, pagination.totalPages))].map((_, i) => {
+                        const pageNum = i + 1;
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                              currentPage === pageNum
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      {pagination.totalPages > 5 && <span className="text-gray-500">...</span>}
+                      <button
+                        onClick={() => setCurrentPage(Math.min(pagination.totalPages, currentPage + 1))}
+                        disabled={currentPage === pagination.totalPages}
+                        className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </main>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
-          setShowLogoutModal(false);
-          router.push('/login');
-        }}
-      />
     </div>
   );
 }

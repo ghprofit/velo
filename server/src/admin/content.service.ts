@@ -1,10 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import { QueryContentDto, ReviewContentDto, ContentStatsDto } from './dto/content.dto';
 
 @Injectable()
 export class ContentService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(ContentService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+  ) {}
 
   async getContent(query: QueryContentDto) {
     const { search, status, creatorId, page = 1, limit = 20 } = query;
@@ -171,6 +177,18 @@ export class ContentService {
   async reviewContent(id: string, dto: ReviewContentDto) {
     const content = await this.prisma.content.findUnique({
       where: { id },
+      include: {
+        creator: {
+          include: {
+            user: {
+              select: {
+                email: true,
+                displayName: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!content) {
@@ -184,9 +202,39 @@ export class ContentService {
       where: { id },
       data: {
         status: dto.status,
+        complianceStatus: dto.status === 'APPROVED' ? 'PASSED' : 'FAILED',
+        complianceCheckedAt: new Date(),
         updatedAt: new Date(),
       },
     });
+
+    // Send email notification to creator
+    try {
+      const creatorName = content.creator.displayName || content.creator.user.displayName || 'Creator';
+      const creatorEmail = content.creator.user.email;
+
+      if (dto.status === 'APPROVED') {
+        this.logger.log(`Sending approval email for content ${id} to ${creatorEmail}`);
+        await this.emailService.sendContentApproval(
+          creatorEmail,
+          creatorName,
+          content.title,
+          `${process.env.CLIENT_URL || 'https://velolink.com'}/c/${content.id}`,
+        );
+      } else if (dto.status === 'REJECTED') {
+        this.logger.log(`Sending rejection email for content ${id} to ${creatorEmail}`);
+        await this.emailService.sendContentRejection(
+          creatorEmail,
+          creatorName,
+          content.title,
+          'Content does not meet our community guidelines',
+        );
+      }
+    } catch (emailError) {
+      // Don't fail the review if email fails - just log it
+      const error = emailError as Error;
+      this.logger.error(`Failed to send email notification: ${error.message}`);
+    }
 
     return {
       success: true,

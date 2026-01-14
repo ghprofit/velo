@@ -118,6 +118,16 @@ export class CreatorsController {
    * Request a payout
    * POST /api/creators/payout/request
    * Requires: email verified, KYC verified, and bank details setup
+   *
+   * Security Note (Bug #9):
+   * CSRF Protection: This endpoint relies on JWT authentication in Authorization header.
+   * Since browsers don't send custom headers in cross-origin requests, this provides
+   * CSRF protection. Additional throttling (3 req/hour) limits abuse potential.
+   *
+   * TODO: For enhanced security, consider:
+   * 1. Moving JWT to HTTP-only cookies with SameSite=Strict
+   * 2. Implementing double-submit cookie pattern
+   * 3. Adding custom CSRF token validation
    */
   @Post('payout/request')
   @HttpCode(HttpStatus.OK)

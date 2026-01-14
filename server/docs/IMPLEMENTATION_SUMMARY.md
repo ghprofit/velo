@@ -25,7 +25,7 @@
 - ✅ Email verification tokens with expiry
 - ✅ `POST /api/auth/verify-email` endpoint
 - ✅ `POST /api/auth/resend-verification` endpoint
-- ✅ AWS SES email integration
+- ✅ SendGrid email integration
 - ✅ Rate limiting (5/min verify, 3/hour resend)
 
 **Files Created:**
@@ -258,12 +258,9 @@ JWT_REFRESH_SECRET=your-very-secure-refresh-secret-at-least-32-characters-long
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# AWS SES (for emails)
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your-aws-access-key-id
-AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
-SES_FROM_EMAIL=noreply@velolink.com
-SES_FROM_NAME=VeloLink
+# SendGrid (for emails)
+SENDGRID_API_KEY=SG.xxx
+SENDGRID_FROM_EMAIL=noreply@velolink.com
 
 # Other required variables...
 ```
@@ -373,7 +370,7 @@ If you want to add more features, consider:
 **Solution**: Ensure PostgreSQL is running and DATABASE_URL is correct in .env
 
 ### Issue: Email not sending
-**Solution**: Check AWS SES credentials in .env, verify email addresses in AWS SES Console, and ensure you're not in sandbox mode. See [AWS_SES_SETUP.md](../src/email/AWS_SES_SETUP.md) for setup guide.
+**Solution**: Check SENDGRID_API_KEY in .env and verify API key is valid.
 
 ---
 
@@ -384,7 +381,7 @@ Before deploying to production:
 - [ ] All environment variables set (no hardcoded values)
 - [ ] Database migrations run successfully
 - [ ] Redis is running and accessible
-- [ ] AWS SES email addresses verified
+- [ ] SendGrid email templates created
 - [ ] JWT secrets are strong and unique
 - [ ] CORS origins configured correctly
 - [ ] Rate limiting tested and working

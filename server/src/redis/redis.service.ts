@@ -1,10 +1,10 @@
 import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, RedisClientType } from 'redis';
+import { Redis } from '@upstash/redis';
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
-  private client: RedisClientType;
+  private client: Redis;
   private readonly logger = new Logger(RedisService.name);
   private isConnected = false;
   private hasLoggedError = false;
@@ -13,40 +13,27 @@ export class RedisService implements OnModuleDestroy {
     this.initializeClient();
   }
 
-  private async initializeClient() {
-    this.client = createClient({
-      socket: {
-        host: this.config.get('REDIS_HOST') || 'localhost',
-        port: parseInt(this.config.get('REDIS_PORT') || '6379'),
-        reconnectStrategy: false, // Disable automatic reconnection
-      },
-      password: this.config.get('REDIS_PASSWORD') || undefined,
-      database: parseInt(this.config.get('REDIS_DB') || '0'),
-    });
+  private initializeClient() {
+    const restUrl = this.config.get('UPSTASH_REDIS_REST_URL');
+    const restToken = this.config.get('UPSTASH_REDIS_REST_TOKEN');
 
-    this.client.on('error', (err) => {
-      // Only log the first error to avoid spam
-      if (!this.hasLoggedError) {
-        this.logger.warn('Redis is unavailable - continuing without caching. Error: ' + err.message);
-        this.hasLoggedError = true;
-      }
-    });
-
-    this.client.on('connect', () => {
-      this.isConnected = true;
-      this.logger.log('Redis Client Connected');
-    });
-
-    this.client.on('disconnect', () => {
+    if (!restUrl || !restToken) {
+      this.logger.warn('Upstash Redis REST credentials not configured - continuing without caching');
       this.isConnected = false;
-    });
+      return;
+    }
 
     try {
-      await this.client.connect();
+      this.client = new Redis({
+        url: restUrl,
+        token: restToken,
+      });
+
       this.isConnected = true;
+      this.logger.log('Upstash Redis REST client initialized');
     } catch (error) {
       this.isConnected = false;
-      this.logger.warn('Redis is unavailable - application will continue without caching');
+      this.logger.warn('Failed to initialize Upstash Redis client - continuing without caching');
     }
   }
 
@@ -55,6 +42,10 @@ export class RedisService implements OnModuleDestroy {
     try {
       return await this.client.get(key);
     } catch (error) {
+      if (!this.hasLoggedError) {
+        this.logger.warn('Redis operation failed:', error);
+        this.hasLoggedError = true;
+      }
       return null;
     }
   }
@@ -63,7 +54,7 @@ export class RedisService implements OnModuleDestroy {
     if (!this.isConnected) return;
     try {
       if (ttl) {
-        await this.client.setEx(key, ttl, value);
+        await this.client.setex(key, ttl, value);
       } else {
         await this.client.set(key, value);
       }
@@ -119,21 +110,15 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    if (this.client && this.isConnected) {
-      try {
-        await this.client.quit();
-        this.logger.log('Redis Client Disconnected');
-      } catch (error) {
-        // Silently ignore disconnection errors
-      }
-    }
+    // No cleanup needed for REST client
+    this.logger.log('Redis service destroyed');
   }
 
   isAvailable(): boolean {
     return this.isConnected;
   }
 
-  getClient(): RedisClientType {
+  getClient(): Redis {
     return this.client;
   }
 }

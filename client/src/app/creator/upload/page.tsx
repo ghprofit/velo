@@ -4,12 +4,11 @@ import { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react';
 import { contentApi, veriffApi } from '@/lib/api-client';
 import UploadBlockedScreen from '@/components/UploadBlockedScreen';
 import NextImage from 'next/image';
+import FloatingLogo from '@/components/FloatingLogo';
 
 interface UploadedFile {
   file: File;
-  preview: string;
   thumbnail: string;
-  base64: string;
   id: string;
 }
 
@@ -42,6 +41,7 @@ export default function UploadContentPage() {
   // Generated link state
   const [generatedLink, setGeneratedLink] = useState('');
   const [shortId, setShortId] = useState('');
+  const [contentStatus, setContentStatus] = useState<string>('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -111,67 +111,64 @@ export default function UploadContentPage() {
 
   const generateThumbnail = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+      if (file.type.startsWith('image/')) {
+        // For images, use object URL and resize
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
 
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
+          let width = img.width;
+          let height = img.height;
+          const maxSize = 300;
 
-        if (file.type.startsWith('image/')) {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-
-            let width = img.width;
-            let height = img.height;
-            const maxSize = 300;
-
-            if (width > height) {
-              if (width > maxSize) {
-                height = (height * maxSize) / width;
-                width = maxSize;
-              }
-            } else {
-              if (height > maxSize) {
-                width = (width * maxSize) / height;
-                height = maxSize;
-              }
+          if (width > height) {
+            if (width > maxSize) {
+              height = (height * maxSize) / width;
+              width = maxSize;
             }
+          } else {
+            if (height > maxSize) {
+              width = (width * maxSize) / height;
+              height = maxSize;
+            }
+          }
 
-            canvas.width = width;
-            canvas.height = height;
-            ctx?.drawImage(img, 0, 0, width, height);
+          canvas.width = width;
+          canvas.height = height;
+          ctx?.drawImage(img, 0, 0, width, height);
 
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
-          };
-          img.onerror = reject;
-          img.src = result;
-        } else if (file.type.startsWith('video/')) {
-          const video = document.createElement('video');
-          video.preload = 'metadata';
+          // Revoke object URL to free memory
+          URL.revokeObjectURL(img.src);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      } else if (file.type.startsWith('video/')) {
+        // For videos, use object URL (no base64 loading)
+        const video = document.createElement('video');
+        video.preload = 'metadata';
 
-          video.onloadeddata = () => {
-            video.currentTime = 0.1;
-          };
+        video.onloadeddata = () => {
+          video.currentTime = 0.1;
+        };
 
-          video.onseeked = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth > 300 ? 300 : video.videoWidth;
-            canvas.height = (canvas.width / video.videoWidth) * video.videoHeight;
+        video.onseeked = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth > 300 ? 300 : video.videoWidth;
+          canvas.height = (canvas.width / video.videoWidth) * video.videoHeight;
 
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
-          };
+          // Revoke object URL to free memory
+          URL.revokeObjectURL(video.src);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
 
-          video.onerror = reject;
-          video.src = result;
-        }
-      };
-
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+        video.onerror = reject;
+        video.src = URL.createObjectURL(file); // Use object URL instead of base64
+      }
     });
   };
 
@@ -181,6 +178,11 @@ export default function UploadContentPage() {
     if (uploadedFiles.length + files.length > 20) {
       setError('Maximum 20 files allowed per upload');
       return;
+    }
+
+    // Warning for 15+ files
+    if (uploadedFiles.length + files.length >= 15) {
+      console.warn(`Uploading ${uploadedFiles.length + files.length} files. This may take some time.`);
     }
 
     const validFiles = files.filter(file => {
@@ -193,22 +195,24 @@ export default function UploadContentPage() {
       setError('Only image and video files are allowed');
     }
 
+    // Validate file sizes
+    const MAX_FILE_SIZE = 524288000; // 500MB in bytes
+    const oversizedFiles = validFiles.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      const fileNames = oversizedFiles.map(f => f.name).join(', ');
+      const sizes = oversizedFiles.map(f => `${(f.size / 1048576).toFixed(1)}MB`).join(', ');
+      setError(`Files exceed 500MB limit: ${fileNames} (${sizes}). Please compress or reduce quality.`);
+      return;
+    }
+
     for (const file of validFiles) {
       try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
+        // Generate thumbnail only (no base64 conversion of full file)
         const thumbnail = await generateThumbnail(file);
 
         const newFile: UploadedFile = {
           file,
-          preview: base64,
           thumbnail,
-          base64,
           id: Math.random().toString(36).substring(7),
         };
 
@@ -222,8 +226,9 @@ export default function UploadContentPage() {
           setContentType('IMAGE');
         }
       } catch (err) {
-        console.error('Error processing file:', err);
-        setError('Failed to process some files');
+        console.error('Error processing file:', file.name, err);
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        setError(`Failed to process "${file.name}": ${errorMsg}`);
       }
     }
   };
@@ -241,29 +246,71 @@ export default function UploadContentPage() {
     setUploading(true);
 
     try {
-      const items = uploadedFiles.map(uf => ({
-        fileData: uf.base64,
+      // Create FormData
+      const formData = new FormData();
+
+      // Add form fields
+      formData.append('title', title.trim());
+      if (description.trim()) {
+        formData.append('description', description.trim());
+      }
+      formData.append('price', price);
+      formData.append('contentType', contentType);
+
+      // Add files metadata as JSON
+      const filesMetadata = uploadedFiles.map(uf => ({
         fileName: uf.file.name,
         contentType: uf.file.type,
         fileSize: uf.file.size,
         duration: undefined,
       }));
+      formData.append('filesMetadata', JSON.stringify(filesMetadata));
 
-      const response = await contentApi.createContent({
-        title: title.trim(),
-        description: description.trim() || undefined,
-        price: parseFloat(price),
-        contentType,
-        items,
-        thumbnailData: uploadedFiles[0].thumbnail,
+      // Add actual file objects
+      uploadedFiles.forEach(uf => {
+        formData.append('files', uf.file);
       });
+
+      // Add thumbnail (convert base64 to Blob)
+      const thumbnailBlob = await fetch(uploadedFiles[0].thumbnail).then(r => r.blob());
+      formData.append('thumbnail', thumbnailBlob, 'thumbnail.jpg');
+
+      // Send multipart request
+      const response = await contentApi.createContentMultipart(formData);
 
       setGeneratedLink(response.data.data.link);
       setShortId(response.data.data.shortId);
+      setContentStatus(response.data.data.status || 'PENDING_REVIEW');
       setCurrentStep(4);
     } catch (err: unknown) {
       console.error('Error creating content:', err);
-      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to create content');
+
+      // Handle different error types with specific user-friendly messages
+      const axiosError = err as {
+        response?: { data?: { message?: string }; status?: number };
+        code?: string;
+        message?: string;
+      };
+
+      let errorMessage = 'Failed to create content';
+
+      if (axiosError.code === 'ECONNABORTED' || axiosError.message?.includes('timeout')) {
+        errorMessage = 'Upload timed out. For large videos, please ensure stable internet connection and try again.';
+      } else if (axiosError.code === 'ERR_NETWORK' || !axiosError.response) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (axiosError.response?.status === 413) {
+        errorMessage = 'File too large for server. Maximum total upload size is 500MB per file.';
+      } else if (axiosError.response?.status === 400) {
+        errorMessage = axiosError.response?.data?.message || 'Invalid upload data. Please check file format and try again.';
+      } else if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
+        errorMessage = 'Authentication error. Please log in again.';
+      } else if (axiosError.response?.status === 500) {
+        errorMessage = 'Server error. Please try again or contact support if the issue persists.';
+      } else if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -411,7 +458,21 @@ export default function UploadContentPage() {
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8 relative">
+        {/* Floating Brand Logos */}
+        <FloatingLogo
+          position="top-right"
+          size={110}
+          animation="float-rotate"
+          opacity={0.08}
+        />
+        <FloatingLogo
+          position="bottom-left"
+          size={90}
+          animation="pulse"
+          opacity={0.06}
+        />
+
         <div className="max-w-3xl mx-auto">
           {/* Error Message */}
           {error && (
@@ -428,9 +489,19 @@ export default function UploadContentPage() {
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Step 1: Upload Your Content</h2>
                   <p className="hidden text-sm text-gray-600 mt-1">Drag and drop or browse to upload your files</p>
                 </div>
-                <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2.5 sm:px-3 py-1 rounded-full w-fit">
-                  {uploadedFiles.length}/20 files
-                </span>
+                <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+                  <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2.5 sm:px-3 py-1 rounded-full w-fit">
+                    {uploadedFiles.length}/20 files
+                  </span>
+                  {uploadedFiles.length >= 15 && (
+                    <span className="text-xs text-amber-600 bg-amber-50 px-2.5 sm:px-3 py-1 rounded-full w-fit flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Large upload - may take time
+                    </span>
+                  )}
+                </div>
               </div>
 
               {uploadedFiles.length < 20 && (
@@ -466,7 +537,7 @@ export default function UploadContentPage() {
                     Browse Files
                   </button>
                   <p className="text-xs text-gray-400 mt-3 sm:mt-4">
-                    Supported: JPG, PNG, GIF, MP4, MOV (up to 1GB each)
+                    Supported: JPG, PNG, GIF, MP4, MOV (max 500MB each, 20 files max)
                   </p>
                   <input
                     ref={fileInputRef}
@@ -762,18 +833,84 @@ export default function UploadContentPage() {
           {/* Step 4: Share */}
           {currentStep === 4 && (
             <div className="space-y-4 sm:space-y-6">
-              {/* Success Message */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 sm:p-6 text-center">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Your Link is Ready!</h2>
-                <p className="text-sm sm:text-base text-gray-600">Share it anywhere to start earning</p>
-              </div>
 
-              {/* Generated Link Card */}
+              {/* PENDING REVIEW NOTIFICATION */}
+              {contentStatus === 'PENDING_REVIEW' && (
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 sm:p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">Content is Pending Approval</h3>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Your content has been submitted for review. We&apos;ll notify you via email when it&apos;s approved or if we need more information.
+                      </p>
+                      <p className="text-xs text-amber-700 flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Typical review time: 1-2 hours</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* FLAGGED CONTENT WARNING */}
+              {contentStatus === 'FLAGGED' && (
+                <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-xl p-4 sm:p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">Content Flagged for Review</h3>
+                      <p className="text-sm text-gray-600">
+                        Our automated safety system has flagged your content for manual review. Our team will review it within 24 hours and notify you via email.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AUTO-APPROVED SUCCESS */}
+              {contentStatus === 'APPROVED' && (
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 sm:p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">Content Approved!</h3>
+                      <p className="text-sm text-gray-600">
+                        Your content passed our safety checks and is now live! Start sharing your link to earn.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Success Message - Only show when content is approved */}
+              {contentStatus === 'APPROVED' && (
+              <>
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 sm:p-6 text-center">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                    <svg className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Your Link is Ready!</h2>
+                  <p className="text-sm sm:text-base text-gray-600">Share it anywhere to start earning</p>
+                </div>
+
+                {/* Generated Link Card */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Your Unique Content Link</h3>
 
@@ -877,6 +1014,8 @@ export default function UploadContentPage() {
                   </button>
                 </div>
               </div>
+              </>
+              )}
 
               {/* Content Summary */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">

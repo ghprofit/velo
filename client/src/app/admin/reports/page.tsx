@@ -1,33 +1,50 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import LogoutModal from '@/components/LogoutModal';
 import AdminSidebar from '@/components/AdminSidebar';
+import { useGetAnalyticsOverviewQuery, useGetCreatorPerformanceQuery } from '@/state/api';
 
 export default function ReportsAnalyticsPage() {
-  const router = useRouter();
   const [activeTab] = useState('reports');
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [timeRange, setTimeRange] = useState('This Month');
   const [metricsFilter, setMetricsFilter] = useState('All Metrics');
   const [revenueTrend, setRevenueTrend] = useState('Monthly');
   const [userGrowthView, setUserGrowthView] = useState('Creators');
   const [reportFilter, setReportFilter] = useState('All');
 
+  // Fetch analytics data
+  const { data: analyticsData, isLoading: analyticsLoading } = useGetAnalyticsOverviewQuery();
+  const { data: performanceData, isLoading: performanceLoading } = useGetCreatorPerformanceQuery({
+    limit: 10,
+    sortBy: 'revenue',
+  });
 
-  const reportData = [
-    { id: 1, creator: 'Afedi Designs', views: '1.2M', revenue: '$24,320', engagement: '7.8%', category: 'Video' },
-    { id: 2, creator: 'Tired', views: '980k', revenue: '$19,850', engagement: '6.9%', category: 'Music' },
-    { id: 3, creator: 'Echo Studio', views: '865k', revenue: '$17,120', engagement: '6.1%', category: 'Podcast' },
-    { id: 4, creator: 'CloudWizz', views: '712k', revenue: '$14,440', engagement: '5.4%', category: 'Images' },
-  ];
+  const analytics = analyticsData?.data;
+  const reportData = performanceData?.data || [];
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  // Format large numbers (views)
+  const formatNumber = (num: number): string => {
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`;
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(0)}k`;
+    }
+    return num.toString();
+  };
 
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto bg-gray-50 lg:ml-0">
@@ -88,15 +105,25 @@ export default function ReportsAnalyticsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
                 <span className="text-sm text-gray-600">Total Revenue</span>
-                <span className="ml-auto px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  </svg>
-                  8%
-                </span>
+                {analyticsLoading ? null : (
+                  <span className={`ml-auto px-2 py-1 text-xs font-semibold rounded flex items-center gap-1 ${
+                    (analytics?.revenueGrowth || 0) >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
+                        (analytics?.revenueGrowth || 0) >= 0
+                          ? "M5 10l7-7m0 0l7 7m-7-7v18"
+                          : "M19 14l-7 7m0 0l-7-7m7 7V3"
+                      } />
+                    </svg>
+                    {Math.abs(analytics?.revenueGrowth || 0).toFixed(1)}%
+                  </span>
+                )}
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">$142,980</p>
-              <p className="text-sm text-gray-500">up this month</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">
+                {analyticsLoading ? 'Loading...' : formatCurrency(analytics?.totalRevenue || 0)}
+              </p>
+              <p className="text-sm text-gray-500">this month</p>
             </div>
 
             {/* Active Creator */}
@@ -105,15 +132,25 @@ export default function ReportsAnalyticsPage() {
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                <span className="text-sm text-gray-600">Active Creator</span>
-                <span className="ml-auto px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  </svg>
-                  15%
-                </span>
+                <span className="text-sm text-gray-600">Active Creators</span>
+                {analyticsLoading ? null : (
+                  <span className={`ml-auto px-2 py-1 text-xs font-semibold rounded flex items-center gap-1 ${
+                    (analytics?.creatorsGrowth || 0) >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
+                        (analytics?.creatorsGrowth || 0) >= 0
+                          ? "M5 10l7-7m0 0l7 7m-7-7v18"
+                          : "M19 14l-7 7m0 0l-7-7m7 7V3"
+                      } />
+                    </svg>
+                    {Math.abs(analytics?.creatorsGrowth || 0).toFixed(1)}%
+                  </span>
+                )}
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">4,892</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">
+                {analyticsLoading ? 'Loading...' : (analytics?.activeCreators || 0).toLocaleString()}
+              </p>
               <p className="text-sm text-gray-500">growth vs last month</p>
             </div>
 
@@ -124,15 +161,25 @@ export default function ReportsAnalyticsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
                 <span className="text-sm text-gray-600">Content Uploaded</span>
-                <span className="ml-auto px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  </svg>
-                  5%
-                </span>
+                {analyticsLoading ? null : (
+                  <span className={`ml-auto px-2 py-1 text-xs font-semibold rounded flex items-center gap-1 ${
+                    (analytics?.contentGrowth || 0) >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
+                        (analytics?.contentGrowth || 0) >= 0
+                          ? "M5 10l7-7m0 0l7 7m-7-7v18"
+                          : "M19 14l-7 7m0 0l-7-7m7 7V3"
+                      } />
+                    </svg>
+                    {Math.abs(analytics?.contentGrowth || 0).toFixed(1)}%
+                  </span>
+                )}
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">1,245</p>
-              <p className="text-sm text-gray-500">this period</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">
+                {analyticsLoading ? 'Loading...' : (analytics?.contentUploaded || 0).toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">this month</p>
             </div>
 
             {/* Avg. Transaction Value */}
@@ -143,7 +190,9 @@ export default function ReportsAnalyticsPage() {
                 </svg>
                 <span className="text-sm text-gray-600">Avg. Transaction Value</span>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">$42.50</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">
+                {analyticsLoading ? 'Loading...' : formatCurrency(analytics?.avgTransactionValue || 0)}
+              </p>
               <p className="text-sm text-gray-500">last 30 days</p>
             </div>
           </div>
@@ -378,21 +427,35 @@ export default function ReportsAnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.map((item) => (
-                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.id}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.creator}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.views}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.revenue}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.engagement}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{item.category}</td>
-                      <td className="py-4 px-4">
-                        <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline">
-                          View Report
-                        </button>
+                  {performanceLoading ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-gray-600">
+                        Loading creator performance data...
                       </td>
                     </tr>
-                  ))}
+                  ) : reportData.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-gray-600">
+                        No creator performance data available
+                      </td>
+                    </tr>
+                  ) : (
+                    reportData.map((item, index) => (
+                      <tr key={item.creatorId} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-4 px-4 text-sm text-gray-900">{index + 1}</td>
+                        <td className="py-4 px-4 text-sm text-gray-900">{item.creatorName}</td>
+                        <td className="py-4 px-4 text-sm text-gray-900">{formatNumber(item.totalViews)}</td>
+                        <td className="py-4 px-4 text-sm text-gray-900">{formatCurrency(item.totalRevenue)}</td>
+                        <td className="py-4 px-4 text-sm text-gray-900">{item.engagement.toFixed(1)}%</td>
+                        <td className="py-4 px-4 text-sm text-gray-900">{item.category}</td>
+                        <td className="py-4 px-4">
+                          <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline">
+                            View Report
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -418,16 +481,6 @@ export default function ReportsAnalyticsPage() {
           </div>
         </div>
       </main>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
-          setShowLogoutModal(false);
-          router.push('/login');
-        }}
-      />
     </div>
   );
 }

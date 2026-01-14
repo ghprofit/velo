@@ -7,8 +7,6 @@ import {
   InternalServerErrorException,
   BadRequestException,
   NotFoundException,
-  Inject,
-  Optional,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -54,7 +52,7 @@ export class AuthService {
     private config: ConfigService,
     private emailService: EmailService,
     private twofactorService: TwofactorService,
-    @Optional() private redisService?: RedisService,
+    private redisService: RedisService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -67,6 +65,14 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists.');
     }
 
+    // Check if user was on waitlist
+    const waitlistEntry = await this.prisma.waitlist.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+
+    const hasWaitlistBonus = !!waitlistEntry;
+    const bonusAmount = hasWaitlistBonus ? 50.0 : 0.0;
+
     // Hash password
     const hashedPassword = await this.hashPassword(dto.password);
 
@@ -77,15 +83,15 @@ export class AuthService {
           email: dto.email.toLowerCase(),
           password: hashedPassword,
           role: 'CREATOR',
-          displayName: dto.displayName,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
           creatorProfile: {
             create: {
               displayName: dto.displayName,
-              firstName: dto.firstName,
-              lastName: dto.lastName,
-              country: dto.country,
+              firstName: dto.firstName || null,
+              lastName: dto.lastName || null,
+              country: dto.country || waitlistEntry?.country || null,
+              waitlistBonus: bonusAmount,
+              totalEarnings: bonusAmount,
+              bonusWithdrawn: false,
             },
           },
         },
@@ -112,16 +118,21 @@ export class AuthService {
         },
       });
 
-      // Send verification email with 6-digit code
-      let emailSent = false;
-      let emailError = null;
+      // Send verification email
       try {
-        await this.generateVerificationCode(user.id, user.email, dto.displayName);
-        emailSent = true;
+        await this.generateVerificationToken(user.id, user.email);
       } catch (error) {
-        console.error('Failed to generate verification code:', error);
-        emailError = (error as any)?.message || 'Failed to send verification email';
+        console.error('Failed to generate verification token:', error);
         // Don't fail registration if email fails
+      }
+
+      // Delete waitlist entry after successful registration
+      if (waitlistEntry) {
+        await this.prisma.waitlist.delete({
+          where: { id: waitlistEntry.id },
+        }).catch(() => {
+          // Ignore errors - don't fail registration if deletion fails
+        });
       }
 
       return {
@@ -130,9 +141,6 @@ export class AuthService {
           email: user.email,
           role: user.role,
           emailVerified: user.emailVerified,
-          displayName: user.displayName,
-          firstName: user.firstName,
-          lastName: user.lastName,
           creatorProfile: {
             id: user.creatorProfile?.id,
             displayName: user.creatorProfile?.displayName,
@@ -144,11 +152,6 @@ export class AuthService {
           refreshToken: tokens.refreshToken,
           expiresIn: tokens.expiresIn,
         },
-        emailSent,
-        emailError,
-        message: emailSent
-          ? 'Registration successful! Please check your email for a verification code.'
-          : 'Registration successful, but verification email failed to send. Please use the resend option in settings.',
       };
     } catch (error) {
       console.error('Registration error:', error);
@@ -165,7 +168,7 @@ export class AuthService {
     // Check if account is locked
     const isLocked = await this.isAccountLocked(loginKey);
     if (isLocked) {
-      const ttl = this.redisService ? await this.redisService.ttl(loginKey) : 1800;
+      const ttl = await this.redisService.ttl(loginKey);
       const minutesRemaining = Math.ceil(ttl / 60);
       throw new ForbiddenException(
         `Account temporarily locked due to too many failed login attempts. Please try again in ${minutesRemaining} minutes.`,
@@ -220,6 +223,7 @@ export class AuthService {
           purpose: '2fa-pending',
           ipAddress,
           userAgent,
+          rememberMe: dto.rememberMe || false,
         },
         {
           secret: this.config.get('JWT_SECRET'),
@@ -239,14 +243,14 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       role: user.role,
-    });
+    }, dto.rememberMe);
 
     // Store refresh token in database with session metadata
     await this.prisma.refreshToken.create({
       data: {
         userId: user.id,
         token: tokens.refreshToken,
-        expiresAt: this.getRefreshTokenExpiration(),
+        expiresAt: this.getRefreshTokenExpiration(dto.rememberMe),
         deviceName: this.extractDeviceName(userAgent),
         ipAddress: ipAddress || null,
         userAgent: userAgent || null,
@@ -392,6 +396,7 @@ export class AuthService {
       displayName: user.displayName || user.creatorProfile?.displayName,
       firstName: user.firstName,
       lastName: user.lastName,
+      profilePicture: user.profilePicture,
       creatorProfile: user.creatorProfile
         ? {
             ...user.creatorProfile,
@@ -410,15 +415,18 @@ export class AuthService {
     return await bcrypt.hash(password, saltRounds);
   }
 
-  private generateTokenPair(payload: JWTPayload): TokenPair {
+  private generateTokenPair(payload: JWTPayload, rememberMe = false): TokenPair {
     const accessToken = this.jwtService.sign(payload, {
       secret: this.config.get('JWT_SECRET'),
       expiresIn: this.config.get('JWT_EXPIRES_IN') || '15m',
     });
 
+    // Extended expiry for rememberMe: 30 days, otherwise 7 days
+    const refreshExpiry = rememberMe ? '30d' : '7d';
+
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.config.get('JWT_REFRESH_SECRET'),
-      expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN') || '7d',
+      expiresIn: refreshExpiry,
     });
 
     return {
@@ -428,75 +436,31 @@ export class AuthService {
     };
   }
 
-  private getRefreshTokenExpiration(): Date {
-    const expirationTime = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+  private getRefreshTokenExpiration(rememberMe = false): Date {
+    // Extended expiry for rememberMe: 30 days, otherwise 7 days
+    const expirationTime = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
+      : 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
     return new Date(Date.now() + expirationTime);
   }
 
   // Email Verification Methods
-  /**
-   * Verify email using 6-digit code
-   */
-  async verifyEmailCode(userId: string, code: string) {
+  async verifyEmail(dto: VerifyEmailDto) {
     const verificationToken = await this.prisma.emailVerificationToken.findUnique({
-      where: { userId },
+      where: { token: dto.token },
       include: { user: true },
     });
 
     if (!verificationToken) {
-      throw new BadRequestException('No verification code found. Please request a new one.');
+      throw new BadRequestException('Invalid verification token');
     }
 
-    // Check if code matches
-    if (verificationToken.code !== code) {
-      throw new BadRequestException('Invalid verification code');
-    }
-
-    // Check if code has expired
     if (verificationToken.expiresAt < new Date()) {
       // Delete expired token
       await this.prisma.emailVerificationToken.delete({
         where: { id: verificationToken.id },
       });
-      throw new BadRequestException('Verification code has expired. Please request a new one.');
-    }
-
-    // Update user as verified
-    await this.prisma.user.update({
-      where: { id: verificationToken.userId },
-      data: { emailVerified: true },
-    });
-
-    // Delete used token
-    await this.prisma.emailVerificationToken.delete({
-      where: { id: verificationToken.id },
-    });
-
-    return {
-      message: 'Email verified successfully',
-    };
-  }
-
-  /**
-   * Legacy method for token-based email verification
-   * @deprecated Use verifyEmailCode instead
-   */
-  async verifyEmail(dto: VerifyEmailDto) {
-    const verificationToken = await this.prisma.emailVerificationToken.findUnique({
-      where: { userId: dto.token }, // This won't work anymore - kept for backward compat only
-      include: { user: true },
-    });
-
-    if (!verificationToken) {
-      throw new BadRequestException('Invalid verification token. Please use the new code-based verification.');
-    }
-
-    // Check if code has expired
-    if (verificationToken.expiresAt < new Date()) {
-      await this.prisma.emailVerificationToken.delete({
-        where: { id: verificationToken.id },
-      });
-      throw new BadRequestException('Verification code has expired. Please request a new one.');
+      throw new BadRequestException('Verification token has expired. Please request a new one.');
     }
 
     // Update user as verified
@@ -528,101 +492,26 @@ export class AuthService {
       throw new BadRequestException('Email is already verified');
     }
 
-    let emailSent = false;
-    let emailError = null;
-
-    // Check for existing verification token
-    const existingToken = await this.prisma.emailVerificationToken.findUnique({
+    // Delete any existing verification tokens for this user
+    await this.prisma.emailVerificationToken.deleteMany({
       where: { userId: user.id },
     });
 
-    // Check resend rate limiting (max 3 resends per hour)
-    if (existingToken) {
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-      const resendCount = existingToken.resendCount || 0;
-      const lastResendAt = existingToken.lastResendAt || existingToken.createdAt;
-
-      if (lastResendAt > oneHourAgo && resendCount >= 3) {
-        const minutesLeft = Math.ceil((lastResendAt.getTime() + 60 * 60 * 1000 - Date.now()) / (60 * 1000));
-        throw new BadRequestException(
-          `You've reached the maximum resend limit. Please try again in ${minutesLeft} minutes.`,
-        );
-      }
-
-      // Reset count if it's been more than an hour
-      const newResendCount = lastResendAt > oneHourAgo ? resendCount + 1 : 1;
-
-      // Delete existing token
-      await this.prisma.emailVerificationToken.delete({
-        where: { userId: user.id },
-      });
-
-      // Generate new code with updated resend count
-      const code = this.generate6DigitCode();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-      await this.prisma.emailVerificationToken.create({
-        data: {
-          userId: user.id,
-          code,
-          expiresAt,
-          resendCount: newResendCount,
-          lastResendAt: new Date(),
-        },
-      });
-
-      // Send verification email with new code
-      try {
-        await this.emailService.sendEmailVerificationCode(
-          user.email,
-          user.displayName || user.email.split('@')[0] || 'User',
-          code,
-          15,
-        );
-        emailSent = true;
-      } catch (error) {
-        console.error('Failed to send verification email:', error);
-        emailError = (error as any)?.message || 'Failed to send verification email';
-      }
-    } else {
-      // No existing token, generate new one
-      try {
-        await this.generateVerificationCode(user.id, user.email, user.displayName || undefined);
-        emailSent = true;
-      } catch (error) {
-        console.error('Failed to generate verification code:', error);
-        emailError = (error as any)?.message || 'Failed to send verification email';
-      }
-    }
+    // Generate new verification token
+    await this.generateVerificationToken(user.id, user.email);
 
     return {
-      emailSent,
-      emailError,
-      message: emailSent
-        ? 'Verification code sent successfully'
-        : 'Failed to send verification email. Please try again later or contact support.',
+      message: 'Verification email sent successfully',
     };
   }
 
-  /**
-   * Generate a cryptographically secure 6-digit code
-   */
-  private generate6DigitCode(): string {
-    // Generate a random number between 100000 and 999999
-    const min = 100000;
-    const max = 999999;
-    return Math.floor(min + Math.random() * (max - min + 1)).toString();
-  }
+  private async generateVerificationToken(userId: string, email: string) {
+    // Generate 6-digit numeric code (100000-999999)
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-  /**
-   * Generate and send email verification code (6-digit)
-   */
-  private async generateVerificationCode(userId: string, email: string, displayName?: string) {
-    // Generate 6-digit code
-    const code = this.generate6DigitCode();
-
-    // Calculate expiration (15 minutes from now)
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    // Calculate expiration (20 minutes for security)
+    const expiryMinutes = 20;
+    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
     // Delete any existing verification tokens for this user
     await this.prisma.emailVerificationToken.deleteMany({
@@ -633,34 +522,25 @@ export class AuthService {
     await this.prisma.emailVerificationToken.create({
       data: {
         userId,
-        code,
+        token: code, // Store 6-digit code in token field
         expiresAt,
-        resendCount: 0,
       },
     });
 
-    // Send verification email with code
+    // Send verification email with CODE (not link)
     try {
-      await this.emailService.sendEmailVerificationCode(
+      await this.emailService.sendEmailVerification(
         email,
-        displayName || email.split('@')[0] || 'User',
-        code,
-        15, // 15 minutes expiry
+        email.split('@')[0] || 'User', // Use email username as fallback name
+        code, // Pass code instead of link
+        expiryMinutes, // Pass minutes instead of hours
       );
     } catch (error) {
       console.error('Failed to send verification email:', error);
-      // Don't throw error - code is still created
+      // Don't throw error - token is still created
     }
 
     return code;
-  }
-
-  /**
-   * Legacy method - kept for backward compatibility
-   * @deprecated Use generateVerificationCode instead
-   */
-  private async generateVerificationToken(userId: string, email: string) {
-    return this.generateVerificationCode(userId, email);
   }
 
   // Password Reset Methods
@@ -838,19 +718,20 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Generate tokens
+    // Generate tokens (preserve rememberMe preference from login)
+    const rememberMe = payload.rememberMe || false;
     const tokens = this.generateTokenPair({
       userId: user.id,
       email: user.email,
       role: user.role,
-    });
+    }, rememberMe);
 
     // Store refresh token in database with session metadata
     await this.prisma.refreshToken.create({
       data: {
         userId: user.id,
         token: tokens.refreshToken,
-        expiresAt: this.getRefreshTokenExpiration(),
+        expiresAt: this.getRefreshTokenExpiration(rememberMe),
         deviceName: this.extractDeviceName(payload.userAgent),
         ipAddress: payload.ipAddress || null,
         userAgent: payload.userAgent || null,
@@ -927,19 +808,20 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Generate tokens
+    // Generate tokens (preserve rememberMe preference from login)
+    const rememberMe = payload.rememberMe || false;
     const tokens = this.generateTokenPair({
       userId: user.id,
       email: user.email,
       role: user.role,
-    });
+    }, rememberMe);
 
     // Store refresh token in database with session metadata
     await this.prisma.refreshToken.create({
       data: {
         userId: user.id,
         token: tokens.refreshToken,
-        expiresAt: this.getRefreshTokenExpiration(),
+        expiresAt: this.getRefreshTokenExpiration(rememberMe),
         deviceName: this.extractDeviceName(payload.userAgent),
         ipAddress: payload.ipAddress || null,
         userAgent: payload.userAgent || null,
@@ -1094,6 +976,7 @@ export class AuthService {
         displayName: dto.displayName,
         firstName: dto.firstName,
         lastName: dto.lastName,
+        profilePicture: dto.profilePicture,
       },
       select: {
         id: true,
@@ -1101,6 +984,7 @@ export class AuthService {
         displayName: true,
         firstName: true,
         lastName: true,
+        profilePicture: true,
         emailVerified: true,
         role: true,
         createdAt: true,
@@ -1231,7 +1115,6 @@ export class AuthService {
    * Check if account is locked due to failed login attempts
    */
   private async isAccountLocked(loginKey: string): Promise<boolean> {
-    if (!this.redisService) return false; // No Redis, no lockout
     const attempts = await this.redisService.get(loginKey);
     return attempts !== null && parseInt(attempts) >= this.MAX_LOGIN_ATTEMPTS;
   }
@@ -1240,7 +1123,6 @@ export class AuthService {
    * Record a failed login attempt
    */
   private async recordFailedLogin(loginKey: string): Promise<void> {
-    if (!this.redisService) return; // Skip if Redis not available
     const attempts = await this.redisService.incr(loginKey);
 
     // Set TTL on first failed attempt
@@ -1258,7 +1140,6 @@ export class AuthService {
    * Clear failed login attempts
    */
   private async clearFailedLogins(loginKey: string): Promise<void> {
-    if (!this.redisService) return; // Skip if Redis not available
     await this.redisService.del(loginKey);
   }
 }

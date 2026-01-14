@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import VerificationStatusBanner from '@/components/VerificationStatusBanner';
 import { authApi, analyticsApi } from '@/lib/api-client';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem, fadeInUp } from '@/lib/animations';
+import FloatingLogo from '@/components/FloatingLogo';
 
 interface CreatorProfile {
   totalViews: number;
@@ -228,7 +231,63 @@ export default function CreatorDashboardPage() {
 
   return (
     <>
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8 relative overflow-hidden">
+          {/* Floating Brand Logos */}
+          <FloatingLogo
+            position="top-right"
+            size={120}
+            animation="float-rotate"
+            opacity={0.08}
+          />
+          <FloatingLogo
+            position="bottom-left"
+            size={100}
+            animation="pulse"
+            opacity={0.06}
+          />
+
+          {/* Floating Decorative Elements */}
+          <motion.div
+            className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"
+            animate={{
+              x: [0, 50, -30, 0],
+              y: [0, -40, 20, 0],
+              scale: [1, 1.2, 0.8, 1],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          <motion.div
+            className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-blue-400/15 to-cyan-400/15 rounded-full blur-2xl"
+            animate={{
+              x: [0, -40, 30, 0],
+              y: [0, 30, -20, 0],
+              scale: [1, 0.8, 1.3, 1],
+            }}
+            transition={{
+              duration: 6,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 1
+            }}
+          />
+          <motion.div
+            className="absolute bottom-20 left-1/4 w-20 h-20 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-xl"
+            animate={{
+              x: [0, 20, -15, 0],
+              y: [0, -25, 15, 0],
+              scale: [1, 1.1, 0.9, 1],
+            }}
+            transition={{
+              duration: 7,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 2
+            }}
+          />
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px]">
@@ -255,37 +314,82 @@ export default function CreatorDashboardPage() {
           {!loading && profile && (
             <>
               {/* Welcome Header */}
-              <div className="mb-6 sm:mb-8">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
-                  Welcome back, {profile.displayName || 'Creator'}
-                </h1>
-                <p className="text-gray-600 text-sm sm:text-base">
-                  Here&apos;s an overview of your content performance.
-                </p>
-              </div>
+              <motion.div 
+                className="mb-6 sm:mb-8 text-center lg:text-left"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <motion.h1 
+                  className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-indigo-800 to-purple-800 bg-clip-text text-transparent mb-2 sm:mb-3"
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                >
+                  Welcome back, {profile.displayName || 'Creator'}! 🎉
+                </motion.h1>
+                <motion.p 
+                  className="text-gray-600 text-sm sm:text-base lg:text-lg"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  Here&apos;s an overview of your amazing content performance. Let&apos;s create something awesome! 🚀
+                </motion.p>
+              </motion.div>
 
               {/* Verification Status Banner */}
               <VerificationStatusBanner />
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+              <motion.div 
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
                 {stats.map((stat, index) => (
-                  <div
+                  <motion.div
                     key={index}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
+                    variants={staggerItem}
+                    whileHover={{ 
+                      scale: 1.05,
+                      rotateY: 5,
+                      transition: { duration: 0.3 }
+                    }}
+                    className="bg-gradient-to-br from-white via-white to-gray-50/50 rounded-2xl shadow-lg border border-gray-200/50 p-4 sm:p-6 backdrop-blur-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 ring-1 ring-white/20"
                   >
                     <div className="flex items-center gap-3 sm:gap-4">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 ${stat.bgColor} rounded-lg flex items-center justify-center ${stat.iconColor}`}>
-                        {renderIcon(stat.icon, 'w-5 h-5 sm:w-6 sm:h-6')}
-                      </div>
+                      <motion.div
+                        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center icon-3d-container ${
+                          stat.icon === 'eye' ? 'icon-3d-blue' :
+                          stat.icon === 'dollar' ? 'icon-3d-green' :
+                          'icon-3d-purple'
+                        } relative overflow-hidden`}
+                        whileHover={{
+                          scale: 1.1,
+                          rotate: [0, -5, 5, 0],
+                          transition: { duration: 0.5 }
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
+                        {renderIcon(stat.icon, 'w-6 h-6 sm:w-7 sm:h-7 relative z-10 text-white drop-shadow-lg')}
+                      </motion.div>
                       <div>
-                        <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">{stat.label}</p>
-                        <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 mb-1 font-medium">{stat.label}</p>
+                        <motion.p 
+                          className="text-2xl sm:text-3xl font-bold text-gray-900"
+                          initial={{ scale: 0.8 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: index * 0.1, type: "spring", stiffness: 200 }}
+                        >
+                          {stat.value}
+                        </motion.p>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
               {/* Earnings Trend */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">

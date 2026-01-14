@@ -1,11 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmailService } from '../../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { QueryContentDto } from './dto/query-content.dto';
 import { UpdateContentDto, ReviewContentDto, RemoveContentDto } from './dto/update-content.dto';
 
 @Injectable()
 export class ContentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+    private config: ConfigService,
+  ) {}
 
   async getContent(query: QueryContentDto) {
     const { search, status, complianceStatus, contentType, severity, page = 1, limit = 20 } = query;
@@ -210,9 +216,8 @@ export class ContentService {
         data: updateData,
         include: {
           creator: {
-            select: {
-              displayName: true,
-              userId: true,
+            include: {
+              user: true,
             },
           },
         },
@@ -237,6 +242,34 @@ export class ContentService {
         },
       }),
     ]);
+
+    // Send email notification to creator
+    try {
+      const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
+
+      if (dto.decision === 'APPROVED') {
+        await this.emailService.sendContentApproved(
+          updatedContent.creator.user.email,
+          {
+            creator_name: updatedContent.creator.displayName,
+            content_title: updatedContent.title,
+            content_link: `${clientUrl}/c/${updatedContent.id}`,
+          },
+        );
+      } else if (dto.decision === 'REJECTED') {
+        await this.emailService.sendContentRejected(
+          updatedContent.creator.user.email,
+          {
+            creator_name: updatedContent.creator.displayName,
+            content_title: updatedContent.title,
+            rejection_reason: dto.notes || dto.reason || 'Content does not meet platform guidelines',
+          },
+        );
+      }
+    } catch (error) {
+      // Log error but don't fail the request
+      console.error('Failed to send content review email:', error);
+    }
 
     return this.formatContentResponse(updatedContent);
   }
@@ -264,9 +297,8 @@ export class ContentService {
         },
         include: {
           creator: {
-            select: {
-              displayName: true,
-              userId: true,
+            include: {
+              user: true,
             },
           },
         },
@@ -282,7 +314,18 @@ export class ContentService {
       }),
     ]);
 
-    // TODO: Send notification to creator if notifyCreator is true
+    // Send notification to creator if notifyCreator is true
+    if (dto.notifyCreator) {
+      try {
+        await this.emailService.sendEmail({
+          to: updatedContent.creator.user.email,
+          subject: 'Content Removed - Action Required',
+          html: `Your content "${updatedContent.title}" has been removed from the platform. Reason: ${dto.reason}`,
+        });
+      } catch (error) {
+        console.error('Failed to send content removal email:', error);
+      }
+    }
 
     return this.formatContentResponse(updatedContent);
   }

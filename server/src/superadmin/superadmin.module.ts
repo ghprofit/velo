@@ -10,9 +10,10 @@ import { FinancialReportsService } from './financial-reports/financial-reports.s
 import { SettingsController } from './settings/settings.controller';
 import { SettingsService } from './settings/settings.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, EmailModule],
   controllers: [SuperadminController, CreatorsController, ContentController, FinancialReportsController, SettingsController],
   providers: [SuperadminService, CreatorsService, ContentService, FinancialReportsService, SettingsService],
   exports: [SuperadminService, CreatorsService, ContentService, FinancialReportsService, SettingsService],

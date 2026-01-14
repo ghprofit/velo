@@ -2,14 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
-import LogoutModal from '@/components/LogoutModal';
 
 export default function ContentReviewPage() {
-  const router = useRouter();
   const [activeTab] = useState('content-review');
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [reviewComments, setReviewComments] = useState('');
 
   const reportedIssues = [
@@ -26,7 +22,7 @@ export default function ContentReviewPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto bg-gray-50 lg:ml-0">
@@ -281,16 +277,6 @@ export default function ContentReviewPage() {
           </div>
         </div>
       </main>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
-          setShowLogoutModal(false);
-          router.push('/login');
-        }}
-      />
     </div>
   );
 }

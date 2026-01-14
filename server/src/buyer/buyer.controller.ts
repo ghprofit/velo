@@ -6,16 +6,16 @@ import {
   Param,
   Req,
   Ip,
+  UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { BuyerService } from './buyer.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { VerifyAccessDto } from './dto/verify-access.dto';
 import { ConfirmPurchaseDto } from './dto/confirm-purchase.dto';
-import { CheckAccessEligibilityDto } from './dto/check-access-eligibility.dto';
-import { RequestDeviceVerificationDto } from './dto/request-device-verification.dto';
-import { VerifyDeviceCodeDto } from './dto/verify-device-code.dto';
+import { CheckEligibilityDto } from './dto/check-eligibility.dto';
 
 @Controller('buyer')
 export class BuyerController {
@@ -46,8 +46,8 @@ export class BuyerController {
    * Create a purchase
    */
   @Post('purchase')
-  async createPurchase(@Body() dto: CreatePurchaseDto, @Ip() ipAddress: string) {
-    return this.buyerService.createPurchase(dto, ipAddress);
+  async createPurchase(@Body() dto: CreatePurchaseDto) {
+    return this.buyerService.createPurchase(dto);
   }
 
   /**
@@ -62,8 +62,17 @@ export class BuyerController {
    * Get content access after purchase
    */
   @Post('access')
-  async getContentAccess(@Body() dto: VerifyAccessDto, @Ip() ipAddress: string) {
-    return this.buyerService.getContentAccess(dto.accessToken, dto.fingerprint, ipAddress);
+  async getContentAccess(@Body() dto: VerifyAccessDto) {
+    return this.buyerService.getContentAccess(dto.accessToken);
+  }
+
+  /**
+   * Check if buyer has access eligibility for content
+   * Validates access token, purchase status, and device fingerprint
+   */
+  @Post('access/check-eligibility')
+  async checkAccessEligibility(@Body() dto: CheckEligibilityDto) {
+    return this.buyerService.checkAccessEligibility(dto.accessToken, dto.fingerprint);
   }
 
   /**
@@ -83,34 +92,35 @@ export class BuyerController {
   }
 
   /**
-   * Check access eligibility before loading content
+   * Request device verification code for accessing purchase on new device
+   * Rate limited to prevent spam
    */
-  @Post('access/check-eligibility')
-  async checkAccessEligibility(@Body() dto: CheckAccessEligibilityDto) {
-    return this.buyerService.checkAccessEligibility(dto.accessToken, dto.fingerprint);
-  }
-
-  /**
-   * Request device verification code
-   */
-  @Post('access/request-device-verification')
-  async requestDeviceVerification(@Body() dto: RequestDeviceVerificationDto) {
+  @Post('request-device-code')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 requests per 5 minutes
+  async requestDeviceCode(
+    @Body() dto: { purchaseId: string; fingerprint: string },
+  ) {
     return this.buyerService.requestDeviceVerification(
-      dto.accessToken,
+      dto.purchaseId,
       dto.fingerprint,
-      dto.email,
     );
   }
 
   /**
-   * Verify device code
+   * Verify device with code to grant access on new device
+   * Rate limited to prevent brute force attacks
    */
-  @Post('access/verify-device')
-  async verifyDeviceCode(@Body() dto: VerifyDeviceCodeDto) {
+  @Post('verify-device')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
+  async verifyDevice(
+    @Body() dto: { purchaseId: string; code: string; fingerprint: string },
+  ) {
     return this.buyerService.verifyDeviceCode(
-      dto.accessToken,
+      dto.purchaseId,
+      dto.code,
       dto.fingerprint,
-      dto.verificationCode,
     );
   }
 }

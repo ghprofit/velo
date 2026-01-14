@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutModal from './LogoutModal';
 import Image from 'next/image';
+import { useLogout } from '@/hooks/useLogout';
 
 export default function CreatorSidebar(): JSX.Element {
   const pathname = usePathname();
@@ -12,6 +13,7 @@ export default function CreatorSidebar(): JSX.Element {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  const { logout, isLoggingOut } = useLogout();
 
   // Check screen size and set appropriate state
   useEffect(() => {
@@ -182,7 +184,11 @@ export default function CreatorSidebar(): JSX.Element {
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                {renderIcon(item.icon)}
+                <div className={`p-2 rounded-lg icon-3d-container ${
+                  isActive(item.href) ? 'icon-3d-indigo' : 'bg-gray-100'
+                }`}>
+                  {renderIcon(item.icon, isActive(item.href) ? 'w-5 h-5 text-white' : 'w-5 h-5')}
+                </div>
                 <span>{item.label}</span>
               </Link>
             ))}
@@ -213,7 +219,9 @@ export default function CreatorSidebar(): JSX.Element {
                   onClick={() => setIsMobileMenuOpen(true)}
                   className="flex flex-col items-center gap-1 px-3 py-2 text-gray-500"
                 >
-                  {renderIcon(item.icon, 'w-5 h-5')}
+                  <div className="p-1.5 rounded-lg icon-3d-container bg-gray-100">
+                    {renderIcon(item.icon, 'w-5 h-5')}
+                  </div>
                   <span className="text-xs">{item.label}</span>
                 </button>
               ) : (
@@ -226,7 +234,11 @@ export default function CreatorSidebar(): JSX.Element {
                       : 'text-gray-500'
                   }`}
                 >
-                  {renderIcon(item.icon, 'w-5 h-5')}
+                  <div className={`p-1.5 rounded-lg icon-3d-container ${
+                    isActive(item.href) ? 'icon-3d-indigo' : 'bg-gray-100'
+                  }`}>
+                    {renderIcon(item.icon, isActive(item.href) ? 'w-5 h-5 text-white' : 'w-5 h-5')}
+                  </div>
                   <span className="text-xs">{item.label}</span>
                 </Link>
               )
@@ -238,10 +250,11 @@ export default function CreatorSidebar(): JSX.Element {
         <LogoutModal
           isOpen={showLogoutModal}
           onClose={() => setShowLogoutModal(false)}
-          onConfirm={() => {
+          onConfirm={async () => {
+            await logout();
             setShowLogoutModal(false);
-            window.location.href = '/login';
           }}
+          isLoading={isLoggingOut}
         />
       </>
     );
@@ -286,7 +299,11 @@ export default function CreatorSidebar(): JSX.Element {
               } ${isCollapsed ? 'justify-center' : ''}`}
               title={isCollapsed ? item.label : undefined}
             >
-              {renderIcon(item.icon)}
+              <div className={`p-2 rounded-lg icon-3d-container ${
+                isActive(item.href) ? 'icon-3d-indigo' : 'bg-gray-100'
+              }`}>
+                {renderIcon(item.icon, isActive(item.href) ? 'w-5 h-5 text-white' : 'w-5 h-5')}
+              </div>
               {!isCollapsed && <span>{item.label}</span>}
             </Link>
           ))}
@@ -311,10 +328,11 @@ export default function CreatorSidebar(): JSX.Element {
       <LogoutModal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
+          await logout();
           setShowLogoutModal(false);
-          window.location.href = '/login';
         }}
+        isLoading={isLoggingOut}
       />
     </>
   );

@@ -628,11 +628,74 @@ interface AdminPayoutsResponse {
     };
 }
 
+interface AdminTransaction {
+    id: string;
+    contentId: string;
+    buyerEmail: string;
+    creatorName: string;
+    amount: number;
+    currency: string;
+    paymentMethod: string;
+    status: string;
+    createdAt: string;
+    completedAt?: string | null;
+}
+
+interface AdminTransactionsResponse {
+    data: AdminTransaction[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+interface QueryTransactionsParams {
+    search?: string;
+    status?: string;
+    paymentMethod?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+}
+
 interface QueryPayoutsParams {
     search?: string;
     status?: string;
     page?: number;
     limit?: number;
+}
+
+interface CreatorPerformanceData {
+    creatorId: string;
+    creatorName: string;
+    totalViews: number;
+    totalRevenue: number;
+    contentCount: number;
+    engagement: number;
+    category: string;
+}
+
+interface CreatorPerformanceResponse {
+    success: boolean;
+    data: CreatorPerformanceData[];
+}
+
+interface AnalyticsOverviewData {
+    totalRevenue: number;
+    revenueGrowth: number;
+    activeCreators: number;
+    creatorsGrowth: number;
+    contentUploaded: number;
+    contentGrowth: number;
+    avgTransactionValue: number;
+}
+
+interface AnalyticsOverviewResponse {
+    success: boolean;
+    data: AnalyticsOverviewData;
 }
 
 export const api = createApi({
@@ -688,14 +751,16 @@ export const api = createApi({
         // Email verification endpoints
         verifyEmail: build.mutation<VerifyEmailResponse, string>({
             query: (token) => ({
-                url: `/api/auth/verify-email/${token}`,
-                method: 'GET',
+                url: '/api/auth/verify-email',
+                method: 'POST',
+                body: { token },
             }),
         }),
-        resendVerificationEmail: build.mutation<ResendVerificationResponse, void>({
-            query: () => ({
+        resendVerificationEmail: build.mutation<ResendVerificationResponse, { email: string }>({
+            query: (body) => ({
                 url: '/api/auth/resend-verification',
                 method: 'POST',
+                body,
             }),
         }),
         // Veriff endpoints
@@ -1024,12 +1089,40 @@ export const api = createApi({
             },
             providesTags: ['Dashboard'],
         }),
+        getAdminTransactions: build.query<AdminTransactionsResponse, QueryTransactionsParams>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.search) searchParams.append('search', params.search);
+                if (params.status) searchParams.append('status', params.status);
+                if (params.paymentMethod) searchParams.append('paymentMethod', params.paymentMethod);
+                if (params.startDate) searchParams.append('startDate', params.startDate);
+                if (params.endDate) searchParams.append('endDate', params.endDate);
+                if (params.page) searchParams.append('page', params.page.toString());
+                if (params.limit) searchParams.append('limit', params.limit.toString());
+                return `/api/admin/payments/transactions?${searchParams.toString()}`;
+            },
+            providesTags: ['Dashboard'],
+        }),
         processPayout: build.mutation<{ success: boolean; message: string }, { payoutId: string }>({
             query: ({ payoutId }) => ({
                 url: `/api/admin/payouts/${payoutId}/process`,
                 method: 'POST',
             }),
             invalidatesTags: ['Dashboard'],
+        }),
+        // Admin reports endpoints
+        getCreatorPerformance: build.query<CreatorPerformanceResponse, { limit?: number; sortBy?: 'revenue' | 'views' | 'engagement' }>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.limit) searchParams.append('limit', params.limit.toString());
+                if (params.sortBy) searchParams.append('sortBy', params.sortBy);
+                return `/api/admin/reports/creator-performance?${searchParams.toString()}`;
+            },
+            providesTags: ['Dashboard'],
+        }),
+        getAnalyticsOverview: build.query<AnalyticsOverviewResponse, void>({
+            query: () => '/api/admin/reports/analytics-overview',
+            providesTags: ['Dashboard'],
         }),
     }),
 });
@@ -1100,6 +1193,11 @@ export const {
     useGetPaymentStatsQuery,
     useGetPayoutsQuery,
     useProcessPayoutMutation,
+    // Admin transaction hooks
+    useGetAdminTransactionsQuery,
+    // Admin reports hooks
+    useGetCreatorPerformanceQuery,
+    useGetAnalyticsOverviewQuery,
 } = api;
 
 export default api;

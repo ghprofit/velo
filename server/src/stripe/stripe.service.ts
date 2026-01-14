@@ -17,9 +17,26 @@ export class StripeService {
 
     this.stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2025-11-17.clover',
+      timeout: 30000, // Bug #24 fix: 30 seconds timeout
+      maxNetworkRetries: 2, // Bug #24 fix: Retry failed requests twice
     });
 
-    this.logger.log('Stripe service initialized');
+    this.logger.log('✓ Stripe SDK initialized with 30s timeout and 2 retries');
+
+    // Validate webhook secret at startup (Bug #2)
+    const webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
+
+    if (!webhookSecret) {
+      this.logger.error('⚠️  CRITICAL: STRIPE_WEBHOOK_SECRET is not configured!');
+      this.logger.error('⚠️  Webhook signature verification will FAIL!');
+      this.logger.error('⚠️  This is a SECURITY VULNERABILITY!');
+    } else if (!webhookSecret.startsWith('whsec_')) {
+      this.logger.warn(
+        'STRIPE_WEBHOOK_SECRET format may be invalid (should start with "whsec_")',
+      );
+    } else {
+      this.logger.log('✓ STRIPE_WEBHOOK_SECRET configured correctly');
+    }
   }
 
   /**
@@ -44,8 +61,7 @@ export class StripeService {
       return paymentIntent;
     } catch (error) {
       this.logger.error('Failed to create payment intent:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new BadRequestException(`Failed to create payment intent: ${errorMessage}`);
+      throw new BadRequestException('Failed to create payment intent');
     }
   }
 

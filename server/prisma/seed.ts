@@ -1,34 +1,24 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
 import { nanoid } from 'nanoid';
-import { config } from 'dotenv';
 
-// Load environment variables
-config();
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting database seeding with realistic data...');
 
   // Clear existing data (in correct order to avoid foreign key constraints)
   console.log('Clearing existing data...');
-  try { await prisma.notification.deleteMany(); } catch (e) { console.log('Notifications table not found, skipping...'); }
-  try { await prisma.supportTicket.deleteMany(); } catch (e) { console.log('Support tickets table not found, skipping...'); }
-  try { await prisma.contentView.deleteMany(); } catch (e) { console.log('Content views table not found, skipping...'); }
-  try { await prisma.purchase.deleteMany(); } catch (e) { console.log('Purchases table not found, skipping...'); }
-  try { await prisma.payout.deleteMany(); } catch (e) { console.log('Payouts table not found, skipping...'); }
-  try { await prisma.buyerSession.deleteMany(); } catch (e) { console.log('Buyer sessions table not found, skipping...'); }
-  try { await prisma.contentItem.deleteMany(); } catch (e) { console.log('Content items table not found, skipping...'); }
-  try { await prisma.content.deleteMany(); } catch (e) { console.log('Content table not found, skipping...'); }
-  try { await prisma.creatorProfile.deleteMany(); } catch (e) { console.log('Creator profiles table not found, skipping...'); }
-  try { await prisma.user.deleteMany(); } catch (e) { console.log('Users table not found, skipping...'); }
+  await prisma.notification.deleteMany();
+  await prisma.supportTicket.deleteMany();
+  await prisma.contentView.deleteMany();
+  await prisma.purchase.deleteMany();
+  await prisma.payout.deleteMany();
+  await prisma.buyerSession.deleteMany();
+  await prisma.contentItem.deleteMany();
+  await prisma.content.deleteMany();
+  await prisma.creatorProfile.deleteMany();
+  await prisma.user.deleteMany();
 
   // Hash password for test users
   const hashedPassword = await bcrypt.hash('Test123!', 10);
@@ -763,11 +753,94 @@ async function main() {
   console.log('  Creator 2: creator2@test.com (password: Test123!)');
   console.log('    - Alex Martinez, Fitness content');
   console.log(`    - ${creator2Purchases.length} purchases, $${creator2Purchases.reduce((s, p) => s + p.amount, 0).toFixed(2)} revenue`);
+import { config } from 'dotenv';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
+import * as bcrypt from 'bcryptjs';
 
+// Load environment variables
+config();
+
+// Parse and rebuild DATABASE_URL with proper encoding if needed
+function getEncodedDatabaseUrl(): string {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error('DATABASE_URL is not defined in environment variables');
+  }
+
+  console.log('Processing DATABASE_URL...');
+
+  try {
+    // Try parsing as URL - if it fails, it has unencoded characters
+    new URL(dbUrl);
+    console.log('DATABASE_URL is already properly formatted');
+    return dbUrl; // Already properly encoded
+  } catch (error) {
+    console.log('DATABASE_URL has encoding issues, attempting to fix...');
+
+    // More robust parsing: postgresql://user:password@host:port/database
+    // We need to handle passwords that might contain @ or other special chars
+    const protocolMatch = dbUrl.match(/^(postgresql:\/\/)/);
+    if (!protocolMatch) {
+      console.error('Invalid DATABASE_URL format: missing postgresql:// protocol');
+      return dbUrl;
+    }
+
+    // Remove protocol
+    const withoutProtocol = dbUrl.substring(protocolMatch[0].length);
+
+    // Split by the LAST @ to separate auth from host
+    const lastAtIndex = withoutProtocol.lastIndexOf('@');
+    if (lastAtIndex === -1) {
+      console.error('Invalid DATABASE_URL format: missing @ separator');
+      return dbUrl;
+    }
+
+    const authPart = withoutProtocol.substring(0, lastAtIndex);
+    const hostPart = withoutProtocol.substring(lastAtIndex + 1);
+
+    // Split auth into user:password (only split on FIRST colon)
+    const firstColonIndex = authPart.indexOf(':');
+    if (firstColonIndex === -1) {
+      console.error('Invalid DATABASE_URL format: missing password');
+      return dbUrl;
+    }
+
+    const user = authPart.substring(0, firstColonIndex);
+    const password = authPart.substring(firstColonIndex + 1);
+
+    // Parse host:port/database
+    const hostMatch = hostPart.match(/^([^:]+):(\d+)\/(.+)$/);
+    if (!hostMatch) {
+      console.error('Invalid DATABASE_URL format: invalid host/port/database format');
+      return dbUrl;
+    }
+
+    const [, host, port, database] = hostMatch;
+
+    // Encode username and password
+    const encodedUser = encodeURIComponent(user);
+    const encodedPassword = encodeURIComponent(password);
+
+    const newUrl = `postgresql://${encodedUser}:${encodedPassword}@${host}:${port}/${database}`;
+    console.log('DATABASE_URL encoding complete');
+    return newUrl;
+  }
+}
+
+const databaseUrl = getEncodedDatabaseUrl();
+const pool = new Pool({
+  connectionString: databaseUrl,
+});
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+
+async function main() {
   console.log('Seeding database...');
 
   // Hash password
-  const adminHashedPassword = await bcrypt.hash('Admin@123', 10);
+  const hashedPassword = await bcrypt.hash('Admin@123', 10);
 
   // Create Super Admin
   const superAdmin = await prisma.user.upsert({
@@ -775,7 +848,7 @@ async function main() {
     update: {},
     create: {
       email: 'superadmin@velo.com',
-      password: adminHashedPassword,
+      password: hashedPassword,
       role: 'SUPER_ADMIN',
       emailVerified: true,
       isActive: true,
@@ -790,7 +863,7 @@ async function main() {
     update: {},
     create: {
       email: 'admin@velo.com',
-      password: adminHashedPassword,
+      password: hashedPassword,
       role: 'ADMIN',
       emailVerified: true,
       isActive: true,
@@ -805,7 +878,7 @@ async function main() {
     update: {},
     create: {
       email: 'creator@velo.com',
-      password: adminHashedPassword,
+      password: hashedPassword,
       role: 'CREATOR',
       emailVerified: true,
       isActive: true,

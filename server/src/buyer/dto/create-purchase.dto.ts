@@ -13,7 +13,7 @@ export class CreatePurchaseDto {
   @IsEmail()
   email?: string;
 
-  @IsOptional()
+  @IsNotEmpty() // Bug #13 fix: Make fingerprint REQUIRED
   @IsString()
-  fingerprint?: string;
+  fingerprint: string;
 }

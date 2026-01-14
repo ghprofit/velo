@@ -5,12 +5,22 @@ import { CreatorsController } from './creators.controller';
 import { CreatorsService } from './creators.service';
 import { ContentController } from './content.controller';
 import { ContentService } from './content.service';
+import { PaymentsController } from './payments.controller';
+import { PaymentsService } from './payments.service';
+import { SupportController } from './support.controller';
+import { SupportService } from './support.service';
+import { NotificationsController } from './notifications.controller';
+import { AdminNotificationsService } from './notifications.service';
+import { ReportsController } from './reports.controller';
+import { ReportsService } from './reports.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { EmailModule } from '../email/email.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [AdminController, CreatorsController, ContentController],
-  providers: [AdminService, CreatorsService, ContentService],
-  exports: [AdminService, CreatorsService, ContentService],
+  imports: [PrismaModule, EmailModule, NotificationsModule],
+  controllers: [AdminController, CreatorsController, ContentController, PaymentsController, SupportController, NotificationsController, ReportsController],
+  providers: [AdminService, CreatorsService, ContentService, PaymentsService, SupportService, AdminNotificationsService, ReportsService],
+  exports: [AdminService, CreatorsService, ContentService, PaymentsService, SupportService, AdminNotificationsService, ReportsService],
 })
 export class AdminModule {}

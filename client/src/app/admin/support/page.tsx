@@ -2,19 +2,29 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import LogoutModal from '@/components/LogoutModal';
 import AdminSidebar from '@/components/AdminSidebar';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function SupportReportsPage() {
   const router = useRouter();
   const [activeTab] = useState('support-reports');
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [issueType, setIssueType] = useState('All Types');
   const [status, setStatus] = useState('All Status');
   const [priority, setPriority] = useState('All Priorities');
   const [assignedTo, setAssignedTo] = useState('All Admins');
   const [, setShowTicketModal] = useState(false);
+
+  // Sample data for ticket volume trend
+  const ticketVolumeData = [
+    { day: 'Day 1', tickets: 12 },
+    { day: 'Day 5', tickets: 18 },
+    { day: 'Day 10', tickets: 14 },
+    { day: 'Day 15', tickets: 22 },
+    { day: 'Day 20', tickets: 16 },
+    { day: 'Day 25', tickets: 28 },
+    { day: 'Day 30', tickets: 24 },
+  ];
 
 
   const tickets = [
@@ -72,7 +82,7 @@ export default function SupportReportsPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto bg-gray-50 lg:ml-0">
@@ -167,8 +177,44 @@ export default function SupportReportsPage() {
           {/* Ticket Volume Trend Chart */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8 mb-6 lg:mb-8">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">Ticket Volume Trend (Last 30 Days)</h2>
-            <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-              <p className="text-gray-500">Chart visualization placeholder</p>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={ticketVolumeData}>
+                  <defs>
+                    <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fontSize: 12 }}
+                    stroke="#9ca3af"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="#9ca3af"
+                    label={{ value: 'Tickets', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }}
+                  />
+                  <Tooltip
+                    formatter={(value) => [`${value}`, 'Tickets']}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="tickets"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorTickets)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
@@ -324,16 +370,6 @@ export default function SupportReportsPage() {
           </div>
         </div>
       </main>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
-          setShowLogoutModal(false);
-          router.push('/login');
-        }}
-      />
     </div>
   );
 }

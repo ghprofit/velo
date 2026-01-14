@@ -1,16 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import { earningsApi } from '@/lib/api-client';
 
 interface RequestPayoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   availableBalance: number;
+  onSuccess?: () => void;
 }
 
-export default function RequestPayoutModal({ isOpen, onClose, availableBalance }: RequestPayoutModalProps) {
+export default function RequestPayoutModal({ isOpen, onClose, availableBalance, onSuccess }: RequestPayoutModalProps) {
   const [amount, setAmount] = useState('');
   const [confirmChecked, setConfirmChecked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleMaxClick = () => {
     setAmount(availableBalance.toFixed(2));
@@ -19,19 +23,52 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance }
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9.]/g, '');
     setAmount(value);
+    setError(null);
   };
 
   const processingFee = parseFloat(amount) > 0 ? 1.00 : 0;
   const netPayout = parseFloat(amount || '0') - processingFee;
 
-  const handleConfirm = () => {
-    // Handle payout request
-    console.log('Payout requested:', {
-      amount: parseFloat(amount),
-      netPayout,
-      processingFee
-    });
-    onClose();
+  const validateAmount = () => {
+    const numAmount = parseFloat(amount);
+    if (!amount || isNaN(numAmount)) {
+      setError('Please enter a valid amount');
+      return false;
+    }
+    if (numAmount < 100) {
+      setError('Minimum payout amount is $100');
+      return false;
+    }
+    if (numAmount > availableBalance) {
+      setError(`Amount exceeds available balance ($${availableBalance.toFixed(2)})`);
+      return false;
+    }
+    if (!confirmChecked) {
+      setError('Please confirm the payout details');
+      return false;
+    }
+    return true;
+  };
+
+  const handleConfirm = async () => {
+    if (!validateAmount()) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await earningsApi.requestPayout(parseFloat(amount));
+      onClose();
+      onSuccess?.();
+      // Reset form
+      setAmount('');
+      setConfirmChecked(false);
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(errorMessage || 'Failed to request payout. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -96,8 +133,11 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance }
               </button>
             </div>
             <p className="mt-2 text-sm text-gray-500">
-              Enter the amount you wish to withdraw (minimum $25.00)
+              Enter the amount you wish to withdraw (minimum $100.00)
             </p>
+            {error && (
+              <p className="mt-2 text-sm text-red-600">{error}</p>
+            )}
           </div>
 
           {/* Select Payout Method */}
@@ -202,13 +242,25 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance }
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!confirmChecked || parseFloat(amount || '0') < 25}
+            disabled={!confirmChecked || parseFloat(amount || '0') < 100 || isLoading}
             className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            Confirm & Request Payout
+            {isLoading ? (
+              <>
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Confirm & Request Payout
+              </>
+            )}
           </button>
         </div>
       </div>

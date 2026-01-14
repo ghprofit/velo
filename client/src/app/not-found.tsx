@@ -9,7 +9,7 @@ export default function NotFound() {
         <div className="mb-8">
           <Image
             src="/assets/logo_svgs/Secondary_Logo(white).svg"
-            alt="Velo"
+            alt="Velolink Logo"
             className="h-12 mx-auto"
           />
         </div>

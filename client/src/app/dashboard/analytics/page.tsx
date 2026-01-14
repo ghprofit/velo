@@ -249,9 +249,9 @@ export default function AnalyticsPage() {
               <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setChartTab('revenue')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`tab-3d px-4 py-2 rounded-lg text-sm font-medium ${
                     chartTab === 'revenue'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'active bg-indigo-600 text-white'
                       : 'text-gray-700 hover:text-gray-900'
                   }`}
                 >
@@ -259,9 +259,9 @@ export default function AnalyticsPage() {
                 </button>
                 <button
                   onClick={() => setChartTab('views')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`tab-3d px-4 py-2 rounded-lg text-sm font-medium ${
                     chartTab === 'views'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'active bg-indigo-600 text-white'
                       : 'text-gray-700 hover:text-gray-900'
                   }`}
                 >
@@ -269,9 +269,9 @@ export default function AnalyticsPage() {
                 </button>
                 <button
                   onClick={() => setChartTab('unlocks')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`tab-3d px-4 py-2 rounded-lg text-sm font-medium ${
                     chartTab === 'unlocks'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'active bg-indigo-600 text-white'
                       : 'text-gray-700 hover:text-gray-900'
                   }`}
                 >

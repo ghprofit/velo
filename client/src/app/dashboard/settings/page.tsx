@@ -151,9 +151,9 @@ export default function SettingsPage() {
                 <button
                   key={tab}
                   onClick={() => setSettingsTab(tab)}
-                  className={`pb-4 px-1 border-b-2 font-medium transition-colors whitespace-nowrap ${
+                  className={`tab-3d pb-4 px-4 sm:px-6 border-b-2 font-medium whitespace-nowrap rounded-t-xl ${
                     settingsTab === tab
-                      ? 'border-indigo-600 text-indigo-600'
+                      ? 'active border-indigo-600 text-indigo-600'
                       : tab === 'Danger Zone'
                       ? 'border-transparent text-red-600 hover:text-red-700'
                       : 'border-transparent text-gray-600 hover:text-gray-900'

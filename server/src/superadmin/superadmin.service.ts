@@ -6,12 +6,18 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { UpdateAdminDto } from './dto/update-admin.dto';
 
 @Injectable()
 export class SuperadminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+    private config: ConfigService,
+  ) {}
 
   async getAllAdmins(search?: string, role?: string) {
     const where: any = {
@@ -95,6 +101,18 @@ export class SuperadminService {
           adminProfile: true,
         },
       });
+
+      // Send welcome email to new admin
+      try {
+        const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
+        await this.emailService.sendEmail({
+          to: dto.email,
+          subject: 'Welcome to VeloLink Admin',
+          html: `<h1>Welcome ${dto.fullName}!</h1><p>Your admin account has been created with the role: ${dto.role}.</p><p>Please login at: <a href="${clientUrl}/login">${clientUrl}/login</a></p>`,
+        });
+      } catch (error) {
+        console.error('Failed to send admin welcome email:', error);
+      }
 
       return this.formatAdminResponse(user);
     } catch (error) {
@@ -213,7 +231,16 @@ export class SuperadminService {
       },
     });
 
-    // TODO: Send password reset email
+    // Send password reset email
+    try {
+      await this.emailService.sendEmail({
+        to: admin.email,
+        subject: 'Password Reset Required',
+        html: `Your password has been reset by a system administrator. You must change your password on your next login.`,
+      });
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
+    }
 
     return { message: 'Password reset forced successfully' };
   }

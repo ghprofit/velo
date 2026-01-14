@@ -11,6 +11,8 @@ import {
 import { Request } from 'express';
 import { StripeService } from './stripe.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('stripe')
 export class StripeController {
@@ -19,6 +21,8 @@ export class StripeController {
   constructor(
     private stripeService: StripeService,
     private prisma: PrismaService,
+    private emailService: EmailService,
+    private config: ConfigService,
   ) {}
 
   /**
@@ -32,31 +36,42 @@ export class StripeController {
   }
 
   /**
-   * Handle Stripe webhooks
+   * Handle Stripe webhooks (Bug #2 - improved error handling)
    */
   @Post('webhook')
   async handleWebhook(
     @Headers('stripe-signature') signature: string,
     @Req() request: RawBodyRequest<Request>,
-  ) {
-    if (!signature) {
-      throw new BadRequestException('Missing stripe-signature header');
+  ): Promise<{ received: boolean }> {
+    const rawBody = request.rawBody;
+
+    if (!rawBody) {
+      this.logger.error('No raw body found in webhook request');
+      throw new BadRequestException('Invalid request body');
     }
 
-    const rawBody = request.rawBody;
-    if (!rawBody) {
-      throw new BadRequestException('Missing request body');
+    if (!signature) {
+      this.logger.error('No stripe-signature header found');
+      throw new BadRequestException('Missing signature header');
     }
 
     let event;
     try {
       event = this.stripeService.constructWebhookEvent(rawBody, signature);
     } catch (error) {
-      this.logger.error('Webhook signature verification failed:', error);
-      throw new BadRequestException('Invalid signature');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Webhook signature verification failed:', errorMessage);
+
+      // Check if it's a missing secret error
+      if (errorMessage?.includes('not configured')) {
+        this.logger.error('CRITICAL: STRIPE_WEBHOOK_SECRET is not configured!');
+      }
+
+      // Return 400 to tell Stripe the webhook failed
+      throw new BadRequestException('Invalid webhook signature');
     }
 
-    this.logger.log(`Received webhook event: ${event.type}`);
+    this.logger.log(`Webhook received: ${event.type}`);
 
     try {
       switch (event.type) {
@@ -85,67 +100,280 @@ export class StripeController {
   }
 
   /**
-   * Handle successful payment
+   * Handle successful payment (webhook-based confirmation)
+   * Uses idempotency keys and transactions to prevent race conditions (Bug #1, #10)
    */
   private async handlePaymentIntentSucceeded(paymentIntent: any) {
     this.logger.log(`Payment succeeded: ${paymentIntent.id}`);
 
-    // Find the purchase by payment intent ID
-    const purchase = await this.prisma.purchase.findUnique({
-      where: { paymentIntentId: paymentIntent.id },
-      include: {
-        content: {
-          include: {
-            creator: true,
-          },
+    const idempotencyKey = `webhook_${paymentIntent.id}_${Date.now()}`;
+
+    // Variable to store purchase data for email notifications
+    let purchaseData: any = null;
+
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          let purchase = await tx.purchase.findUnique({
+            where: { paymentIntentId: paymentIntent.id },
+            include: {
+              content: {
+                include: {
+                  creator: {
+                    include: { user: true },
+                  },
+                },
+              },
+              buyerSession: true,
+            },
+          });
+
+          if (!purchase) {
+            this.logger.warn(
+              `Purchase not found for payment intent: ${paymentIntent.id}`,
+            );
+
+            // FALLBACK: Try to create purchase from webhook metadata
+            const { contentId, sessionId } = paymentIntent.metadata || {};
+
+            if (!contentId || !sessionId) {
+              this.logger.error(
+                `Cannot create purchase from webhook - missing metadata. ContentId: ${contentId}, SessionId: ${sessionId}`,
+              );
+              return;
+            }
+
+            this.logger.log(
+              `Attempting to create purchase from webhook for payment intent: ${paymentIntent.id}`,
+            );
+
+            try {
+              // Get content and session details
+              const [content, buyerSession] = await Promise.all([
+                tx.content.findUnique({
+                  where: { id: contentId },
+                  include: {
+                    creator: {
+                      include: { user: true },
+                    },
+                  },
+                }),
+                tx.buyerSession.findUnique({ where: { id: sessionId } }),
+              ]);
+
+              if (!content || !buyerSession) {
+                this.logger.error(
+                  `Cannot create purchase - content or session not found. Content: ${!!content}, Session: ${!!buyerSession}`,
+                );
+                return;
+              }
+
+              // Generate access token
+              const crypto = require('crypto');
+              const accessToken = crypto.randomBytes(32).toString('hex');
+
+              // Calculate amounts
+              const amount = paymentIntent.amount / 100; // Convert from cents
+              const basePrice = content.price; // Use content price as base
+
+              // Create purchase record from webhook
+              purchase = await tx.purchase.create({
+                data: {
+                  contentId,
+                  buyerSessionId: sessionId,
+                  amount,
+                  basePrice,
+                  currency: paymentIntent.currency.toUpperCase(),
+                  paymentProvider: 'STRIPE',
+                  paymentIntentId: paymentIntent.id,
+                  status: 'COMPLETED',
+                  transactionId: paymentIntent.id,
+                  completedBy: 'WEBHOOK',
+                  completedAt: new Date(),
+                  webhookProcessedAt: new Date(),
+                  completionIdempotencyKey: idempotencyKey,
+                  accessToken,
+                  purchaseFingerprint: buyerSession.fingerprint,
+                  trustedFingerprints: buyerSession.fingerprint
+                    ? [buyerSession.fingerprint]
+                    : [],
+                  purchaseIpAddress: buyerSession.ipAddress,
+                },
+                include: {
+                  content: {
+                    include: {
+                      creator: {
+                        include: { user: true },
+                      },
+                    },
+                  },
+                  buyerSession: true,
+                },
+              });
+
+              this.logger.log(
+                `✅ Purchase created from webhook: ${purchase.id} for payment intent: ${paymentIntent.id}`,
+              );
+
+              // Update content stats
+              await tx.content.update({
+                where: { id: contentId },
+                data: {
+                  purchaseCount: { increment: 1 },
+                  totalRevenue: { increment: amount },
+                },
+              });
+
+              // Update creator earnings - 90% of base price
+              const creatorEarnings = basePrice * 0.9;
+
+              await tx.creatorProfile.update({
+                where: { id: content.creatorId },
+                data: {
+                  totalEarnings: { increment: creatorEarnings },
+                  totalPurchases: { increment: 1 },
+                },
+              });
+
+              // Store purchase data for email notifications
+              purchaseData = {
+                id: purchase.id,
+                buyerEmail: buyerSession.email,
+                contentTitle: content.title,
+                contentId: content.id,
+                amount,
+                accessToken,
+                creatorEmail: content.creator.user.email,
+                creatorName: content.creator.displayName,
+                creatorEarnings,
+              };
+
+              this.logger.log(
+                `Purchase ${purchase.id} created and confirmed by WEBHOOK FALLBACK with idempotency key ${idempotencyKey}`,
+              );
+
+              // Early return since we've already processed everything
+              return;
+            } catch (createError) {
+              this.logger.error(
+                `Failed to create purchase from webhook:`,
+                createError,
+              );
+              return;
+            }
+          }
+
+          // Idempotency check - prevent duplicate processing
+          if (purchase.status === 'COMPLETED') {
+            this.logger.log(
+              `Purchase ${purchase.id} already completed by ${purchase.completedBy}`,
+            );
+            return;
+          }
+
+          // Update purchase status
+          await tx.purchase.update({
+            where: { id: purchase.id },
+            data: {
+              status: 'COMPLETED',
+              transactionId: paymentIntent.id,
+              completionIdempotencyKey: idempotencyKey,
+              completedBy: 'WEBHOOK',
+              completedAt: new Date(),
+              webhookProcessedAt: new Date(),
+            },
+          });
+
+          // Update content stats
+          await tx.content.update({
+            where: { id: purchase.contentId },
+            data: {
+              purchaseCount: { increment: 1 },
+              totalRevenue: { increment: purchase.amount },
+            },
+          });
+
+          // Update creator earnings - 90% of base price
+          // For new purchases: basePrice exists, creator gets 90% of basePrice
+          // For old purchases (migration): basePrice is null, use old calculation (85% of amount)
+          const creatorEarnings = purchase.basePrice
+            ? purchase.basePrice * 0.9
+            : purchase.amount * 0.85;
+
+          await tx.creatorProfile.update({
+            where: { id: purchase.content.creatorId },
+            data: {
+              totalEarnings: { increment: creatorEarnings },
+              totalPurchases: { increment: 1 },
+            },
+          });
+
+          // Store purchase data for email notifications
+          purchaseData = {
+            id: purchase.id,
+            buyerEmail: purchase.buyerSession?.email,
+            contentTitle: purchase.content.title,
+            contentId: purchase.content.id,
+            amount: purchase.amount,
+            accessToken: purchase.accessToken,
+            creatorEmail: purchase.content.creator.user.email,
+            creatorName: purchase.content.creator.displayName,
+            creatorEarnings,
+          };
+
+          this.logger.log(
+            `Purchase ${purchase.id} confirmed by WEBHOOK with idempotency key ${idempotencyKey}`,
+          );
         },
-      },
-    });
+        { maxWait: 5000, timeout: 10000 },
+      );
 
-    if (!purchase) {
-      this.logger.warn(`Purchase not found for payment intent: ${paymentIntent.id}`);
-      return;
+      // Send email notifications (after transaction succeeds)
+      if (purchaseData) {
+        // Send purchase receipt to buyer
+        if (purchaseData.buyerEmail) {
+          try {
+            const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
+            await this.emailService.sendPurchaseReceipt(
+              purchaseData.buyerEmail,
+              {
+                buyer_email: purchaseData.buyerEmail,
+                content_title: purchaseData.contentTitle,
+                amount: purchaseData.amount.toFixed(2),
+                date: new Date().toLocaleDateString(),
+                access_link: `${clientUrl}/c/${purchaseData.contentId}?token=${purchaseData.accessToken}`,
+                transaction_id: paymentIntent.id,
+              },
+            );
+            this.logger.log(`Purchase receipt sent to ${purchaseData.buyerEmail}`);
+          } catch (error) {
+            this.logger.error('Failed to send purchase receipt:', error);
+          }
+        }
+
+        // Send sale notification to creator
+        try {
+          await this.emailService.sendCreatorSaleNotification(
+            purchaseData.creatorEmail,
+            {
+              creator_name: purchaseData.creatorName,
+              content_title: purchaseData.contentTitle,
+              amount: purchaseData.creatorEarnings.toFixed(2),
+              date: new Date().toLocaleDateString(),
+            },
+          );
+          this.logger.log(`Sale notification sent to creator ${purchaseData.creatorEmail}`);
+        } catch (error) {
+          this.logger.error('Failed to send creator sale notification:', error);
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to process payment_intent.succeeded webhook:`,
+        error,
+      );
+      throw error;
     }
-
-    // Check if already completed (to avoid double-processing)
-    if (purchase.status === 'COMPLETED') {
-      this.logger.log(`Purchase ${purchase.id} already completed, skipping webhook processing`);
-      return;
-    }
-
-    // Update purchase status to COMPLETED
-    await this.prisma.purchase.update({
-      where: { id: purchase.id },
-      data: {
-        status: 'COMPLETED',
-        transactionId: paymentIntent.id,
-      },
-    });
-
-    // Update content stats
-    await this.prisma.content.update({
-      where: { id: purchase.contentId },
-      data: {
-        purchaseCount: { increment: 1 },
-        totalRevenue: { increment: purchase.amount },
-      },
-    });
-
-    // Update creator earnings - 90% of base price
-    // For new purchases: basePrice exists, creator gets 90% of basePrice
-    // For old purchases (migration): basePrice is null, use old calculation (85% of amount)
-    const creatorEarnings = purchase.basePrice
-      ? purchase.basePrice * 0.90  // New pricing: 90% of base price
-      : purchase.amount * 0.85;    // Legacy purchases: 85% of amount
-    await this.prisma.creatorProfile.update({
-      where: { id: purchase.content.creatorId },
-      data: {
-        totalEarnings: { increment: creatorEarnings },
-        totalPurchases: { increment: 1 },
-      },
-    });
-
-    this.logger.log(`Purchase ${purchase.id} completed successfully`);
   }
 
   /**
@@ -176,58 +404,97 @@ export class StripeController {
   }
 
   /**
-   * Handle refund
+   * Handle refund with validation and transaction support (Bug #7)
    */
   private async handleChargeRefunded(charge: any) {
-    this.logger.log(`Charge refunded: ${charge.id}`);
+    this.logger.log(`Processing refund for charge: ${charge.id}`);
 
-    // Find the purchase by payment intent ID
-    const purchase = await this.prisma.purchase.findUnique({
-      where: { paymentIntentId: charge.payment_intent },
-      include: {
-        content: {
-          include: {
-            creator: true,
-          },
-        },
-      },
-    });
+    const refundAmount = (charge.amount_refunded || 0) / 100;
 
-    if (!purchase) {
-      this.logger.warn(`Purchase not found for charge: ${charge.id}`);
+    if (refundAmount <= 0) {
+      this.logger.warn(`Invalid refund amount: ${refundAmount}`);
       return;
     }
 
-    // Update purchase status to REFUNDED
-    await this.prisma.purchase.update({
-      where: { id: purchase.id },
-      data: {
-        status: 'REFUNDED',
-      },
-    });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const purchase = await tx.purchase.findUnique({
+          where: { paymentIntentId: charge.payment_intent },
+          include: {
+            content: {
+              include: { creator: true },
+            },
+          },
+        });
 
-    // Reverse content stats
-    await this.prisma.content.update({
-      where: { id: purchase.contentId },
-      data: {
-        purchaseCount: { decrement: 1 },
-        totalRevenue: { decrement: purchase.amount },
-      },
-    });
+        if (!purchase) {
+          this.logger.warn(
+            `Purchase not found for charge: ${charge.payment_intent}`,
+          );
+          return;
+        }
 
-    // Reverse creator earnings
-    // Use same logic as earnings calculation to properly reverse
-    const creatorEarnings = purchase.basePrice
-      ? purchase.basePrice * 0.90  // New pricing: 90% of base price
-      : purchase.amount * 0.85;    // Legacy purchases: 85% of amount
-    await this.prisma.creatorProfile.update({
-      where: { id: purchase.content.creatorId },
-      data: {
-        totalEarnings: { decrement: creatorEarnings },
-        totalPurchases: { decrement: 1 },
-      },
-    });
+        // Calculate total refunded amount
+        const previouslyRefunded = purchase.refundedAmount || 0;
+        const totalRefunded = previouslyRefunded + refundAmount;
 
-    this.logger.log(`Purchase ${purchase.id} refunded successfully`);
+        // Validate refund amount doesn't exceed purchase amount (Bug #7)
+        if (totalRefunded > purchase.amount * 1.01) {
+          this.logger.error(
+            `Refund amount ${totalRefunded} exceeds purchase amount ${purchase.amount}`,
+          );
+          return;
+        }
+
+        // Determine if this is a full or partial refund (99% threshold)
+        const isFullRefund = totalRefunded >= purchase.amount * 0.99;
+
+        // Update purchase record
+        await tx.purchase.update({
+          where: { id: purchase.id },
+          data: {
+            status: isFullRefund ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+            refundedAmount: totalRefunded,
+            isFullyRefunded: isFullRefund,
+            isPartiallyRefunded: !isFullRefund && totalRefunded > 0,
+            refundedAt: purchase.refundedAt || new Date(),
+          },
+        });
+
+        // Only reverse stats for FULL refunds
+        if (isFullRefund && purchase.status === 'COMPLETED') {
+          // Reverse content stats
+          await tx.content.update({
+            where: { id: purchase.contentId },
+            data: {
+              purchaseCount: { decrement: 1 },
+              totalRevenue: { decrement: purchase.amount },
+            },
+          });
+
+          // Reverse creator earnings
+          const creatorEarnings = purchase.basePrice
+            ? purchase.basePrice * 0.9
+            : purchase.amount * 0.85;
+
+          await tx.creatorProfile.update({
+            where: { id: purchase.content.creatorId },
+            data: {
+              totalEarnings: { decrement: creatorEarnings },
+              totalPurchases: { decrement: 1 },
+            },
+          });
+
+          this.logger.log(`Full refund processed for purchase ${purchase.id}`);
+        } else {
+          this.logger.log(
+            `Partial refund (${refundAmount}) processed for purchase ${purchase.id}`,
+          );
+        }
+      });
+    } catch (error) {
+      this.logger.error('Failed to process refund:', error);
+      throw error;
+    }
   }
 }

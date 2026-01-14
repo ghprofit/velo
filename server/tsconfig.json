@@ -7,7 +7,7 @@
     "module": "commonjs",
     "target": "ES2021",
     "lib": ["ES2021"],
-    "types": ["node"],
+    "types": ["node", "multer"],
 
     // NestJS Decorator Support
     "experimentalDecorators": true,
@@ -21,7 +21,7 @@
     "incremental": true,
 
     // Module Resolution
-    "moduleResolution": "node",
+    "moduleResolution": "node10",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
@@ -57,9 +57,10 @@
     "dist",
     "test",
     "**/*spec.ts",
-    "prisma/**/*",
-    "**/examples/**",
+    "**/*example.ts",
+    "**/*examples*.ts",
     "src/recognition/**/*",
+    "prisma/**/*",
     "src/controllers/auth/*.ts",
     "src/controllers/buyer/*.ts",
     "src/controllers/verification/*.ts",

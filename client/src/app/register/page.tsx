@@ -5,6 +5,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { useRegister } from '@/hooks/useRegister';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { PageTransition } from '@/components/ui/PageTransition';
+import { staggerContainer, staggerItem, scaleInBounce } from '@/lib/animations';
+import { ProgressDots } from '@/components/ui/ProgressBar';
+import FloatingLogo from '@/components/FloatingLogo';
 
 const COUNTRIES = [
   { code: 'AF', name: 'Afghanistan' },
@@ -366,43 +371,115 @@ export default function RegisterPage() {
   const years = Array.from({ length: 100 }, (_, i) => currentYear - 18 - i);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white md:bg-gradient-to-br md:from-indigo-50 md:via-white md:to-cyan-50 flex flex-col py-0 md:py-12 px-0 md:px-6">
+    <PageTransition>
+      <main className="min-h-screen bg-gradient-playful-2 flex flex-col py-0 md:py-12 px-0 md:px-6 relative overflow-hidden">
+      {/* Floating Brand Logo */}
+      <FloatingLogo
+        position="top-left"
+        size={95}
+        animation="orbit"
+        opacity={0.10}
+      />
+
+      {/* Floating Decorative Elements */}
+      <motion.div
+        className="absolute top-20 left-10 w-48 h-48 bg-gradient-to-br from-purple-400/15 to-pink-400/15 rounded-full blur-3xl"
+        animate={{
+          x: [0, 80, -60, 0],
+          y: [0, -60, 40, 0],
+          scale: [1, 1.4, 0.7, 1],
+        }}
+        transition={{
+          duration: 12,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      <motion.div
+        className="absolute bottom-20 right-20 w-40 h-40 bg-gradient-to-br from-blue-400/12 to-cyan-400/12 rounded-full blur-2xl"
+        animate={{
+          x: [0, -70, 50, 0],
+          y: [0, 50, -35, 0],
+          scale: [1, 0.8, 1.3, 1],
+        }}
+        transition={{
+          duration: 10,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 1
+        }}
+      />
+      <motion.div
+        className="absolute top-1/2 right-1/4 w-32 h-32 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-xl"
+        animate={{
+          x: [0, 40, -30, 0],
+          y: [0, -40, 25, 0],
+          scale: [1, 1.2, 0.8, 1],
+        }}
+        transition={{
+          duration: 11,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2
+        }}
+      />
       {/* Mobile: Sticky Header */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 py-4 border-b border-gray-100 md:hidden">
         <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 py-6 md:py-0">
-        <div className="w-full max-w-lg">
+        <motion.div
+          className="w-full max-w-lg"
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+        >
           {/* Card Container */}
-          <div className="bg-white md:rounded-2xl md:shadow-xl p-6 md:p-10 lg:p-12 border-0 md:border md:border-gray-100">
+          <motion.div
+            variants={staggerItem}
+            className="bg-white md:rounded-2xl shadow-3d p-6 md:p-10 lg:p-12 border-0 md:border md:border-gray-100"
+          >
             {/* Logo (Desktop Only) */}
-            <div className="hidden md:flex justify-center mb-8">
+            <motion.div variants={staggerItem} className="hidden md:flex justify-center mb-8">
               <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-15"/>
-            </div>
+            </motion.div>
 
             {/* Title */}
-            <div className="text-center mb-8 md:mb-10">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Create Your Creator Account
-              </h1>
-            </div>
+            <motion.div variants={staggerItem} className="text-center mb-8 md:mb-10">
+              <motion.h1 
+                className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2"
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              >
+                Join the Creator Revolution! 🚀
+              </motion.h1>
+              <motion.p 
+                className="text-gray-600 text-sm md:text-base"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                Start your journey to connect with amazing buyers and share your content ✨
+              </motion.p>
+            </motion.div>
 
             {/* Mobile: Simplified Step Indicator (Dots) */}
-            <div className="flex md:hidden items-center justify-center gap-2 mb-6">
-              <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
-              <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-              <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-              <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-            </div>
+            <motion.div variants={staggerItem} className="flex md:hidden items-center justify-center mb-6">
+              <ProgressDots currentStep={1} totalSteps={4} color="indigo" />
+            </motion.div>
 
             {/* Desktop: Full Step Indicator */}
-            <div className="hidden md:flex items-center justify-center mb-6">
+            <motion.div variants={staggerItem} className="hidden md:flex items-center justify-center mb-6">
               <div className="flex items-center gap-3">
                 {/* Step 1 */}
-                <div className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold text-lg">
+                <motion.div
+                  variants={scaleInBounce}
+                  className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold text-lg shadow-lg"
+                >
                   1
-                </div>
+                </motion.div>
 
                 {/* Line */}
                 <div className="w-16 lg:w-20 h-0.5 bg-gray-300"></div>
@@ -428,11 +505,11 @@ export default function RegisterPage() {
                   4
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            <p className="text-center text-xs md:text-sm text-gray-600 mb-8 md:mb-10">
+            <motion.p variants={staggerItem} className="text-center text-xs md:text-sm text-gray-600 mb-8 md:mb-10">
               Step 1 of 4: Account Details
-            </p>
+            </motion.p>
 
             {/* Server Error Display */}
             {serverError && (
@@ -444,46 +521,48 @@ export default function RegisterPage() {
             {/* Form */}
             <form onSubmit={handleContinue} className="space-y-5">
               {/* Display Name */}
-              <div>
+              <motion.div variants={staggerItem}>
                 <label htmlFor="displayName" className="block text-sm font-medium text-gray-900 mb-2">
                   Creator Name (Display Name)
                 </label>
-                <input
+                <motion.input
                   id="displayName"
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   onBlur={() => handleBlur('displayName')}
                   placeholder="How you'll appear to viewers"
-                  className={`w-full h-12 px-4 text-base border-2 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
+                  className={`w-full h-12 px-4 text-base border-2 rounded-xl focus-glow outline-none transition-all ${
                     touched.displayName && errors.displayName
                       ? 'border-red-500 focus:border-red-500'
                       : 'border-gray-300 focus:border-indigo-500'
                   }`}
+                  animate={touched.displayName && errors.displayName ? { x: [0, -10, 10, -10, 10, 0], transition: { duration: 0.4 } } : {}}
                   required
                 />
                 {touched.displayName && errors.displayName && (
                   <p className="mt-1.5 text-sm text-red-600">{errors.displayName}</p>
                 )}
-              </div>
+              </motion.div>
 
               {/* First & Last Name - Stack on mobile, side-by-side on tablet+ */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium text-gray-900 mb-2">
                     First Name
                   </label>
-                  <input
+                  <motion.input
                     id="firstName"
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     onBlur={() => handleBlur('firstName')}
-                    className={`w-full h-12 px-4 text-base border-2 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
+                    className={`w-full h-12 px-4 text-base border-2 rounded-xl focus-glow outline-none transition-all ${
                       touched.firstName && errors.firstName
                         ? 'border-red-500 focus:border-red-500'
                         : 'border-gray-300 focus:border-indigo-500'
                     }`}
+                    animate={touched.firstName && errors.firstName ? { x: [0, -10, 10, -10, 10, 0], transition: { duration: 0.4 } } : {}}
                     required
                   />
                   {touched.firstName && errors.firstName && (
@@ -511,7 +590,7 @@ export default function RegisterPage() {
                     <p className="mt-1.5 text-sm text-red-600">{errors.lastName}</p>
                   )}
                 </div>
-              </div>
+              </motion.div>
 
               {/* Email Address */}
               <div>
@@ -793,16 +872,17 @@ export default function RegisterPage() {
                 </p>
               </div>
             </form>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
 
       {/* Mobile: Sticky Footer */}
       <footer className="sticky bottom-0 bg-white border-t border-gray-100 px-4 py-3 md:static md:border-0 md:mt-8">
         <p className="text-xs md:text-sm text-gray-500 text-center">
-          © 2025 Velo. All rights reserved.
+          © 2025 Velolink. All rights reserved.
         </p>
       </footer>
     </main>
+    </PageTransition>
   );
 }

@@ -160,7 +160,11 @@ export default function DashboardPage() {
               }`}
               onClick={() => setActiveTab(item.id)}
             >
-              {renderIcon(item.icon)}
+              <div className={`p-2 rounded-lg icon-3d-container ${
+                activeTab === item.id ? 'icon-3d-indigo' : 'bg-gray-100'
+              }`}>
+                {renderIcon(item.icon, activeTab === item.id ? 'w-5 h-5 text-white' : 'w-5 h-5')}
+              </div>
               <span>{item.label}</span>
             </Link>
           ))}
@@ -199,8 +203,12 @@ export default function DashboardPage() {
                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center ${stat.iconColor}`}>
-                    {renderIcon(stat.icon, 'w-6 h-6')}
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center icon-3d-container ${
+                    stat.icon === 'eye' ? 'icon-3d-blue' :
+                    stat.icon === 'dollar' ? 'icon-3d-green' :
+                    'icon-3d-purple'
+                  }`}>
+                    {renderIcon(stat.icon, 'w-6 h-6 text-white drop-shadow-lg')}
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">{stat.label}</p>

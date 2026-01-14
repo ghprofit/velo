@@ -2,14 +2,10 @@
 
 import { JSX, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import LogoutModal from '@/components/LogoutModal';
 import AdminSidebar from '@/components/AdminSidebar';
 
 export default function NotificationsPage() {
-  const router = useRouter();
   const [activeTab] = useState('notifications');
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sortOrder, setSortOrder] = useState('Newest → Oldest');
@@ -150,7 +146,7 @@ export default function NotificationsPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto lg:ml-0">
@@ -366,16 +362,6 @@ export default function NotificationsPage() {
           </div>
         </div>
       </main>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
-          setShowLogoutModal(false);
-          router.push('/login');
-        }}
-      />
     </div>
   );
 }

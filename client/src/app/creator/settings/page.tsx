@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authApi, payoutApi } from '@/lib/api-client';
+import FloatingLogo from '@/components/FloatingLogo';
 
 interface UserProfile {
   id: string;
@@ -343,7 +344,16 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8 relative">
+          {/* Floating Brand Logo */}
+          <FloatingLogo
+            position="center"
+            size={80}
+            animation="pulse"
+            opacity={0.05}
+            zIndex={-1}
+          />
+
           {/* Settings Tabs */}
           <div className="border-b border-gray-200 mb-6 sm:mb-8 -mx-4 sm:mx-0 px-4 sm:px-0">
             <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 overflow-x-auto scrollbar-hide pb-px">
@@ -355,9 +365,9 @@ export default function SettingsPage() {
                     setError('');
                     setSuccess('');
                   }}
-                  className={`pb-3 sm:pb-4 px-1 border-b-2 text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${
+                  className={`tab-3d pb-3 sm:pb-4 px-4 sm:px-6 border-b-2 text-sm sm:text-base font-medium whitespace-nowrap rounded-t-xl ${
                     settingsTab === tab
-                      ? 'border-indigo-600 text-indigo-600'
+                      ? 'active border-indigo-600 text-indigo-600'
                       : tab === 'Danger Zone'
                       ? 'border-transparent text-red-600 hover:text-red-700'
                       : 'border-transparent text-gray-600 hover:text-gray-900'

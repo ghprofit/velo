@@ -2,13 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import LogoutModal from '@/components/LogoutModal';
 import AdminSidebar from '@/components/AdminSidebar';
 
 export default function ReportedContentDetailPage() {
   const router = useRouter();
   const [activeTab] = useState('reported-content');
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [status, setStatus] = useState('Pending');
   const [internalNote, setInternalNote] = useState('');
 
@@ -23,7 +21,7 @@ export default function ReportedContentDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <AdminSidebar activeTab={activeTab} onLogout={() => setShowLogoutModal(true)} />
+      <AdminSidebar activeTab={activeTab} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto bg-gray-50 lg:ml-0">
@@ -262,16 +260,6 @@ export default function ReportedContentDetailPage() {
           </div>
         </div>
       </main>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={() => {
-          setShowLogoutModal(false);
-          router.push('/login');
-        }}
-      />
     </div>
   );
 }

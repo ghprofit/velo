@@ -4,6 +4,7 @@ import React, { useState, useEffect, JSX } from 'react';
 import Link from 'next/link';
 import { analyticsApi } from '@/lib/api-client';
 import Image from 'next/image';
+import FloatingLogo from '@/components/FloatingLogo';
 
 interface OverviewStats {
   totalRevenue: number;
@@ -194,50 +195,81 @@ export default function AnalyticsPage() {
     return String.fromCodePoint(...codePoints);
   };
 
-  // Get device icon
+  // Get device icon with 3D effect
   const getDeviceIcon = (device: string) => {
-    switch (device.toLowerCase()) {
+    const deviceLower = device.toLowerCase();
+    const gradientClass =
+      deviceLower === 'desktop' ? 'icon-3d-blue' :
+      deviceLower === 'mobile' ? 'icon-3d-purple' :
+      deviceLower === 'tablet' ? 'icon-3d-cyan' :
+      'icon-3d-indigo';
+
+    let icon;
+    switch (deviceLower) {
       case 'desktop':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        icon = (
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         );
+        break;
       case 'mobile':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        icon = (
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
         );
+        break;
       case 'tablet':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        icon = (
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
         );
+        break;
       default:
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        icon = (
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         );
     }
+
+    return (
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center icon-3d-container ${gradientClass}`}>
+        {icon}
+      </div>
+    );
   };
 
-  // Get browser icon
+  // Get browser icon with 3D effect
   const getBrowserIcon = (browser: string) => {
     const lowerBrowser = browser.toLowerCase();
+    let icon;
+    let gradientClass;
+
     if (lowerBrowser.includes('chrome')) {
-      return <span className="text-lg">🌐</span>;
+      icon = <span className="text-lg">🌐</span>;
+      gradientClass = 'icon-3d-blue';
     } else if (lowerBrowser.includes('firefox')) {
-      return <span className="text-lg">🦊</span>;
+      icon = <span className="text-lg">🦊</span>;
+      gradientClass = 'icon-3d-pink';
     } else if (lowerBrowser.includes('safari')) {
-      return <span className="text-lg">🧭</span>;
+      icon = <span className="text-lg">🧭</span>;
+      gradientClass = 'icon-3d-cyan';
     } else if (lowerBrowser.includes('edge')) {
-      return <span className="text-lg">🔷</span>;
+      icon = <span className="text-lg">🔷</span>;
+      gradientClass = 'icon-3d-indigo';
     } else {
-      return <span className="text-lg">🌐</span>;
+      icon = <span className="text-lg">🌐</span>;
+      gradientClass = 'icon-3d-blue';
     }
+
+    return (
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center icon-3d-container ${gradientClass}`}>
+        {icon}
+      </div>
+    );
   };
 
   const stats = [
@@ -358,7 +390,15 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8 relative">
+        {/* Floating Brand Logo */}
+        <FloatingLogo
+          position="top-right"
+          size={100}
+          animation="rotate"
+          opacity={0.08}
+        />
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {stats.map((stat, index) => (
@@ -394,9 +434,9 @@ export default function AnalyticsPage() {
             <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 p-1 rounded-lg overflow-x-auto">
               <button
                 onClick={() => setChartTab('revenue')}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                className={`tab-3d px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
                   chartTab === 'revenue'
-                    ? 'bg-indigo-600 text-white'
+                    ? 'active bg-indigo-600 text-white'
                     : 'text-gray-700 hover:text-gray-900'
                 }`}
               >
@@ -404,9 +444,9 @@ export default function AnalyticsPage() {
               </button>
               <button
                 onClick={() => setChartTab('views')}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                className={`tab-3d px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm font-medium whitespace-nowrap ${
                   chartTab === 'views'
-                    ? 'bg-indigo-600 text-white'
+                    ? 'active bg-indigo-600 text-white'
                     : 'text-gray-700 hover:text-gray-900'
                 }`}
               >
@@ -414,9 +454,9 @@ export default function AnalyticsPage() {
               </button>
               <button
                 onClick={() => setChartTab('unlocks')}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                className={`tab-3d px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
                   chartTab === 'unlocks'
-                    ? 'bg-indigo-600 text-white'
+                    ? 'active bg-indigo-600 text-white'
                     : 'text-gray-700 hover:text-gray-900'
                 }`}
               >
@@ -729,9 +769,9 @@ export default function AnalyticsPage() {
                 <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg overflow-x-auto">
                   <button
                     onClick={() => setDemographicsTab('geographic')}
-                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                    className={`tab-3d px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap ${
                       demographicsTab === 'geographic'
-                        ? 'bg-indigo-600 text-white'
+                        ? 'active bg-indigo-600 text-white'
                         : 'text-gray-700 hover:text-gray-900'
                     }`}
                   >
@@ -739,9 +779,9 @@ export default function AnalyticsPage() {
                   </button>
                   <button
                     onClick={() => setDemographicsTab('devices')}
-                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                    className={`tab-3d px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap ${
                       demographicsTab === 'devices'
-                        ? 'bg-indigo-600 text-white'
+                        ? 'active bg-indigo-600 text-white'
                         : 'text-gray-700 hover:text-gray-900'
                     }`}
                   >
@@ -749,9 +789,9 @@ export default function AnalyticsPage() {
                   </button>
                   <button
                     onClick={() => setDemographicsTab('browsers')}
-                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                    className={`tab-3d px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap ${
                       demographicsTab === 'browsers'
-                        ? 'bg-indigo-600 text-white'
+                        ? 'active bg-indigo-600 text-white'
                         : 'text-gray-700 hover:text-gray-900'
                     }`}
                   >
@@ -836,9 +876,7 @@ export default function AnalyticsPage() {
                                 className="bg-gray-50 rounded-xl p-4 border border-gray-100"
                               >
                                 <div className="flex items-center gap-3 mb-3">
-                                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
-                                    {getDeviceIcon(device.device)}
-                                  </div>
+                                  {getDeviceIcon(device.device)}
                                   <span className="text-sm font-medium text-gray-900">{device.device}</span>
                                 </div>
                                 <div className="flex items-end justify-between">

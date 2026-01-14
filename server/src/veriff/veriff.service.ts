@@ -126,26 +126,32 @@ export class VeriffService {
 
   /**
    * Verify webhook signature
-   * Veriff sends HMAC-SHA256 of just the payload body
+   * Veriff sends HMAC-SHA256 of the raw payload body
+   *
+   * IMPORTANT: Must receive raw Buffer from request body for signature to match
+   * @param payload - Raw request body as Buffer (not JSON string)
+   * @param signature - HMAC signature from x-hmac-signature header
    */
-  verifyWebhookSignature(payload: string, signature: string): boolean {
+  verifyWebhookSignature(payload: Buffer, signature: string): boolean {
     try {
       if (!this.webhookSecret) {
-        this.logger.warn('Webhook secret not configured, skipping verification');
+        this.logger.error('Webhook secret not configured - cannot verify signature');
         return false;
       }
 
+      // Compute HMAC-SHA256 from raw buffer
       const expectedSignature = crypto
         .createHmac('sha256', this.webhookSecret)
-        .update(payload, 'utf8')
+        .update(payload)  // Use Buffer directly, not string
         .digest('hex');
 
       this.logger.debug(`Received signature: ${signature}`);
       this.logger.debug(`Expected signature: ${expectedSignature}`);
 
+      // Timing-safe comparison to prevent timing attacks
       return crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature),
+        Buffer.from(signature, 'utf-8'),
+        Buffer.from(expectedSignature, 'utf-8'),
       );
     } catch (error) {
       this.logger.error('Webhook signature verification failed:', error);

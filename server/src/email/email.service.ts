@@ -1,13 +1,13 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { SESClient, SendEmailCommand, SendRawEmailCommand } from '@aws-sdk/client-ses';
-import * as nodemailer from 'nodemailer';
+import nodemailer from 'nodemailer';
 import type {
   EmailConfig,
   SendEmailOptions,
   EmailSendResult,
   BulkEmailResult,
 } from './interfaces/email.interface';
-import { EMAIL_TEMPLATES, HTML_TEMPLATES } from './templates/email-templates';
+import { HTML_TEMPLATES } from './templates/email-templates';
 
 @Injectable()
 export class EmailService {
@@ -19,28 +19,30 @@ export class EmailService {
   constructor() {
     // Initialize configuration from environment variables
     this.config = {
-      apiKey: '', // Not used for AWS SES
+      apiKey: process.env.AWS_ACCESS_KEY_ID || '',
       fromEmail: process.env.SES_FROM_EMAIL || 'noreply@example.com',
       fromName: process.env.SES_FROM_NAME || 'VeloLink',
       replyToEmail: process.env.SES_REPLY_TO_EMAIL,
     };
 
-    // Configure AWS SES
-    const hasCredentials = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY;
+    // Initialize AWS SES Client
+    const awsRegion = process.env.AWS_REGION || 'us-east-1';
+    const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
 
-    if (hasCredentials) {
+    if (awsAccessKeyId && awsSecretAccessKey) {
       this.sesClient = new SESClient({
-        region: process.env.AWS_REGION || 'us-east-1',
+        region: awsRegion,
         credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+          accessKeyId: awsAccessKeyId,
+          secretAccessKey: awsSecretAccessKey,
         },
       });
       this.isConfigured = true;
       this.logger.log('AWS SES configured successfully');
     } else {
-      // Create a dummy client for development mode
-      this.sesClient = new SESClient({ region: 'us-east-1' });
+      // Create a dummy client to prevent errors
+      this.sesClient = new SESClient({ region: awsRegion });
       this.logger.warn(
         'AWS SES credentials not found. Email sending will be simulated.',
       );
@@ -59,61 +61,50 @@ export class EmailService {
         throw new BadRequestException('Recipient email is required');
       }
 
-      if (!options.subject && !options.templateId) {
-        throw new BadRequestException(
-          'Either subject or templateId is required',
-        );
+      if (!options.subject && !options.html) {
+        throw new BadRequestException('Either subject or html content is required');
       }
 
-      // Handle attachments with nodemailer
+      // If attachments are present, use raw email
       if (options.attachments && options.attachments.length > 0) {
         return this.sendEmailWithAttachments(options);
       }
 
-      // Prepare email addresses
+      // Normalize recipient addresses
       const toAddresses = Array.isArray(options.to) ? options.to : [options.to];
-      const ccAddresses = options.cc ? (Array.isArray(options.cc) ? options.cc : [options.cc]) : undefined;
-      const bccAddresses = options.bcc ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc]) : undefined;
 
-      const fromAddress = options.from || `${this.config.fromName} <${this.config.fromEmail}>`;
-      const replyToAddresses = options.replyTo ? [options.replyTo] : (this.config.replyToEmail ? [this.config.replyToEmail] : undefined);
-
-      // Build SES email parameters
-      const params: any = {
-        Source: fromAddress,
+      // Build email command for AWS SES
+      const params = {
+        Source: `${this.config.fromName} <${options.from || this.config.fromEmail}>`,
         Destination: {
           ToAddresses: toAddresses,
-          CcAddresses: ccAddresses,
-          BccAddresses: bccAddresses,
+          CcAddresses: options.cc || [],
+          BccAddresses: options.bcc || [],
         },
         Message: {
           Subject: {
-            Data: options.subject || '',
+            Data: options.subject || 'Notification',
             Charset: 'UTF-8',
           },
-          Body: {},
+          Body: {
+            Html: {
+              Data: options.html || options.text || '',
+              Charset: 'UTF-8',
+            },
+            ...(options.text && {
+              Text: {
+                Data: options.text,
+                Charset: 'UTF-8',
+              },
+            }),
+          },
         },
+        ...(options.replyTo || this.config.replyToEmail
+          ? {
+              ReplyToAddresses: [options.replyTo || this.config.replyToEmail || ''],
+            }
+          : {}),
       };
-
-      // Add HTML and/or Text body
-      if (options.html) {
-        params.Message.Body.Html = {
-          Data: options.html,
-          Charset: 'UTF-8',
-        };
-      }
-
-      if (options.text) {
-        params.Message.Body.Text = {
-          Data: options.text,
-          Charset: 'UTF-8',
-        };
-      }
-
-      // Add Reply-To
-      if (replyToAddresses) {
-        params.ReplyToAddresses = replyToAddresses;
-      }
 
       // Send email
       if (this.isConfigured) {
@@ -126,12 +117,13 @@ export class EmailService {
 
         return {
           success: true,
-          messageId: response.MessageId || `ses-${Date.now()}`,
-          statusCode: response.$metadata.httpStatusCode || 200,
+          messageId: response.MessageId || `sent-${Date.now()}`,
+          statusCode: 200,
         };
       } else {
         // Simulate sending in development
         this.logger.warn(`[SIMULATED] Email would be sent to: ${options.to}`);
+        this.logger.warn(`[SIMULATED] Subject: ${options.subject}`);
         return {
           success: true,
           messageId: `simulated-${Date.now()}`,
@@ -147,43 +139,49 @@ export class EmailService {
   }
 
   /**
-   * Send email with attachments using nodemailer + AWS SES
+   * Send email with attachments using raw email
+   * Uses nodemailer to build MIME message, then sends via AWS SES SendRawEmailCommand
    */
-  private async sendEmailWithAttachments(options: SendEmailOptions): Promise<EmailSendResult> {
+  private async sendEmailWithAttachments(
+    options: SendEmailOptions,
+  ): Promise<EmailSendResult> {
     try {
-      // Build email message using nodemailer
+      this.logger.log(`Sending email with attachments to: ${options.to}`);
+
+      // Create a transporter using streamTransport to build MIME message
+      const transporter = nodemailer.createTransport({
+        streamTransport: true,
+        newline: 'unix',
+      } as any);
+
+      // Build email options for nodemailer
       const mailOptions = {
-        from: options.from || `${this.config.fromName} <${this.config.fromEmail}>`,
-        to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
+        from: `${this.config.fromName} <${options.from || this.config.fromEmail}>`,
+        to: options.to,
+        cc: options.cc?.join(', '),
+        bcc: options.bcc?.join(', '),
+        replyTo: options.replyTo || this.config.replyToEmail,
         subject: options.subject,
         text: options.text,
         html: options.html,
-        cc: options.cc,
-        bcc: options.bcc,
-        replyTo: options.replyTo || this.config.replyToEmail,
         attachments: options.attachments,
       };
 
+      // Generate raw MIME message
+      const info: any = await transporter.sendMail(mailOptions);
+
+      // Collect message from stream
+      const chunks: Buffer[] = [];
+      for await (const chunk of info.message) {
+        chunks.push(chunk);
+      }
+      const rawMessage = Buffer.concat(chunks);
+
       if (this.isConfigured) {
-        // Use nodemailer's streamTransport to build raw MIME message
-        const transporter = nodemailer.createTransport({
-          streamTransport: true,
-          newline: 'unix',
-        } as any);
-
-        const info: any = await transporter.sendMail(mailOptions);
-
-        // Collect the raw email message from the stream
-        const chunks: Buffer[] = [];
-        for await (const chunk of info.message) {
-          chunks.push(chunk);
-        }
-        const message = Buffer.concat(chunks);
-
-        // Send the raw email using AWS SES
+        // Send via AWS SES
         const command = new SendRawEmailCommand({
           RawMessage: {
-            Data: message,
+            Data: rawMessage,
           },
         });
 
@@ -195,14 +193,16 @@ export class EmailService {
 
         return {
           success: true,
-          messageId: response.MessageId || `ses-${Date.now()}`,
-          statusCode: response.$metadata.httpStatusCode || 200,
+          messageId: response.MessageId || `sent-${Date.now()}`,
+          statusCode: 200,
         };
       } else {
-        this.logger.warn(`[SIMULATED] Email with attachments would be sent to: ${options.to}`);
+        this.logger.warn(
+          `[SIMULATED] Email with attachments would be sent to: ${options.to}`,
+        );
         return {
           success: true,
-          messageId: `simulated-attach-${Date.now()}`,
+          messageId: `simulated-${Date.now()}`,
         };
       }
     } catch (error) {
@@ -215,51 +215,7 @@ export class EmailService {
   }
 
   /**
-   * Send email using a predefined template
-   * Uses HTML templates defined in code
-   */
-  async sendTemplateEmail(
-    to: string,
-    templateKey: keyof typeof EMAIL_TEMPLATES,
-    templateData: Record<string, any>,
-    options?: Partial<SendEmailOptions>,
-  ): Promise<EmailSendResult> {
-    const template = EMAIL_TEMPLATES[templateKey];
-
-    if (!template) {
-      throw new BadRequestException(`Template ${templateKey} not found`);
-    }
-
-    // Validate required variables
-    const missingVars = template.requiredVariables.filter(
-      (varName) => !(varName in templateData),
-    );
-
-    if (missingVars.length > 0) {
-      throw new BadRequestException(
-        `Missing required template variables: ${missingVars.join(', ')}`,
-      );
-    }
-
-    // Generate HTML message from template
-    const htmlGenerator = HTML_TEMPLATES[templateKey];
-    if (!htmlGenerator) {
-      throw new BadRequestException(`HTML template ${templateKey} not found`);
-    }
-
-    const htmlMessage = htmlGenerator(templateData as any);
-
-    // Send email with HTML content
-    return this.sendEmail({
-      to,
-      subject: template.subject || '',
-      html: htmlMessage,
-      ...options,
-    });
-  }
-
-  /**
-   * Send bulk emails (up to 50 recipients per batch for AWS SES)
+   * Send bulk emails (up to 1000 recipients per batch)
    */
   async sendBulkEmails(
     recipients: Array<{ email: string; templateData?: Record<string, any> }>,
@@ -274,41 +230,21 @@ export class EmailService {
       failures: [],
     };
 
-    // AWS SES allows up to 50 recipients per API call
-    const batchSize = 50;
-    const batches = this.chunkArray(recipients, batchSize);
+    // Send individual emails (AWS SES doesn't have built-in bulk like SendGrid)
+    for (const recipient of recipients) {
+      const emailResult = await this.sendEmail({
+        to: recipient.email,
+        ...options,
+        html: options.html || '',
+      } as SendEmailOptions);
 
-    for (const batch of batches) {
-      try {
-        // Send individual emails for bulk sends
-        // Note: AWS SES doesn't have the same batch personalization as SendGrid
-        for (const recipient of batch) {
-          const emailResult = await this.sendEmail({
-            to: recipient.email,
-            ...options,
-          });
-
-          if (emailResult.success) {
-            result.successCount++;
-          } else {
-            result.failureCount++;
-            result.failures.push({
-              email: recipient.email,
-              error: emailResult.error || 'Unknown error',
-            });
-          }
-
-          // Small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      } catch (error) {
-        this.logger.error(`Failed to send batch of ${batch.length} emails:`, error);
-        result.failureCount += batch.length;
-        batch.forEach((recipient) => {
-          result.failures.push({
-            email: recipient.email,
-            error: (error as any)?.message || 'Batch send failed',
-          });
+      if (emailResult.success) {
+        result.successCount++;
+      } else {
+        result.failureCount++;
+        result.failures.push({
+          email: recipient.email,
+          error: emailResult.error || 'Unknown error',
         });
       }
     }
@@ -337,33 +273,25 @@ export class EmailService {
 
     const htmlMessage = htmlGenerator(templateData as any);
 
-    // Use HTML template from code
-    const template = EMAIL_TEMPLATES[templateKey];
-
     return this.sendEmail({
       to,
-      subject: subject || template?.subject || 'Notification',
+      subject: subject || 'Notification',
       html: htmlMessage,
     });
   }
 
   /**
    * Schedule an email to be sent later
-   * Note: AWS SES does not support native scheduling.
-   * This method immediately sends the email.
-   * For true scheduling, implement with AWS EventBridge or similar service.
-   * @deprecated Use AWS EventBridge for scheduled emails
+   * Note: AWS SES doesn't support scheduled sending natively
+   * This would require additional infrastructure (e.g., EventBridge, Lambda)
    */
   async scheduleEmail(
     options: SendEmailOptions,
     sendAt: Date,
   ): Promise<EmailSendResult> {
     this.logger.warn(
-      `AWS SES does not support native scheduling. Email will be sent immediately. ` +
-      `Scheduled time ${sendAt.toISOString()} was requested but ignored.`
+      'AWS SES does not support scheduled emails natively. Sending immediately instead.',
     );
-
-    // Send immediately since AWS SES doesn't support scheduling
     return this.sendEmail(options);
   }
 
@@ -374,10 +302,15 @@ export class EmailService {
     to: string,
     userName: string,
   ): Promise<EmailSendResult> {
-    return this.sendHTMLTemplateEmail(to, 'WELCOME', {
-      user_name: userName,
-      app_name: this.config.fromName,
-    }, `Welcome to ${this.config.fromName}!`);
+    return this.sendHTMLTemplateEmail(
+      to,
+      'WELCOME',
+      {
+        user_name: userName,
+        app_name: this.config.fromName,
+      },
+      `Welcome to ${this.config.fromName}!`,
+    );
   }
 
   /**
@@ -386,14 +319,19 @@ export class EmailService {
   async sendEmailVerification(
     to: string,
     userName: string,
-    verificationLink: string,
-    expiryMinutes: number = 60,
+    verificationCode: string,
+    expiryMinutes: number = 20,
   ): Promise<EmailSendResult> {
-    return this.sendHTMLTemplateEmail(to, 'EMAIL_VERIFICATION', {
-      user_name: userName,
-      verification_link: verificationLink,
-      expiry_time: `${expiryMinutes} minutes`,
-    }, 'Verify your email address');
+    return this.sendHTMLTemplateEmail(
+      to,
+      'EMAIL_VERIFICATION',
+      {
+        user_name: userName,
+        verification_code: verificationCode,
+        expiry_time: `${expiryMinutes} minutes`,
+      },
+      'Verify your email address',
+    );
   }
 
   /**
@@ -405,22 +343,27 @@ export class EmailService {
     resetLink: string,
     expiryMinutes: number = 30,
   ): Promise<EmailSendResult> {
-    return this.sendHTMLTemplateEmail(to, 'PASSWORD_RESET', {
-      user_name: userName,
-      reset_link: resetLink,
-      expiry_time: `${expiryMinutes} minutes`,
-    }, 'Reset your password');
+    return this.sendHTMLTemplateEmail(
+      to,
+      'PASSWORD_RESET',
+      {
+        user_name: userName,
+        reset_link: resetLink,
+        expiry_time: `${expiryMinutes} minutes`,
+      },
+      'Reset your password',
+    );
   }
 
   /**
-   * Get email statistics (if configured)
+   * Get email statistics
+   * Note: AWS SES stats require CloudWatch integration
    */
   async getEmailStats(days: number = 7): Promise<any> {
-    // This would require AWS CloudWatch API for SES stats
-    // Implementation requires CloudWatch integration
     this.logger.log(`Getting email stats for last ${days} days`);
     return {
-      message: 'Stats endpoint not implemented. Use AWS CloudWatch or SES console for metrics.',
+      message:
+        'AWS SES stats require CloudWatch integration. Use AWS Console for detailed metrics.',
     };
   }
 
@@ -430,17 +373,6 @@ export class EmailService {
   isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
-  }
-
-  /**
-   * Chunk array into batches
-   */
-  private chunkArray<T>(array: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += size) {
-      chunks.push(array.slice(i, i + size));
-    }
-    return chunks;
   }
 
   /**
@@ -516,6 +448,65 @@ export class EmailService {
       'PAYOUT_PROCESSED',
       data,
       'Your payout has been processed',
+    );
+  }
+
+  /**
+   * Send admin payout request alert
+   * Note: This sends to a single admin email. The caller should loop through all admin emails.
+   */
+  async sendAdminPayoutAlert(
+    to: string,
+    data: {
+      creator_name: string;
+      amount: string;
+      request_id: string;
+      available_balance: string;
+    },
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'ADMIN_PAYOUT_REQUEST_ALERT',
+      data,
+      'New Payout Request - Action Required',
+    );
+  }
+
+  /**
+   * Send payout approved email to creator
+   */
+  async sendPayoutApproved(
+    to: string,
+    data: {
+      creator_name: string;
+      amount: string;
+      request_id: string;
+    },
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'PAYOUT_APPROVED',
+      data,
+      'Payout Request Approved',
+    );
+  }
+
+  /**
+   * Send payout rejected email to creator
+   */
+  async sendPayoutRejected(
+    to: string,
+    data: {
+      creator_name: string;
+      amount: string;
+      reason: string;
+    },
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'PAYOUT_REJECTED',
+      data,
+      'Payout Request Status Update',
     );
   }
 
@@ -738,25 +729,34 @@ export class EmailService {
   }
 
   /**
-   * Send email verification code (6-digit)
+   * Send content approval notification (wrapper for sendContentApproved)
    */
-  async sendEmailVerificationCode(
+  async sendContentApproval(
     to: string,
-    userName: string,
-    verificationCode: string,
-    expiryMinutes: number = 15,
+    creatorName: string,
+    contentTitle: string,
+    contentLink: string,
   ): Promise<EmailSendResult> {
-    const expiryTime = `${expiryMinutes} minutes`;
+    return this.sendContentApproved(to, {
+      creator_name: creatorName,
+      content_title: contentTitle,
+      content_link: contentLink,
+    });
+  }
 
-    return this.sendHTMLTemplateEmail(
-      to,
-      'EMAIL_VERIFICATION_CODE',
-      {
-        user_name: userName,
-        verification_code: verificationCode,
-        expiry_time: expiryTime,
-      },
-      'Your Velo verification code',
-    );
+  /**
+   * Send content rejection notification (wrapper for sendContentRejected)
+   */
+  async sendContentRejection(
+    to: string,
+    creatorName: string,
+    contentTitle: string,
+    rejectionReason: string,
+  ): Promise<EmailSendResult> {
+    return this.sendContentRejected(to, {
+      creator_name: creatorName,
+      content_title: contentTitle,
+      rejection_reason: rejectionReason,
+    });
   }
 }

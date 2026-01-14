@@ -6,10 +6,15 @@ import Link from 'next/link';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { buyerApi, stripeApi } from '@/lib/api-client';
-import { getBuyerSession, getBrowserFingerprint, savePurchaseToken } from '@/lib/buyer-session';
+import { getBuyerSession, getOrGenerateBrowserFingerprint, clearCachedBuyerFingerprint, savePurchaseToken } from '@/lib/buyer-session';
 import CheckoutForm from '@/components/CheckoutForm';
 import Footer from '@/components/Footer';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { PageTransition } from '@/components/ui/PageTransition';
+import { staggerContainer, staggerItem } from '@/lib/animations';
+import { useCurrencyCountUp } from '@/hooks/useCountUp';
+import FloatingLogo from '@/components/FloatingLogo';
 
 interface ContentData {
   id: string;
@@ -36,6 +41,11 @@ export function PaymentClient({ id }: { id: string }) {
   const [purchaseInfo, setPurchaseInfo] = useState<PurchaseInfo | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Animated price count-ups
+  const contentPriceAnimated = useCurrencyCountUp(content?.price || 0, '$', 1000);
+  const platformFeeAnimated = useCurrencyCountUp((content?.price || 0) * 0.10, '$', 1000);
+  const totalPriceAnimated = useCurrencyCountUp((content?.price || 0) * 1.10, '$', 1000);
+
   // Detect mobile screen size
   useEffect(() => {
     const checkMobile = () => {
@@ -55,34 +65,54 @@ export function PaymentClient({ id }: { id: string }) {
     }
 
     const initializePayment = async () => {
+      console.log('[CHECKOUT] ========== PAYMENT INITIALIZATION STARTED ==========');
+      console.log('[CHECKOUT] Content ID:', id);
+      console.log('[CHECKOUT] Email:', email);
+
       try {
         setLoading(true);
         setError(null);
 
         // Validate session exists FIRST
+        console.log('[CHECKOUT] Checking for buyer session...');
         const session = getBuyerSession();
         if (!session || !session.sessionToken) {
-          console.error('No valid session found');
+          console.error('[CHECKOUT] ❌ No valid session found');
           setError('Session expired. Redirecting to checkout...');
           setTimeout(() => {
             router.push(`/checkout/${id}`);
           }, 2000);
           return;
         }
+        console.log('[CHECKOUT] ✅ Session found:', session.sessionToken.substring(0, 16) + '...');
 
         // Get Stripe publishable key
+        console.log('[CHECKOUT] Fetching Stripe config...');
         const configResponse = await stripeApi.getConfig();
         const publishableKey = configResponse.data.publishableKey;
+        console.log('[CHECKOUT] ✅ Stripe publishable key received');
         setStripePromise(loadStripe(publishableKey));
 
         // Get content details
+        console.log('[CHECKOUT] Fetching content details...');
         const contentResponse = await buyerApi.getContentDetails(id);
         setContent(contentResponse.data);
+        console.log('[CHECKOUT] ✅ Content details:', contentResponse.data.title);
 
-        // Get browser fingerprint for device tracking
-        const fingerprint = await getBrowserFingerprint();
+        // Get browser fingerprint for device tracking (uses cached value from checkout page)
+        console.log('[CHECKOUT] Getting browser fingerprint...');
+        const fingerprint = await getOrGenerateBrowserFingerprint();
+        console.log('[CHECKOUT] ✅ Fingerprint retrieved:', fingerprint);
 
         // Create purchase and get client secret
+        console.log('[CHECKOUT] Creating purchase...');
+        console.log('[CHECKOUT] Request payload:', {
+          contentId: id,
+          sessionToken: session.sessionToken.substring(0, 16) + '...',
+          email: email || 'not provided',
+          fingerprint
+        });
+
         const purchaseResponse = await buyerApi.createPurchase({
           contentId: id,
           sessionToken: session.sessionToken,
@@ -90,8 +120,13 @@ export function PaymentClient({ id }: { id: string }) {
           fingerprint,
         });
 
+        console.log('[CHECKOUT] ✅ Purchase created successfully!');
+        console.log('[CHECKOUT] Purchase ID:', purchaseResponse.data.purchaseId);
+        console.log('[CHECKOUT] Already purchased:', purchaseResponse.data.alreadyPurchased || false);
+
         if (purchaseResponse.data.alreadyPurchased) {
           // Already purchased, redirect to content view
+          console.log('[CHECKOUT] Redirecting to content (already purchased)');
           savePurchaseToken(id, purchaseResponse.data.accessToken);
           router.push(`/c/${id}?token=${purchaseResponse.data.accessToken}`);
           return;
@@ -104,11 +139,18 @@ export function PaymentClient({ id }: { id: string }) {
           clientSecret: purchaseResponse.data.clientSecret,
         });
 
+        console.log('[CHECKOUT] ========== PAYMENT INITIALIZATION COMPLETE ==========');
         setError(null);
       } catch (err: unknown) {
-        console.error('Payment initialization error:', err);
-        const error = err as { response?: { data?: { message?: string } }; message?: string };
+        console.error('[CHECKOUT] ❌ ========== PAYMENT INITIALIZATION FAILED ==========');
+        console.error('[CHECKOUT] Error:', err);
+        const error = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
+        console.error('[CHECKOUT] Error response:', error.response?.data);
+        console.error('[CHECKOUT] Error message:', error.message);
+        console.error('[CHECKOUT] HTTP status:', (error as { response?: { status?: number } }).response?.status);
+
         const errorMessage = error.response?.data?.message || error.message || 'Failed to initialize payment';
+        console.error('[CHECKOUT] Displaying error to user:', errorMessage);
         setError(errorMessage);
       } finally {
         setLoading(false);
@@ -132,6 +174,8 @@ export function PaymentClient({ id }: { id: string }) {
 
       // Only proceed if confirmation succeeded
       if (result.data.status === 'COMPLETED') {
+        // Clear the cached fingerprint after successful purchase
+        clearCachedBuyerFingerprint();
         savePurchaseToken(id, accessToken);
         router.push(`/checkout/${id}/success?token=${accessToken}`);
       } else {
@@ -144,6 +188,9 @@ export function PaymentClient({ id }: { id: string }) {
       setError(
         'Payment processed but verification failed. Please contact support with your payment confirmation. Your access token has been saved.'
       );
+
+      // Clear cached fingerprint even on error (purchase attempted)
+      clearCachedBuyerFingerprint();
 
       // Save token anyway (webhook will handle completion)
       savePurchaseToken(id, accessToken);
@@ -225,7 +272,17 @@ export function PaymentClient({ id }: { id: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col">
+    <PageTransition>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col relative">
+      {/* Floating Brand Logo */}
+      <FloatingLogo
+        position="center"
+        size={110}
+        animation="rotate"
+        opacity={0.06}
+        zIndex={-1}
+      />
+
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 py-4 px-4 sm:px-6 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -236,14 +293,18 @@ export function PaymentClient({ id }: { id: string }) {
               className="h-7 sm:h-8 w-auto"
             />
           </Link>
-          <div className="flex items-center gap-2 text-gray-600 bg-gradient-to-r from-green-50 to-emerald-50 px-3 py-1.5 rounded-full border border-green-200">
+          <motion.div
+            className="flex items-center gap-2 text-gray-600 bg-gradient-to-r from-green-50 to-emerald-50 px-3 py-1.5 rounded-full border border-green-200"
+            animate={{ scale: [1, 1.02, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
             <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
             <span className="text-xs sm:text-sm font-semibold text-green-700 hidden sm:inline">Secure Payment</span>
             <span className="hidden md:inline text-gray-400">•</span>
             <span className="text-xs sm:text-sm text-green-600 hidden md:inline">Encrypted</span>
-          </div>
+          </motion.div>
         </div>
       </header>
 
@@ -251,7 +312,12 @@ export function PaymentClient({ id }: { id: string }) {
       <main className="flex-1 py-4 sm:py-8 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           {/* Progress Indicator */}
-          <div className="mb-6 flex items-center justify-center">
+          <motion.div
+            className="mb-6 flex items-center justify-center"
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+          >
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 text-green-600">
                 <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
@@ -276,7 +342,7 @@ export function PaymentClient({ id }: { id: string }) {
                 <span className="text-sm font-medium hidden sm:inline">Access</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Mobile Title - Shows above thumbnail on mobile only */}
           <div className="lg:hidden mb-4">
@@ -307,7 +373,12 @@ export function PaymentClient({ id }: { id: string }) {
               </div>
 
               {/* Security Info - Desktop Only */}
-              <div className="hidden lg:block bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 shadow-sm ring-1 ring-green-100">
+              <motion.div
+                className="hidden lg:block bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 shadow-sm ring-1 ring-green-100"
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
+              >
                 <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,26 +388,35 @@ export function PaymentClient({ id }: { id: string }) {
                   <span className="text-lg">Secure Payment</span>
                 </h3>
                 <div className="space-y-3 text-sm text-gray-700">
-                  <div className="flex items-center gap-3 bg-white/50 rounded-lg p-3">
+                  <motion.div
+                    className="flex items-center gap-3 bg-white/50 rounded-lg p-3"
+                    variants={staggerItem}
+                  >
                     <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">256-bit SSL encryption</span>
-                  </div>
-                  <div className="flex items-center gap-3 bg-white/50 rounded-lg p-3">
+                  </motion.div>
+                  <motion.div
+                    className="flex items-center gap-3 bg-white/50 rounded-lg p-3"
+                    variants={staggerItem}
+                  >
                     <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">PCI DSS compliant</span>
-                  </div>
-                  <div className="flex items-center gap-3 bg-white/50 rounded-lg p-3">
+                  </motion.div>
+                  <motion.div
+                    className="flex items-center gap-3 bg-white/50 rounded-lg p-3"
+                    variants={staggerItem}
+                  >
                     <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">Powered by Stripe</span>
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             {/* Right Column - Payment Form */}
@@ -378,19 +458,24 @@ export function PaymentClient({ id }: { id: string }) {
                   <div className="mt-6 pt-6 space-y-3 border-t border-gray-200">
                     <div className="flex justify-between text-gray-600 text-sm">
                       <span>Content Price:</span>
-                      <span className="font-medium">${content.price.toFixed(2)}</span>
+                      <span className="font-medium">{contentPriceAnimated}</span>
                     </div>
                     <div className="flex justify-between text-gray-600 text-sm">
                       <span>Platform Fee (10%):</span>
-                      <span className="font-medium">${(content.price * 0.10).toFixed(2)}</span>
+                      <span className="font-medium">{platformFeeAnimated}</span>
                     </div>
                     <div className="border-t border-gray-200 pt-3 mt-3"></div>
-                    <div className="flex justify-between text-lg font-bold text-gray-900">
+                    <motion.div
+                      className="flex justify-between text-lg font-bold text-gray-900"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.3, duration: 0.5 }}
+                    >
                       <span>Total:</span>
                       <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                        ${(content.price * 1.10).toFixed(2)}
+                        {totalPriceAnimated}
                       </span>
-                    </div>
+                    </motion.div>
                   </div>
 
                   {error && (
@@ -426,5 +511,6 @@ export function PaymentClient({ id }: { id: string }) {
 
       <Footer />
     </div>
+    </PageTransition>
   );
 }

@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui';
 import Link from 'next/link';
+import FloatingLogo from '@/components/FloatingLogo';
 
 export default function PaymentFailedPage() {
   // In a real app, these would come from URL params or session storage
@@ -12,6 +13,14 @@ export default function PaymentFailedPage() {
 
   return (
     <div className="min-h-screen bg-gray-600 flex items-center justify-center p-6 relative">
+      {/* Floating Logo */}
+      <FloatingLogo
+        position="top-right"
+        size={100}
+        animation="float"
+        opacity={0.10}
+      />
+
       {/* Main Error Card */}
       <div className="max-w-xl w-full bg-white rounded-3xl shadow-2xl p-12">
         {/* Error Icon */}

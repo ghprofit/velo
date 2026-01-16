@@ -16,9 +16,15 @@ export default function PaymentFailedPage() {
       {/* Floating Logo */}
       <FloatingLogo
         position="top-right"
+        size={120}
+        animation="float-rotate"
+        opacity={0.08}
+      />
+      <FloatingLogo
+        position="bottom-left"
         size={100}
-        animation="float"
-        opacity={0.10}
+        animation="pulse"
+        opacity={0.06}
       />
 
       {/* Main Error Card */}

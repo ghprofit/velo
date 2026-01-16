@@ -172,16 +172,16 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
       <div className="min-h-screen bg-gradient-playful-1 flex flex-col relative">
       {/* Floating Brand Logos */}
       <FloatingLogo
-        position="top-left"
-        size={90}
+        position="top-right"
+        size={120}
         animation="float-rotate"
-        opacity={0.10}
+        opacity={0.08}
       />
       <FloatingLogo
-        position="bottom-right"
-        size={70}
+        position="bottom-left"
+        size={100}
         animation="pulse"
-        opacity={0.08}
+        opacity={0.06}
       />
 
       {/* Header */}

@@ -15,11 +15,6 @@ interface UploadedFile {
 
 type Step = 1 | 2 | 'success';
 
-const STEPS = [
-  { number: 1, title: 'Upload', description: 'Add your content' },
-  { number: 2, title: 'Details', description: 'Set info & price' },
-];
-
 export default function UploadContentPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -433,50 +428,6 @@ export default function UploadContentPage() {
         <p className="hidden text-sm sm:text-base text-gray-600">Follow the steps to upload, price, and share your exclusive content.</p>
       </div>
 
-      {/* Progress Steps - Hide when in success state */}
-      {currentStep !== 'success' && (
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between">
-            {STEPS.map((step, index) => {
-              const stepNum = typeof currentStep === 'number' ? currentStep : 3;
-              const isCompleted = stepNum > step.number;
-              const isCurrent = stepNum >= step.number;
-              return (
-              <div key={step.number} className="flex items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm transition-colors ${
-                      isCurrent
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      step.number
-                    )}
-                  </div>
-                  <div className="mt-1.5 sm:mt-2 text-center">
-                    <p className={`text-xs sm:text-sm font-medium ${isCurrent ? 'text-indigo-600' : 'text-gray-500'}`}>
-                      {step.title}
-                    </p>
-                    <p className="text-xs text-gray-400 hidden sm:block">{step.description}</p>
-                  </div>
-                </div>
-                {index < STEPS.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 sm:mx-4 ${isCompleted ? 'bg-indigo-600' : 'bg-gray-200'}`} />
-                )}
-              </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      )}
 
       <div className="p-4 sm:p-6 lg:p-8 relative">
         {/* Floating Brand Logos */}

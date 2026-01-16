@@ -1,5 +1,4 @@
 {
     "html.validate.scripts": true,
-    "html.validate.styles": true,
-    "prisma.pinToPrisma6": false
+    "html.validate.styles": true
 }

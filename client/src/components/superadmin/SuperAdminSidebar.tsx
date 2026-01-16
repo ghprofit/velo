@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLogoutUserMutation } from '@/state/api';
 import { useDispatch, useSelector } from 'react-redux';
@@ -38,7 +39,6 @@ export default function SuperAdminSidebar() {
     { id: 'creators', label: 'Creators', icon: 'creators', href: '/superadmin/creators' },
     { id: 'content', label: 'Content Moderation', icon: 'content', href: '/superadmin/content' },
     { id: 'financial', label: 'Financial Reports', icon: 'financial', href: '/superadmin/financial-reports' },
-    { id: 'settings', label: 'Settings', icon: 'settings', href: '/superadmin/settings' },
   ];
 
   const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
@@ -91,30 +91,23 @@ export default function SuperAdminSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col min-h-screen">
+    <aside className="w-64 h-screen sticky top-0 bg-white border-r border-gray-200 flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          {/* Lock Icon */}
-          <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
-            <rect x="8" y="14" width="16" height="12" rx="2" fill="black"/>
-            <path d="M11 14V10C11 7.23858 13.2386 5 16 5C18.7614 5 21 7.23858 21 10V14" stroke="black" strokeWidth="2" fill="none"/>
-            <circle cx="16" cy="20" r="1.5" fill="white"/>
-          </svg>
-
-          {/* VeloLink Text */}
-          <div className="border-l-2 border-gray-900 pl-3">
-            <div className="text-xl">
-              <span className="font-bold text-gray-900">Velo</span>
-              <span className="font-light text-gray-900">Link</span>
-            </div>
-            <div className="text-xs text-red-600 font-medium">Super Admin</div>
-          </div>
+        <div className="flex items-center justify-center">
+          <Image
+            src="/assets/logo_svgs/Primary_Logo(black).svg"
+            alt="VeloLink Super Admin"
+            width={150}
+            height={40}
+            className="h-10 w-auto"
+            priority
+          />
         </div>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => (
           <Link
             key={item.id}

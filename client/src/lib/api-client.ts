@@ -325,7 +325,7 @@ export const contentApi = {
     apiClient.post('/content', data),
 
   // Create new content using multipart/form-data (streaming)
-  createContentMultipart: (formData: FormData, onUploadProgress?: (progressEvent: any) => void) =>
+  createContentMultipart: (formData: FormData, onUploadProgress?: (progressEvent: { loaded: number; total?: number }) => void) =>
     apiClient.post('/content/multipart', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

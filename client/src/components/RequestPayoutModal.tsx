@@ -81,7 +81,7 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-1">Request Payout</h2>
-              <p className="text-gray-600">Withdraw funds from your available VELO balance.</p>
+              <p className="text-gray-600">Withdraw funds from your available VELOLink balance.</p>
             </div>
             <button
               onClick={onClose}
@@ -189,7 +189,7 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
                 <span className="font-semibold text-gray-900">${parseFloat(amount || '0').toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-700">VELO Processing Fee</span>
+                <span className="text-gray-700">VELOLink Processing Fee</span>
                 <span className="font-semibold text-gray-900">- ${processingFee.toFixed(2)}</span>
               </div>
               <div className="pt-3 border-t border-gray-200">
@@ -206,7 +206,7 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
               </svg>
               <div>
                 <p className="text-sm font-medium text-blue-900">Estimated Arrival</p>
-                <p className="text-sm text-blue-700">Funds arrive in 1-3 business days</p>
+                <p className="text-sm text-blue-700">Funds arrive in 0-24 working hours</p>
               </div>
             </div>
 

@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { Bell, Settings, LogOut } from 'lucide-react';
 import AdminSidebar from '@/components/AdminSidebar';
 import { adminApi } from '@/lib/api-client';
+import { useLogout } from '@/hooks/useLogout';
 
 interface PayoutRequest {
   id: string;
@@ -32,6 +35,11 @@ export default function AdminPayoutsPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const profileRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const { logout } = useLogout();
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -55,6 +63,17 @@ export default function AdminPayoutsPage() {
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleApprove = (request: PayoutRequest) => {
     setSelectedRequest(request);
@@ -145,9 +164,51 @@ export default function AdminPayoutsPage() {
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Payout Requests</h1>
-            <p className="text-gray-600 mt-2">Review and manage creator payout requests</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Payout Requests</h1>
+              <p className="text-gray-600 mt-2">Review and manage creator payout requests</p>
+            </div>
+            <div className="flex items-center gap-4">
+              {/* Notification Button */}
+              <button
+                onClick={() => router.push('/admin/notifications')}
+                className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+
+              {/* Profile Dropdown */}
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-green-600 font-medium text-sm">A</span>
+                  </div>
+                </button>
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                    <button
+                      onClick={() => router.push('/admin/settings')}
+                      className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </button>
+                    <button
+                      onClick={logout}
+                      className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Filters */}

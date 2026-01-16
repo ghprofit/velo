@@ -1,15 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
-import { useGetAdminTransactionsQuery, useGetPaymentStatsQuery } from '@/state/api';
+import { useGetAdminTransactionsQuery, useGetPaymentStatsQuery, useGetRevenueOverTimeQuery } from '@/state/api';
+import { useLogout } from '@/hooks/useLogout';
 
 export default function PaymentsPage() {
+  const router = useRouter();
   const [activeTab] = useState('payments');
   const [searchQuery, setSearchQuery] = useState('');
-  const [timeRange, setTimeRange] = useState('Monthly');
+  const [timeRange, setTimeRange] = useState<'Weekly' | 'Monthly' | 'Yearly'>('Monthly');
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const { logout } = useLogout();
 
   // Fetch transactions with pagination and filters
   const { data: transactionsData, isLoading: transactionsLoading, error: transactionsError } = useGetAdminTransactionsQuery({
@@ -22,8 +30,73 @@ export default function PaymentsPage() {
   // Fetch payment stats
   const { data: statsData, isLoading: statsLoading } = useGetPaymentStatsQuery();
 
+  // Map timeRange to API period
+  const periodMap = { Weekly: '7' as const, Monthly: '30' as const, Yearly: '90' as const };
+  const { data: revenueData, isLoading: revenueLoading } = useGetRevenueOverTimeQuery({ period: periodMap[timeRange] });
+
   const transactions = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
+
+  // Click outside handlers
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setShowProfileDropdown(false);
+      }
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setShowFilterDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Export CSV function
+  const handleExportCSV = () => {
+    const headers = ['Transaction ID', 'Creator', 'Buyer Email', 'Amount', 'Currency', 'Payment Method', 'Status', 'Date'];
+    const csvContent = [
+      headers.join(','),
+      ...transactions.map(t => [
+        t.id,
+        `"${t.creatorName}"`,
+        t.buyerEmail,
+        t.amount,
+        t.currency,
+        t.paymentMethod,
+        t.status,
+        formatDate(t.createdAt)
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Generate chart data from revenue
+  const chartData = revenueData?.data
+    ? revenueData.data.slice(-7).map((point, index, arr) => {
+        const maxAmount = Math.max(...arr.map(p => p.amount), 1);
+        const date = new Date(point.date);
+        return {
+          x: 50 + index * 100,
+          barHeight: Math.max((point.amount / maxAmount) * 130, 10),
+          lineY: 200 - Math.max((point.amount / maxAmount) * 130, 10),
+          amount: point.amount,
+          label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        };
+      })
+    : Array.from({ length: 7 }, (_, i) => ({
+        x: 50 + i * 100,
+        barHeight: [60, 80, 100, 90, 120, 110, 130][i],
+        lineY: 200 - [60, 80, 100, 90, 120, 110, 130][i],
+        amount: 0,
+        label: '',
+      }));
 
   // Helper function to get status color
   const getStatusColor = (status: string) => {
@@ -77,51 +150,108 @@ export default function PaymentsPage() {
                   type="text"
                   placeholder="Search transaction or creator..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-96 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 />
                 <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
 
-              {/* Filter Button */}
-              <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-              </button>
+              {/* Filter Dropdown */}
+              <div className="relative" ref={filterDropdownRef}>
+                <button
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className={`p-2 border rounded-lg transition-colors ${statusFilter ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 hover:bg-gray-50'}`}
+                >
+                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </button>
+                {showFilterDropdown && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <button
+                      onClick={() => { setStatusFilter(undefined); setShowFilterDropdown(false); setCurrentPage(1); }}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${!statusFilter ? 'text-indigo-600 font-medium' : 'text-gray-700'}`}
+                    >
+                      All Status
+                    </button>
+                    {['COMPLETED', 'PENDING', 'FAILED', 'REFUNDED'].map(status => (
+                      <button
+                        key={status}
+                        onClick={() => { setStatusFilter(status); setShowFilterDropdown(false); setCurrentPage(1); }}
+                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${statusFilter === status ? 'text-indigo-600 font-medium' : 'text-gray-700'}`}
+                      >
+                        {status.charAt(0) + status.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Export CSV Button */}
-              <button className="px-4 py-2 border-2 border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2">
+              <button
+                onClick={handleExportCSV}
+                className="px-4 py-2 border-2 border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Export CSV
               </button>
 
-              {/* Date Range */}
-              <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Date Range
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {/* Settings Icon */}
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              {/* Notification Button */}
+              <button
+                onClick={() => router.push('/admin/notifications')}
+                className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </button>
 
-              {/* Profile Icon */}
-              <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white font-semibold">
-                A
+              {/* Profile Dropdown */}
+              <div className="relative" ref={profileDropdownRef}>
+                <button
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium">Admin</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showProfileDropdown && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <button
+                      onClick={() => { router.push('/admin/settings'); setShowProfileDropdown(false); }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Settings
+                    </button>
+                    <button
+                      onClick={() => { logout(); setShowProfileDropdown(false); }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -247,44 +377,85 @@ export default function PaymentsPage() {
 
             {/* Chart Area */}
             <div className="h-64 border border-gray-200 rounded-lg bg-gray-50 relative">
-              {/* Simple line visualization */}
-              <svg className="w-full h-full" viewBox="0 0 800 250">
-                {/* Grid lines */}
-                <line x1="0" y1="200" x2="800" y2="200" stroke="#e5e7eb" strokeWidth="1" />
+              {revenueLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
+              ) : (
+                <>
+                  <svg className="w-full h-full" viewBox="0 0 750 250">
+                    {/* Grid lines */}
+                    <line x1="0" y1="200" x2="750" y2="200" stroke="#e5e7eb" strokeWidth="1" />
 
-                {/* Bars */}
-                <rect x="50" y="140" width="40" height="60" fill="#e5e7eb" rx="2" />
-                <rect x="150" y="120" width="40" height="80" fill="#e5e7eb" rx="2" />
-                <rect x="250" y="100" width="40" height="100" fill="#e5e7eb" rx="2" />
-                <rect x="350" y="110" width="40" height="90" fill="#e5e7eb" rx="2" />
-                <rect x="450" y="80" width="40" height="120" fill="#e5e7eb" rx="2" />
-                <rect x="550" y="90" width="40" height="110" fill="#e5e7eb" rx="2" />
-                <rect x="650" y="70" width="40" height="130" fill="#e5e7eb" rx="2" />
+                    {/* Bars */}
+                    {chartData.map((point, i) => (
+                      <rect
+                        key={`bar-${i}`}
+                        x={point.x}
+                        y={200 - point.barHeight}
+                        width="40"
+                        height={point.barHeight}
+                        fill="#e5e7eb"
+                        rx="2"
+                        className="hover:fill-gray-300 transition-colors cursor-pointer"
+                      />
+                    ))}
 
-                {/* Revenue line */}
-                <polyline
-                  points="70,150 170,130 270,110 370,115 470,90 570,95 670,75"
-                  fill="none"
-                  stroke="#6366f1"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                    {/* Revenue line */}
+                    <polyline
+                      points={chartData.map(p => `${p.x + 20},${p.lineY}`).join(' ')}
+                      fill="none"
+                      stroke="#6366f1"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
 
-                {/* Data points */}
-                <circle cx="70" cy="150" r="4" fill="#6366f1" />
-                <circle cx="170" cy="130" r="4" fill="#6366f1" />
-                <circle cx="270" cy="110" r="4" fill="#6366f1" />
-                <circle cx="370" cy="115" r="4" fill="#6366f1" />
-                <circle cx="470" cy="90" r="4" fill="#6366f1" />
-                <circle cx="570" cy="95" r="4" fill="#6366f1" />
-                <circle cx="670" cy="75" r="4" fill="#6366f1" />
-              </svg>
+                    {/* Data points with tooltips */}
+                    {chartData.map((point, i) => (
+                      <g key={`point-${i}`} className="group">
+                        <circle
+                          cx={point.x + 20}
+                          cy={point.lineY}
+                          r="6"
+                          fill="#6366f1"
+                          className="cursor-pointer hover:r-8"
+                        />
+                        {point.amount > 0 && (
+                          <g className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <rect
+                              x={point.x - 20}
+                              y={point.lineY - 35}
+                              width="80"
+                              height="25"
+                              fill="#1f2937"
+                              rx="4"
+                            />
+                            <text
+                              x={point.x + 20}
+                              y={point.lineY - 18}
+                              textAnchor="middle"
+                              fill="white"
+                              fontSize="12"
+                            >
+                              ${point.amount.toLocaleString()}
+                            </text>
+                          </g>
+                        )}
+                      </g>
+                    ))}
+                  </svg>
 
-              {/* Axis labels */}
-              <div className="absolute bottom-2 left-4 text-xs text-gray-500">
-                X: Weeks • Y: USD
-              </div>
+                  {/* X-axis labels */}
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-around px-8">
+                    {chartData.map((point, i) => (
+                      <span key={i} className="text-xs text-gray-500 w-12 text-center">
+                        {point.label}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -335,7 +506,10 @@ export default function PaymentsPage() {
                           </td>
                           <td className="py-4 px-4 text-sm text-gray-900">{formatDate(transaction.createdAt)}</td>
                           <td className="py-4 px-4">
-                            <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline">
+                            <button
+                              onClick={() => alert(`Transaction Details:\n\nID: ${transaction.id}\nCreator: ${transaction.creatorName}\nBuyer: ${transaction.buyerEmail}\nAmount: ${formatCurrency(transaction.amount, transaction.currency)}\nMethod: ${transaction.paymentMethod}\nStatus: ${transaction.status}\nDate: ${formatDate(transaction.createdAt)}`)}
+                              className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline"
+                            >
                               View Details
                             </button>
                           </td>

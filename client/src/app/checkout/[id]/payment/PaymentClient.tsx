@@ -216,7 +216,7 @@ export function PaymentClient({ id }: { id: string }) {
       }
     } catch (error) {
       console.error('[PAYMENT] ❌ Failed to confirm purchase:', error);
-      const err = error as { response?: { data?: { message?: string; error?: any; statusCode?: number }; status?: number }; message?: string };
+      const err = error as { response?: { data?: { message?: string; error?: unknown; statusCode?: number }; status?: number }; message?: string };
       console.error('[PAYMENT] Error response data:', JSON.stringify(err.response?.data, null, 2));
       console.error('[PAYMENT] Error response status:', err.response?.status);
       console.error('[PAYMENT] Error message:', err.message);
@@ -317,11 +317,16 @@ export function PaymentClient({ id }: { id: string }) {
     <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col relative">
       {/* Floating Brand Logo */}
       <FloatingLogo
-        position="center"
-        size={110}
-        animation="rotate"
+        position="top-right"
+        size={120}
+        animation="float-rotate"
+        opacity={0.08}
+      />
+      <FloatingLogo
+        position="bottom-left"
+        size={100}
+        animation="pulse"
         opacity={0.06}
-        zIndex={-1}
       />
 
       {/* Header */}

@@ -356,7 +356,7 @@ export default function SettingsPage() {
 
           {/* Settings Tabs */}
           <div className="border-b border-gray-200 mb-6 sm:mb-8 -mx-4 sm:mx-0 px-4 sm:px-0">
-            <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 overflow-x-auto scrollbar-hide pb-px">
+            <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 overflow-x-auto scrollbar-hide pb-px">
               {settingsTabs.map((tab) => (
                 <button
                   key={tab}
@@ -365,7 +365,7 @@ export default function SettingsPage() {
                     setError('');
                     setSuccess('');
                   }}
-                  className={`tab-3d pb-3 sm:pb-4 px-4 sm:px-6 border-b-2 text-sm sm:text-base font-medium whitespace-nowrap rounded-t-xl ${
+                  className={`tab-3d pb-3 sm:pb-4 px-2 sm:px-4 lg:px-6 border-b-2 text-xs sm:text-sm lg:text-base font-medium whitespace-nowrap rounded-t-xl ${
                     settingsTab === tab
                       ? 'active border-indigo-600 text-indigo-600'
                       : tab === 'Danger Zone'

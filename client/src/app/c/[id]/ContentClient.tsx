@@ -346,9 +346,15 @@ export function ContentClient({ id }: { id: string }) {
         {/* Floating Brand Logo */}
         <FloatingLogo
           position="top-right"
+          size={120}
+          animation="float-rotate"
+          opacity={0.08}
+        />
+        <FloatingLogo
+          position="bottom-left"
           size={100}
-          animation="orbit"
-          opacity={0.12}
+          animation="pulse"
+          opacity={0.06}
         />
 
         {/* Header */}

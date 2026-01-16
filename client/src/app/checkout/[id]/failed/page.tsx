@@ -20,9 +20,15 @@ export default function PaymentFailedPage({ params }: { params: Promise<{ id: st
       {/* Floating Logo */}
       <FloatingLogo
         position="top-right"
-        size={100}
-        animation="float"
+        size={120}
+        animation="float-rotate"
         opacity={0.08}
+      />
+      <FloatingLogo
+        position="bottom-left"
+        size={100}
+        animation="pulse"
+        opacity={0.06}
       />
 
       {/* Header */}

@@ -72,7 +72,7 @@ const iconVariants = {
   visible: {
     scale: 1,
     opacity: 1,
-    transition: { type: 'spring', stiffness: 500, damping: 25 },
+    transition: { type: 'spring' as const, stiffness: 500, damping: 25 },
   },
   exit: { scale: 0, opacity: 0, transition: { duration: 0.1 } },
 };
@@ -83,7 +83,7 @@ const dropdownVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { type: 'spring', stiffness: 300, damping: 25 },
+    transition: { type: 'spring' as const, stiffness: 300, damping: 25 },
   },
   exit: { opacity: 0, y: 10, scale: 0.95, transition: { duration: 0.15 } },
 };

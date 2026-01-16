@@ -35,8 +35,6 @@ export default function AdminSettingsPage() {
     { id: 'profile', label: 'Profile', icon: 'user' },
     { id: 'security', label: 'Security', icon: 'lock' },
     { id: 'notifications', label: 'Notifications', icon: 'bell' },
-    { id: 'platform', label: 'Platform', icon: 'settings' },
-    { id: 'integrations', label: 'Integrations', icon: 'grid' },
   ];
 
   const renderTabIcon = (iconName: string) => {

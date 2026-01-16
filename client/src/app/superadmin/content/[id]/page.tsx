@@ -37,7 +37,7 @@ export default function SuperAdminContentDetailsPage() {
 
     setIsReviewing(true);
     try {
-      await reviewContent({ id: contentId, data: { status: 'APPROVED' } }).unwrap();
+      await reviewContent({ id: contentId, data: { decision: 'APPROVED' } }).unwrap();
       alert('Content approved successfully!');
       refetch();
     } catch (error) {
@@ -53,7 +53,7 @@ export default function SuperAdminContentDetailsPage() {
 
     setIsReviewing(true);
     try {
-      await reviewContent({ id: contentId, data: { status: 'REJECTED' } }).unwrap();
+      await reviewContent({ id: contentId, data: { decision: 'REJECTED' } }).unwrap();
       setShowRejectModal(false);
       alert('Content rejected successfully!');
       refetch();

@@ -18,7 +18,7 @@ let VerifiedCreatorGuard = class VerifiedCreatorGuard {
     }
     async canActivate(context) {
         const request = context.switchToHttp().getRequest();
-        const userId = request.user?.userId;
+        const userId = request.user?.id;
         if (!userId) {
             throw new common_1.ForbiddenException('User not authenticated');
         }

@@ -12,9 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContentService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
+const email_service_1 = require("../../email/email.service");
+const config_1 = require("@nestjs/config");
 let ContentService = class ContentService {
-    constructor(prisma) {
+    constructor(prisma, emailService, config) {
         this.prisma = prisma;
+        this.emailService = emailService;
+        this.config = config;
     }
     async getContent(query) {
         const { search, status, complianceStatus, contentType, severity, page = 1, limit = 20 } = query;
@@ -186,9 +190,8 @@ let ContentService = class ContentService {
                 data: updateData,
                 include: {
                     creator: {
-                        select: {
-                            displayName: true,
-                            userId: true,
+                        include: {
+                            user: true,
                         },
                     },
                 },
@@ -213,6 +216,26 @@ let ContentService = class ContentService {
                 },
             }),
         ]);
+        try {
+            const clientUrl = this.config.get('CLIENT_URL') || 'http://localhost:3000';
+            if (dto.decision === 'APPROVED') {
+                await this.emailService.sendContentApproved(updatedContent.creator.user.email, {
+                    creator_name: updatedContent.creator.displayName,
+                    content_title: updatedContent.title,
+                    content_link: `${clientUrl}/c/${updatedContent.id}`,
+                });
+            }
+            else if (dto.decision === 'REJECTED') {
+                await this.emailService.sendContentRejected(updatedContent.creator.user.email, {
+                    creator_name: updatedContent.creator.displayName,
+                    content_title: updatedContent.title,
+                    rejection_reason: dto.notes || dto.reason || 'Content does not meet platform guidelines',
+                });
+            }
+        }
+        catch (error) {
+            console.error('Failed to send content review email:', error);
+        }
         return this.formatContentResponse(updatedContent);
     }
     async removeContent(id, dto, adminId) {
@@ -236,9 +259,8 @@ let ContentService = class ContentService {
                 },
                 include: {
                     creator: {
-                        select: {
-                            displayName: true,
-                            userId: true,
+                        include: {
+                            user: true,
                         },
                     },
                 },
@@ -253,6 +275,18 @@ let ContentService = class ContentService {
                 },
             }),
         ]);
+        if (dto.notifyCreator) {
+            try {
+                await this.emailService.sendEmail({
+                    to: updatedContent.creator.user.email,
+                    subject: 'Content Removed - Action Required',
+                    html: `Your content "${updatedContent.title}" has been removed from the platform. Reason: ${dto.reason}`,
+                });
+            }
+            catch (error) {
+                console.error('Failed to send content removal email:', error);
+            }
+        }
         return this.formatContentResponse(updatedContent);
     }
     formatContentResponse(content) {
@@ -319,6 +353,8 @@ let ContentService = class ContentService {
 exports.ContentService = ContentService;
 exports.ContentService = ContentService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        email_service_1.EmailService,
+        config_1.ConfigService])
 ], ContentService);
 //# sourceMappingURL=content.service.js.map

@@ -4,14 +4,15 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { VerifyAccessDto } from './dto/verify-access.dto';
 import { ConfirmPurchaseDto } from './dto/confirm-purchase.dto';
-import { CheckAccessEligibilityDto } from './dto/check-access-eligibility.dto';
-import { RequestDeviceVerificationDto } from './dto/request-device-verification.dto';
-import { VerifyDeviceCodeDto } from './dto/verify-device-code.dto';
+import { CheckEligibilityDto } from './dto/check-eligibility.dto';
 export declare class BuyerController {
     private readonly buyerService;
     constructor(buyerService: BuyerService);
     createSession(dto: CreateSessionDto, ipAddress: string, req: Request): Promise<{
+        id: string;
         sessionToken: string;
+        fingerprint: string | null;
+        ipAddress: string | null;
         expiresAt: Date;
     }>;
     getContentDetails(id: string): Promise<{
@@ -24,6 +25,7 @@ export declare class BuyerController {
         duration: number | null;
         viewCount: number;
         purchaseCount: number;
+        itemCount: number;
         creator: {
             id: string;
             displayName: string;
@@ -31,7 +33,7 @@ export declare class BuyerController {
             verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
         };
     }>;
-    createPurchase(dto: CreatePurchaseDto, ipAddress: string): Promise<{
+    createPurchase(dto: CreatePurchaseDto): Promise<{
         alreadyPurchased: boolean;
         accessToken: string;
         purchaseId?: undefined;
@@ -39,7 +41,7 @@ export declare class BuyerController {
         amount?: undefined;
     } | {
         purchaseId: string;
-        clientSecret: string | null;
+        clientSecret: any;
         amount: number;
         accessToken: string;
         alreadyPurchased?: undefined;
@@ -54,7 +56,7 @@ export declare class BuyerController {
             contentType: string;
         };
     }>;
-    getContentAccess(dto: VerifyAccessDto, ipAddress: string): Promise<{
+    getContentAccess(dto: VerifyAccessDto): Promise<{
         content: {
             id: string;
             title: string;
@@ -81,24 +83,7 @@ export declare class BuyerController {
             purchasedAt: Date;
         };
     }>;
-    getSessionPurchases(sessionToken: string): Promise<{
-        id: string;
-        accessToken: string;
-        purchasedAt: Date;
-        viewCount: number;
-        content: {
-            id: string;
-            title: string;
-            thumbnailUrl: string;
-            contentType: string;
-        };
-    }[]>;
-    confirmPurchase(dto: ConfirmPurchaseDto): Promise<{
-        purchaseId: string;
-        accessToken: string;
-        status: string;
-    }>;
-    checkAccessEligibility(dto: CheckAccessEligibilityDto): Promise<{
+    checkAccessEligibility(dto: CheckEligibilityDto): Promise<{
         hasAccess: boolean;
         reason: string;
         isExpired?: undefined;
@@ -131,10 +116,34 @@ export declare class BuyerController {
         needsEmailVerification?: undefined;
         canAddMoreDevices?: undefined;
     }>;
-    requestDeviceVerification(dto: RequestDeviceVerificationDto): Promise<{
+    getSessionPurchases(sessionToken: string): Promise<{
+        id: string;
+        accessToken: string;
+        purchasedAt: Date;
+        viewCount: number;
+        content: {
+            id: string;
+            title: string;
+            thumbnailUrl: string;
+            contentType: string;
+        };
+    }[]>;
+    confirmPurchase(dto: ConfirmPurchaseDto): Promise<{
+        purchaseId: string;
+        accessToken: string;
+        status: string;
+    }>;
+    requestDeviceCode(dto: {
+        purchaseId: string;
+        fingerprint: string;
+    }): Promise<{
         success: boolean;
     }>;
-    verifyDeviceCode(dto: VerifyDeviceCodeDto): Promise<{
+    verifyDevice(dto: {
+        purchaseId: string;
+        code: string;
+        fingerprint: string;
+    }): Promise<{
         success: boolean;
     }>;
 }

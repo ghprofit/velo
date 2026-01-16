@@ -40,7 +40,7 @@ export default function SupportPage() {
           <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 lg:p-8 mb-8 sm:mb-12">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
               <div className="flex items-start gap-4 sm:gap-6">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
                   <svg className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -76,19 +76,19 @@ export default function SupportPage() {
                 </div>
                 <div className="space-y-2 sm:space-y-3">
                   <button onClick={() => openModal('pricing')} className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors group w-full text-left">
-                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <span className="text-xs sm:text-sm">Payout Threshold & Fees</span>
                   </button>
                   <button onClick={() => openModal('pricing')} className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors group w-full text-left">
-                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <span className="text-xs sm:text-sm">Withdrawing Funds</span>
                   </button>
                   <button onClick={() => openModal('help')} className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors group w-full text-left">
-                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <span className="text-xs sm:text-sm">Tax Documents (1099)</span>
@@ -108,19 +108,19 @@ export default function SupportPage() {
                 </div>
                 <div className="space-y-2 sm:space-y-3">
                   <Link href="/settings/2fa" className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors group">
-                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <span className="text-xs sm:text-sm">Two-Factor Authentication Setup</span>
                   </Link>
                   <button onClick={() => openModal('security')} className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors group w-full text-left">
-                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <span className="text-xs sm:text-sm">Updating Payment Methods</span>
                   </button>
                   <button onClick={() => openModal('help')} className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors group w-full text-left">
-                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <span className="text-xs sm:text-sm">Account Deactivation</span>
@@ -140,19 +140,19 @@ export default function SupportPage() {
                 </div>
                 <div className="space-y-2 sm:space-y-3">
                   <button onClick={() => openModal('compliance')} className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors group w-full text-left">
-                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <span className="text-xs sm:text-sm">Content Guidelines</span>
                   </button>
                   <button onClick={() => openModal('pricing')} className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors group w-full text-left">
-                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <span className="text-xs sm:text-sm">Disputes & Refunds</span>
                   </button>
                   <button onClick={() => openModal('help')} className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors group w-full text-left">
-                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <span className="text-xs sm:text-sm">Troubleshooting Upload Errors</span>
@@ -163,7 +163,7 @@ export default function SupportPage() {
           </div>
 
           {/* Legal & Policy Links */}
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-8 sm:mb-12">
+          <div className="bg-linear-to-br from-indigo-50 to-purple-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-8 sm:mb-12">
             <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Legal & Policies</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <button

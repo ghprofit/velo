@@ -23,6 +23,8 @@ var NotificationType;
     NotificationType["PURCHASE_MADE"] = "PURCHASE_MADE";
     NotificationType["PAYOUT_SENT"] = "PAYOUT_SENT";
     NotificationType["PAYOUT_FAILED"] = "PAYOUT_FAILED";
+    NotificationType["PAYOUT_APPROVED"] = "PAYOUT_APPROVED";
+    NotificationType["PAYOUT_REJECTED"] = "PAYOUT_REJECTED";
     NotificationType["PLATFORM_UPDATE"] = "PLATFORM_UPDATE";
     NotificationType["NEW_FEATURE"] = "NEW_FEATURE";
     NotificationType["POLICY_WARNING"] = "POLICY_WARNING";

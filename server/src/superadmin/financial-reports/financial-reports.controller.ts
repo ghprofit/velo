@@ -1,10 +1,11 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { FinancialReportsService } from './financial-reports.service';
 import { QueryFinancialReportsDto } from './dto/query-financial-reports.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SuperAdminGuard } from '../guards/superadmin.guard';
 
 @Controller('superadmin/financial-reports')
-@UseGuards(SuperAdminGuard)
+@UseGuards(JwtAuthGuard, SuperAdminGuard)
 export class FinancialReportsController {
   constructor(private readonly financialReportsService: FinancialReportsService) {}
 

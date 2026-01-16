@@ -5,9 +5,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { VeriffModule } from '../veriff/veriff.module';
 import { EmailModule } from '../email/email.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { StripeModule } from '../stripe/stripe.module';
 
 @Module({
-  imports: [PrismaModule, VeriffModule.forRoot(), EmailModule, NotificationsModule],
+  imports: [PrismaModule, VeriffModule.forRoot(), EmailModule, NotificationsModule, StripeModule],
   controllers: [CreatorsController],
   providers: [CreatorsService],
   exports: [CreatorsService],

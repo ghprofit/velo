@@ -1,6 +1,6 @@
 import { OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RedisClientType } from 'redis';
+import { Redis } from '@upstash/redis';
 export declare class RedisService implements OnModuleDestroy {
     private config;
     private client;
@@ -18,6 +18,6 @@ export declare class RedisService implements OnModuleDestroy {
     ttl(key: string): Promise<number>;
     onModuleDestroy(): Promise<void>;
     isAvailable(): boolean;
-    getClient(): RedisClientType;
+    getClient(): Redis;
 }
 //# sourceMappingURL=redis.service.d.ts.map

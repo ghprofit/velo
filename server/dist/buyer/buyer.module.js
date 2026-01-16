@@ -14,12 +14,19 @@ const prisma_module_1 = require("../prisma/prisma.module");
 const stripe_module_1 = require("../stripe/stripe.module");
 const email_module_1 = require("../email/email.module");
 const s3_module_1 = require("../s3/s3.module");
+const redis_module_1 = require("../redis/redis.module");
 let BuyerModule = class BuyerModule {
 };
 exports.BuyerModule = BuyerModule;
 exports.BuyerModule = BuyerModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, stripe_module_1.StripeModule, email_module_1.EmailModule, s3_module_1.S3Module],
+        imports: [
+            prisma_module_1.PrismaModule,
+            stripe_module_1.StripeModule,
+            email_module_1.EmailModule,
+            s3_module_1.S3Module,
+            redis_module_1.RedisModule,
+        ],
         controllers: [buyer_controller_1.BuyerController],
         providers: [buyer_service_1.BuyerService],
         exports: [buyer_service_1.BuyerService],

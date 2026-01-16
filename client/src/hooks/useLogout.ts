@@ -46,7 +46,10 @@ export function useLogout() {
     try {
       // Step 1: Call logout API (server clears cookies & DB)
       try {
-        await apiClient.post('/auth/logout');
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+          await apiClient.post('/auth/logout', { refreshToken });
+        }
       } catch (apiError) {
         // Continue cleanup even if API fails
         // This ensures user is logged out locally even if network fails

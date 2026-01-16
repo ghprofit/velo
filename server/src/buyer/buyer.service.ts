@@ -587,7 +587,30 @@ export class BuyerService {
           profileImage: null, // Hide profile image even after purchase if privacy is disabled
         };
 
-    // Return content info (S3 service will generate signed URLs separately)
+    // Generate signed URLs for content items (24-hour expiry)
+    console.log('[BUYER SERVICE] Generating signed URLs for', purchase.content.contentItems.length, 'content items');
+    const contentItemsWithUrls = await Promise.all(
+      purchase.content.contentItems.map(async (item, index) => {
+        console.log(`[BUYER SERVICE] Generating signed URL for item ${index}:`, item.s3Key);
+        const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400);
+        console.log(`[BUYER SERVICE] Generated signed URL for item ${index}:`, signedUrl?.substring(0, 100) + '...');
+        return {
+          id: item.id,
+          s3Key: item.s3Key,
+          s3Bucket: item.s3Bucket,
+          order: item.order,
+          signedUrl,
+        };
+      })
+    );
+
+    console.log('[BUYER SERVICE] Content items with URLs:', contentItemsWithUrls.map(item => ({
+      id: item.id,
+      hasSignedUrl: !!item.signedUrl,
+      signedUrlPreview: item.signedUrl?.substring(0, 100),
+    })));
+
+    // Return content info with signed URLs
     return {
       content: {
         id: purchase.content.id,
@@ -599,12 +622,7 @@ export class BuyerService {
         thumbnailUrl: purchase.content.thumbnailUrl,
         duration: purchase.content.duration,
         creator: creatorInfo,
-        contentItems: purchase.content.contentItems.map((item) => ({
-          id: item.id,
-          s3Key: item.s3Key,
-          s3Bucket: item.s3Bucket,
-          order: item.order,
-        })),
+        contentItems: contentItemsWithUrls,
       },
       purchase: {
         viewCount: purchase.viewCount + 1,
@@ -733,7 +751,7 @@ export class BuyerService {
         }
 
         // Update purchase status
-        await tx.purchase.update({
+        const updatedPurchase = await tx.purchase.update({
           where: { id: purchase.id },
           data: {
             status: 'COMPLETED',
@@ -743,6 +761,16 @@ export class BuyerService {
             completedAt: new Date(),
           },
         });
+
+        this.logger.log(
+          `✅ Purchase ${updatedPurchase.id} updated to COMPLETED status`,
+        );
+        this.logger.log(
+          `💾 Transaction ID: ${updatedPurchase.transactionId}`,
+        );
+        this.logger.log(
+          `🔑 Access Token: ${updatedPurchase.accessToken.substring(0, 20)}...`,
+        );
 
         // Update content stats
         await tx.content.update({
@@ -770,6 +798,9 @@ export class BuyerService {
 
         this.logger.log(
           `Purchase ${purchaseId} confirmed by CLIENT with idempotency key ${idempotencyKey}`,
+        );
+        this.logger.log(
+          `💰 Creator earnings updated: +$${creatorEarnings.toFixed(2)}`,
         );
 
         return {

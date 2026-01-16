@@ -196,7 +196,7 @@ export default function CreatorDetailsPage() {
             <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
               <div className="flex items-start gap-6">
                 {/* Profile Picture */}
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center overflow-hidden text-white text-3xl font-bold">
+                <div className="w-32 h-32 rounded-full bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center overflow-hidden text-white text-3xl font-bold">
                   {creator.profileImage ? (
                     <Image src={creator.profileImage} alt={creator.name} className="w-full h-full object-cover" />
                   ) : (

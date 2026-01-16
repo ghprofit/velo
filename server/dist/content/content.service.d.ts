@@ -1,21 +1,22 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { RecognitionService } from '../recognition/recognition.service';
-import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService } from '../email/email.service';
 import { CreateContentDto } from './dto/create-content.dto';
+import { CreateContentMultipartDto } from './dto/create-content-multipart.dto';
 export declare class ContentService {
     private prisma;
     private s3Service;
     private recognitionService;
-    private notificationsService;
-    constructor(prisma: PrismaService, s3Service: S3Service, recognitionService: RecognitionService, notificationsService: NotificationsService);
-    private getSignedThumbnailUrl;
+    private emailService;
+    private readonly logger;
+    constructor(prisma: PrismaService, s3Service: S3Service, recognitionService: RecognitionService, emailService: EmailService);
     createContent(userId: string, createContentDto: CreateContentDto): Promise<{
         content: {
             creator: {
                 user: {
-                    email: string;
                     displayName: string | null;
+                    profilePicture: string | null;
                 };
             } & {
                 id: string;
@@ -25,6 +26,7 @@ export declare class ContentService {
                 firstName: string | null;
                 lastName: string | null;
                 country: string | null;
+                bio: string | null;
                 profileImage: string | null;
                 coverImage: string | null;
                 allowBuyerProfileView: boolean;
@@ -50,6 +52,8 @@ export declare class ContentService {
                 totalEarnings: number;
                 totalViews: number;
                 totalPurchases: number;
+                waitlistBonus: number;
+                bonusWithdrawn: boolean;
                 userId: string;
             };
             contentItems: {
@@ -65,11 +69,11 @@ export declare class ContentService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            description: string | null;
             status: import(".prisma/client").$Enums.ContentStatus;
             viewCount: number;
             creatorId: string;
             title: string;
+            description: string | null;
             price: number;
             thumbnailUrl: string;
             contentType: string;
@@ -82,14 +86,117 @@ export declare class ContentService {
             complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
             complianceCheckedAt: Date | null;
             complianceNotes: string | null;
+            rekognitionJobId: string | null;
+            rekognitionJobStatus: string | null;
+            rekognitionJobStartedAt: Date | null;
+            rekognitionJobCompletedAt: Date | null;
+            moderationCheckType: string | null;
             purchaseCount: number;
             totalRevenue: number;
         };
         link: string;
         shortId: string;
+        status: "PENDING_REVIEW" | "APPROVED";
     }>;
-    getCreatorContent(userId: string): Promise<{
-        thumbnailUrl: string;
+    createContentMultipart(userId: string, createContentDto: CreateContentMultipartDto, files: Express.Multer.File[], thumbnailFile: Express.Multer.File, filesMetadata: Array<{
+        fileName: string;
+        contentType: string;
+        fileSize: number;
+        duration?: number;
+    }>): Promise<{
+        content: {
+            creator: {
+                user: {
+                    id: string;
+                    email: string;
+                    displayName: string | null;
+                    profilePicture: string | null;
+                };
+            } & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                displayName: string;
+                firstName: string | null;
+                lastName: string | null;
+                country: string | null;
+                bio: string | null;
+                profileImage: string | null;
+                coverImage: string | null;
+                allowBuyerProfileView: boolean;
+                verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
+                veriffSessionId: string | null;
+                veriffDecisionId: string | null;
+                verifiedAt: Date | null;
+                verificationNotes: string | null;
+                dateOfBirth: Date | null;
+                bankAccountName: string | null;
+                bankName: string | null;
+                bankAccountNumber: string | null;
+                bankRoutingNumber: string | null;
+                bankSwiftCode: string | null;
+                bankIban: string | null;
+                bankCountry: string | null;
+                bankCurrency: string | null;
+                payoutSetupCompleted: boolean;
+                paypalEmail: string | null;
+                stripeAccountId: string | null;
+                payoutStatus: import(".prisma/client").$Enums.PayoutStatus;
+                policyStrikes: number;
+                totalEarnings: number;
+                totalViews: number;
+                totalPurchases: number;
+                waitlistBonus: number;
+                bonusWithdrawn: boolean;
+                userId: string;
+            };
+            contentItems: {
+                id: string;
+                createdAt: Date;
+                contentId: string;
+                s3Key: string;
+                s3Bucket: string;
+                fileSize: number;
+                order: number;
+            }[];
+        } & {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: import(".prisma/client").$Enums.ContentStatus;
+            viewCount: number;
+            creatorId: string;
+            title: string;
+            description: string | null;
+            price: number;
+            thumbnailUrl: string;
+            contentType: string;
+            s3Key: string;
+            s3Bucket: string;
+            fileSize: number;
+            duration: number | null;
+            isPublished: boolean;
+            publishedAt: Date | null;
+            complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
+            complianceCheckedAt: Date | null;
+            complianceNotes: string | null;
+            rekognitionJobId: string | null;
+            rekognitionJobStatus: string | null;
+            rekognitionJobStartedAt: Date | null;
+            rekognitionJobCompletedAt: Date | null;
+            moderationCheckType: string | null;
+            purchaseCount: number;
+            totalRevenue: number;
+        };
+        shortId: string;
+        status: "PENDING_REVIEW" | "APPROVED";
+        message: string;
+    }>;
+    processVideoModerationJobs(): Promise<void>;
+    private handleModerationJobComplete;
+    private handleModerationJobFailed;
+    private sendApprovalEmail;
+    getCreatorContent(userId: string): Promise<({
         _count: {
             purchases: number;
         };
@@ -102,15 +209,17 @@ export declare class ContentService {
             fileSize: number;
             order: number;
         }[];
+    } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         status: import(".prisma/client").$Enums.ContentStatus;
         viewCount: number;
         creatorId: string;
         title: string;
+        description: string | null;
         price: number;
+        thumbnailUrl: string;
         contentType: string;
         s3Key: string;
         s3Bucket: string;
@@ -121,14 +230,19 @@ export declare class ContentService {
         complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
         complianceCheckedAt: Date | null;
         complianceNotes: string | null;
+        rekognitionJobId: string | null;
+        rekognitionJobStatus: string | null;
+        rekognitionJobStartedAt: Date | null;
+        rekognitionJobCompletedAt: Date | null;
+        moderationCheckType: string | null;
         purchaseCount: number;
         totalRevenue: number;
-    }[]>;
+    })[]>;
     getContentById(contentId: string): Promise<{
-        thumbnailUrl: string;
         creator: {
             user: {
                 displayName: string | null;
+                profilePicture: string | null;
             };
         } & {
             id: string;
@@ -138,6 +252,7 @@ export declare class ContentService {
             firstName: string | null;
             lastName: string | null;
             country: string | null;
+            bio: string | null;
             profileImage: string | null;
             coverImage: string | null;
             allowBuyerProfileView: boolean;
@@ -163,6 +278,8 @@ export declare class ContentService {
             totalEarnings: number;
             totalViews: number;
             totalPurchases: number;
+            waitlistBonus: number;
+            bonusWithdrawn: boolean;
             userId: string;
         };
         contentItems: {
@@ -174,15 +291,17 @@ export declare class ContentService {
             fileSize: number;
             order: number;
         }[];
+    } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         status: import(".prisma/client").$Enums.ContentStatus;
         viewCount: number;
         creatorId: string;
         title: string;
+        description: string | null;
         price: number;
+        thumbnailUrl: string;
         contentType: string;
         s3Key: string;
         s3Bucket: string;
@@ -193,6 +312,11 @@ export declare class ContentService {
         complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
         complianceCheckedAt: Date | null;
         complianceNotes: string | null;
+        rekognitionJobId: string | null;
+        rekognitionJobStatus: string | null;
+        rekognitionJobStartedAt: Date | null;
+        rekognitionJobCompletedAt: Date | null;
+        moderationCheckType: string | null;
         purchaseCount: number;
         totalRevenue: number;
     }>;

@@ -1,9 +1,13 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { UpdateAdminDto } from './dto/update-admin.dto';
 export declare class SuperadminService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private emailService;
+    private config;
+    constructor(prisma: PrismaService, emailService: EmailService, config: ConfigService);
     getAllAdmins(search?: string, role?: string): Promise<{
         id: any;
         name: any;
@@ -91,10 +95,10 @@ export declare class SuperadminService {
         message: string;
     }>;
     getAdminActivityLog(id: string): Promise<{
+        reason: string | null;
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         createdAt: Date;
-        reason: string | null;
         action: string;
         adminId: string;
         targetType: string;

@@ -3,5 +3,6 @@ export declare class UpdateProfileDto {
     firstName?: string;
     lastName?: string;
     email?: string;
+    profilePicture?: string;
 }
 //# sourceMappingURL=update-profile.dto.d.ts.map

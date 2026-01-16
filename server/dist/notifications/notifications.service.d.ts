@@ -9,10 +9,10 @@ export declare class NotificationsService {
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         createdAt: Date;
-        type: string;
         message: string;
         userId: string;
         title: string;
+        type: string;
         isRead: boolean;
     }[]>;
     getStats(userId: string): Promise<{
@@ -26,10 +26,10 @@ export declare class NotificationsService {
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         createdAt: Date;
-        type: string;
         message: string;
         userId: string;
         title: string;
+        type: string;
         isRead: boolean;
     }>;
     markAllAsRead(userId: string): Promise<import(".prisma/client").Prisma.BatchPayload>;
@@ -37,10 +37,10 @@ export declare class NotificationsService {
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         createdAt: Date;
-        type: string;
         message: string;
         userId: string;
         title: string;
+        type: string;
         isRead: boolean;
     }>;
     clearAllRead(userId: string): Promise<import(".prisma/client").Prisma.BatchPayload>;
@@ -48,10 +48,10 @@ export declare class NotificationsService {
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         createdAt: Date;
-        type: string;
         message: string;
         userId: string;
         title: string;
+        type: string;
         isRead: boolean;
     }>;
     sendToMultipleUsers(dto: SendToMultipleUsersDto): Promise<{
@@ -83,10 +83,10 @@ export declare class NotificationsService {
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
-            type: string;
             message: string;
             userId: string;
             title: string;
+            type: string;
             isRead: boolean;
         })[];
         pagination: {
@@ -108,10 +108,10 @@ export declare class NotificationsService {
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         createdAt: Date;
-        type: string;
         message: string;
         userId: string;
         title: string;
+        type: string;
         isRead: boolean;
     }>;
     bulkDeleteNotifications(notificationIds: string[]): Promise<{
@@ -124,10 +124,10 @@ export declare class NotificationsService {
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         createdAt: Date;
-        type: string;
         message: string;
         userId: string;
         title: string;
+        type: string;
         isRead: boolean;
     }>;
     notifyAdmins(type: NotificationType, title: string, message: string, metadata?: Record<string, any>): Promise<{

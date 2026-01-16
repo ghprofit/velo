@@ -56,7 +56,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed top-4 right-4 z-9999 flex flex-col gap-2 pointer-events-none">
         <AnimatePresence mode="popLayout">
           {toasts.map((toast) => (
             <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
@@ -120,11 +120,11 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
       <div
         className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg ${bgColor} ${borderColor} min-w-[300px] max-w-[400px]`}
       >
-        <Icon className={`w-5 h-5 flex-shrink-0 ${iconColor}`} />
+        <Icon className={`w-5 h-5 shrink-0 ${iconColor}`} />
         <p className={`text-sm font-medium flex-1 ${textColor}`}>{message}</p>
         <button
           onClick={() => onRemove(id)}
-          className={`flex-shrink-0 ${textColor} hover:opacity-70 transition-opacity`}
+          className={`shrink-0 ${textColor} hover:opacity-70 transition-opacity`}
           aria-label="Close notification"
         >
           <X className="w-4 h-4" />

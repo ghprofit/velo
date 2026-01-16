@@ -143,7 +143,7 @@ export default function PaymentsPage() {
               <p className="text-3xl font-bold text-gray-900 mb-2">
                 {statsLoading ? 'Loading...' : formatCurrency(statsData?.totalRevenue || 0)}
               </p>
-              <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
+              <div className="h-1 bg-linear-to-r from-indigo-500 to-blue-500 rounded-full"></div>
             </div>
 
             {/* Total Payouts */}

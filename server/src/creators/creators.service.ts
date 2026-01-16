@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { VeriffService } from '../veriff/veriff.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { StripeService } from '../stripe/stripe.service';
 import { NotificationType } from '../notifications/dto/create-notification.dto';
 import { CreateSessionDto } from '../veriff/dto';
 import { VerificationStatus } from '@prisma/client';
@@ -17,6 +18,7 @@ export class CreatorsService {
     private readonly veriffService: VeriffService,
     private readonly emailService: EmailService,
     private readonly notificationsService: NotificationsService,
+    private readonly stripeService: StripeService,
   ) {}
 
   /**
@@ -54,6 +56,10 @@ export class CreatorsService {
       // Prepare Veriff session data
       // IMPORTANT: callback must point to API webhook endpoint, NOT frontend
       const apiUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:8000';
+      
+      // Log the data being sent for debugging
+      this.logger.log(`Creator profile data: firstName=${user.creatorProfile.firstName}, lastName=${user.creatorProfile.lastName}, dateOfBirth=${user.creatorProfile.dateOfBirth}`);
+      
       const sessionData: CreateSessionDto = {
         verification: {
           callback: `${apiUrl}/api/veriff/webhooks/decision`,
@@ -67,6 +73,8 @@ export class CreatorsService {
           vendorData: userId, // Store user ID for webhook processing
         },
       };
+      
+      this.logger.log(`Veriff session data: ${JSON.stringify(sessionData, null, 2)}`);
 
       // Create Veriff session
       const session = await this.veriffService.createSession(sessionData);
@@ -219,7 +227,26 @@ export class CreatorsService {
         throw new BadRequestException('Creator must be verified before setting up payout');
       }
 
-      // Update creator profile with bank account info
+      // Create or get Stripe Connect account
+      let stripeAccountId = user.creatorProfile.stripeAccountId;
+
+      if (!stripeAccountId) {
+        this.logger.log(`Creating Stripe Connect account for user: ${userId}`);
+        
+        const stripeAccount = await this.stripeService.createConnectAccount(
+          user.email,
+          {
+            userId: user.id,
+            creatorId: user.creatorProfile.id,
+            displayName: user.creatorProfile.displayName,
+          },
+        );
+
+        stripeAccountId = stripeAccount.id;
+        this.logger.log(`Stripe Connect account created: ${stripeAccountId}`);
+      }
+
+      // Update creator profile with bank account info and Stripe account
       const updatedProfile = await this.prisma.creatorProfile.update({
         where: { id: user.creatorProfile.id },
         data: {
@@ -231,6 +258,7 @@ export class CreatorsService {
           bankIban: bankAccountDto.bankIban,
           bankCountry: bankAccountDto.bankCountry,
           bankCurrency: bankAccountDto.bankCurrency || 'USD',
+          stripeAccountId,
           payoutSetupCompleted: true,
         },
       });
@@ -245,6 +273,7 @@ export class CreatorsService {
         bankCountry: updatedProfile.bankCountry!,
         bankCurrency: updatedProfile.bankCurrency!,
         payoutSetupCompleted: updatedProfile.payoutSetupCompleted,
+        stripeAccountId: updatedProfile.stripeAccountId!,
       };
     } catch (error) {
       this.logger.error(`Failed to setup bank account for user ${userId}:`, error);
@@ -279,6 +308,7 @@ export class CreatorsService {
         bankCountry: profile.bankCountry!,
         bankCurrency: profile.bankCurrency!,
         payoutSetupCompleted: profile.payoutSetupCompleted,
+        stripeAccountId: profile.stripeAccountId || undefined,
       };
     } catch (error) {
       this.logger.error(`Failed to get bank account for user ${userId}:`, error);
@@ -312,30 +342,42 @@ export class CreatorsService {
             throw new BadRequestException('Minimum payout amount is $100');
           }
 
-          // Calculate available balance considering waitlist bonus restrictions
-          let availableBalance = user.creatorProfile.totalEarnings;
+          // Calculate total completed payouts
+          const completedPayouts = await tx.payout.aggregate({
+            where: {
+              creatorId: user.creatorProfile.id,
+              status: 'COMPLETED',
+            },
+            _sum: {
+              amount: true,
+            },
+          });
 
-          // Check if waitlist bonus is locked
+          const totalPayouts = completedPayouts._sum.amount || 0;
+
+          // Calculate available balance: totalEarnings - completedPayouts
+          // Earnings are immediately available after purchase - no pending period
+          // Note: totalEarnings only includes purchase earnings, NOT the waitlist bonus
+          let availableBalance = user.creatorProfile.totalEarnings - totalPayouts;
+
+          // Check if waitlist bonus should be added to available balance
+          // Bonus is separate from earnings and is only unlocked after 5 sales
+          let bonusMessage = '';
           if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
-            if (user.creatorProfile.totalPurchases < 5) {
-              // Bonus is locked - exclude from available balance
-              availableBalance = availableBalance - user.creatorProfile.waitlistBonus;
-
-              // Inform user they need more sales to unlock bonus
-              if (requestedAmount > availableBalance) {
-                const remainingSales = 5 - user.creatorProfile.totalPurchases;
-                throw new BadRequestException(
-                  `You need ${remainingSales} more sale${remainingSales > 1 ? 's' : ''} to unlock your $${user.creatorProfile.waitlistBonus.toFixed(2)} sign-up bonus. Available balance (excluding bonus): $${availableBalance.toFixed(2)}`,
-                );
-              }
+            if (user.creatorProfile.totalPurchases >= 5) {
+              // Bonus is unlocked - add to available balance
+              availableBalance = availableBalance + user.creatorProfile.waitlistBonus;
+            } else {
+              // Bonus is locked - track for informational purposes but don't modify balance
+              const remainingSales = 5 - user.creatorProfile.totalPurchases;
+              bonusMessage = ` (Plus $${user.creatorProfile.waitlistBonus.toFixed(2)} bonus unlocks after ${remainingSales} more sale${remainingSales > 1 ? 's' : ''})`;
             }
-            // If totalPurchases >= 5, bonus is withdrawable
           }
 
           // Validate available balance (locked within transaction)
           if (requestedAmount > availableBalance) {
             throw new BadRequestException(
-              `Insufficient balance. Available: $${availableBalance.toFixed(2)}, Requested: $${requestedAmount.toFixed(2)}`,
+              `Insufficient balance. Available: $${availableBalance.toFixed(2)}${bonusMessage}, Requested: $${requestedAmount.toFixed(2)}`,
             );
           }
 
@@ -474,8 +516,30 @@ export class CreatorsService {
         },
       });
 
-      // Calculate current available balance from totalEarnings (Bug #4 fix)
-      const currentBalance = user.creatorProfile.totalEarnings;
+      // Calculate total completed payouts
+      const completedPayouts = await this.prisma.payout.aggregate({
+        where: {
+          creatorId: user.creatorProfile.id,
+          status: 'COMPLETED',
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+
+      const totalPayouts = completedPayouts._sum.amount || 0;
+
+      // Calculate current available balance: totalEarnings - completedPayouts
+      // Earnings are immediately available after purchase - no pending period
+      let currentBalance = user.creatorProfile.totalEarnings - totalPayouts;
+
+      // Add unlocked waitlist bonus to available balance if applicable
+      if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
+        if (user.creatorProfile.totalPurchases >= 5) {
+          // Bonus is unlocked - add to available balance
+          currentBalance = currentBalance + user.creatorProfile.waitlistBonus;
+        }
+      }
 
       return requests.map(request => ({
         id: request.id,
@@ -552,6 +616,87 @@ export class CreatorsService {
       };
     } catch (error) {
       this.logger.error(`Failed to get payout request ${requestId} for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Stripe Connect onboarding link
+   */
+  async getStripeOnboardingLink(userId: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { creatorProfile: true },
+      });
+
+      if (!user || !user.creatorProfile) {
+        throw new NotFoundException('Creator profile not found');
+      }
+
+      if (!user.creatorProfile.stripeAccountId) {
+        throw new BadRequestException(
+          'Please set up your bank account details first before completing Stripe onboarding',
+        );
+      }
+
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+      const accountLink = await this.stripeService.createAccountLink(
+        user.creatorProfile.stripeAccountId,
+        `${clientUrl}/creator/settings?tab=payout&refresh=true`,
+        `${clientUrl}/creator/settings?tab=payout&success=true`,
+      );
+
+      this.logger.log(`Stripe onboarding link created for user: ${userId}`);
+
+      return {
+        url: accountLink.url,
+        expiresAt: new Date(accountLink.expires_at * 1000),
+      };
+    } catch (error) {
+      this.logger.error(`Failed to create Stripe onboarding link for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Stripe account status
+   */
+  async getStripeAccountStatus(userId: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { creatorProfile: true },
+      });
+
+      if (!user || !user.creatorProfile) {
+        throw new NotFoundException('Creator profile not found');
+      }
+
+      if (!user.creatorProfile.stripeAccountId) {
+        return {
+          hasAccount: false,
+          onboardingComplete: false,
+          chargesEnabled: false,
+          payoutsEnabled: false,
+        };
+      }
+
+      const account = await this.stripeService.getConnectAccount(
+        user.creatorProfile.stripeAccountId,
+      );
+
+      return {
+        hasAccount: true,
+        onboardingComplete: account.details_submitted || false,
+        chargesEnabled: account.charges_enabled || false,
+        payoutsEnabled: account.payouts_enabled || false,
+        requiresAction: !account.details_submitted,
+        accountId: account.id,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get Stripe account status for user ${userId}:`, error);
       throw error;
     }
   }

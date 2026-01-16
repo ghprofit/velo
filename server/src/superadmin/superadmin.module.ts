@@ -11,9 +11,10 @@ import { SettingsController } from './settings/settings.controller';
 import { SettingsService } from './settings/settings.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EmailModule } from '../email/email.module';
+import { S3Module } from '../s3/s3.module';
 
 @Module({
-  imports: [PrismaModule, EmailModule],
+  imports: [PrismaModule, EmailModule, S3Module],
   controllers: [SuperadminController, CreatorsController, ContentController, FinancialReportsController, SettingsController],
   providers: [SuperadminService, CreatorsService, ContentService, FinancialReportsService, SettingsService],
   exports: [SuperadminService, CreatorsService, ContentService, FinancialReportsService, SettingsService],

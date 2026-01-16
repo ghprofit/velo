@@ -164,7 +164,7 @@ export default function AdminAuditPage() {
           <h2 className="text-lg font-bold text-gray-900 mb-6">Admin Profile & Contact</h2>
 
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-xl">
+            <div className="w-16 h-16 bg-linear-to-br from-blue-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-xl">
               {admin.name.split(' ').map(n => n[0]).join('')}
             </div>
             <div>

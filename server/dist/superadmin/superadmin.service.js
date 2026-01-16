@@ -46,9 +46,13 @@ exports.SuperadminService = void 0;
 const common_1 = require("@nestjs/common");
 const bcrypt = __importStar(require("bcrypt"));
 const prisma_service_1 = require("../prisma/prisma.service");
+const email_service_1 = require("../email/email.service");
+const config_1 = require("@nestjs/config");
 let SuperadminService = class SuperadminService {
-    constructor(prisma) {
+    constructor(prisma, emailService, config) {
         this.prisma = prisma;
+        this.emailService = emailService;
+        this.config = config;
     }
     async getAllAdmins(search, role) {
         const where = {
@@ -117,6 +121,17 @@ let SuperadminService = class SuperadminService {
                     adminProfile: true,
                 },
             });
+            try {
+                const clientUrl = this.config.get('CLIENT_URL') || 'http://localhost:3000';
+                await this.emailService.sendEmail({
+                    to: dto.email,
+                    subject: 'Welcome to VeloLink Admin',
+                    html: `<h1>Welcome ${dto.fullName}!</h1><p>Your admin account has been created with the role: ${dto.role}.</p><p>Please login at: <a href="${clientUrl}/login">${clientUrl}/login</a></p>`,
+                });
+            }
+            catch (error) {
+                console.error('Failed to send admin welcome email:', error);
+            }
             return this.formatAdminResponse(user);
         }
         catch (error) {
@@ -217,6 +232,16 @@ let SuperadminService = class SuperadminService {
                 lastPasswordReset: new Date(),
             },
         });
+        try {
+            await this.emailService.sendEmail({
+                to: admin.email,
+                subject: 'Password Reset Required',
+                html: `Your password has been reset by a system administrator. You must change your password on your next login.`,
+            });
+        }
+        catch (error) {
+            console.error('Failed to send password reset email:', error);
+        }
         return { message: 'Password reset forced successfully' };
     }
     async getAdminActivityLog(id) {
@@ -333,6 +358,8 @@ let SuperadminService = class SuperadminService {
 exports.SuperadminService = SuperadminService;
 exports.SuperadminService = SuperadminService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        email_service_1.EmailService,
+        config_1.ConfigService])
 ], SuperadminService);
 //# sourceMappingURL=superadmin.service.js.map

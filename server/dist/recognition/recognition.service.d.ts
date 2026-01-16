@@ -1,3 +1,4 @@
+import { OnModuleInit } from '@nestjs/common';
 export interface ContentSource {
     type: 'base64' | 'url' | 's3';
     data: string;
@@ -38,13 +39,15 @@ export interface VideoSafetyJobResult {
         confidence: number;
     }>;
 }
-export declare class RecognitionService {
+export declare class RecognitionService implements OnModuleInit {
     private readonly logger;
     private rekognitionClient;
     private isConfigured;
     private readonly region;
     private readonly s3Bucket?;
+    private initializationError?;
     constructor();
+    onModuleInit(): Promise<void>;
     checkImageSafety(content: ContentSource, minConfidence?: number): Promise<SafetyCheckResult>;
     checkBatchSafety(items: Array<{
         id: string;

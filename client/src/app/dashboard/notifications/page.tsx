@@ -298,7 +298,7 @@ export default function NotificationsPage() {
                     className="bg-white rounded-xl p-5 border border-gray-200 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 ${notification.iconBg} rounded-full flex items-center justify-center flex-shrink-0 ${notification.iconColor}`}>
+                      <div className={`w-12 h-12 ${notification.iconBg} rounded-full flex items-center justify-center shrink-0 ${notification.iconColor}`}>
                         {renderNotificationIcon(notification.icon)}
                       </div>
                       <div className="flex-1 min-w-0">

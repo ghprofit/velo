@@ -196,7 +196,7 @@ export default function CreatorAuditPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: User Info */}
           <div className="flex items-start gap-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+            <div className="w-20 h-20 bg-linear-to-br from-blue-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-2xl">
               {creator.name.split(' ').map(n => n[0]).join('')}
             </div>
             <div>

@@ -276,6 +276,13 @@ model Content {
   complianceCheckedAt DateTime?
   complianceNotes     String?
 
+  // Async Video Moderation (AWS Rekognition)
+  rekognitionJobId          String?
+  rekognitionJobStatus      String?   // IN_PROGRESS, SUCCEEDED, FAILED
+  rekognitionJobStartedAt   DateTime?
+  rekognitionJobCompletedAt DateTime?
+  moderationCheckType       String?   // SYNC_IMAGE, ASYNC_VIDEO
+
   // Stats
   viewCount     Int   @default(0)
   purchaseCount Int   @default(0)
@@ -295,6 +302,7 @@ model Content {
   @@index([status])
   @@index([complianceStatus])
   @@index([isPublished])
+  @@index([rekognitionJobStatus])
   @@map("content")
 }
 

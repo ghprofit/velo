@@ -138,7 +138,13 @@ export default function CreatorSidebar(): JSX.Element {
       <>
         {/* Mobile Top Header */}
         <div className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
+          <Image 
+            src="/assets/logo_svgs/Primary_Logo(black).svg" 
+            alt="velo logo" 
+            width={120} 
+            height={32} 
+            className="h-8 w-auto" 
+          />
           <button
             onClick={() => setIsMobileMenuOpen(true)}
             className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
@@ -271,9 +277,9 @@ export default function CreatorSidebar(): JSX.Element {
         {/* Logo & Toggle */}
         <div className={`p-4 border-b border-gray-200 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isCollapsed ? (
-            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12" />
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" width={180} height={48} className="h-12" />
           ) : (
-            <Image src="/assets/logo_svgs/Brand_Icon(black).svg" alt="velo logo" className="h-8 w-8" />
+            <Image src="/assets/logo_svgs/Brand_Icon(black).svg" alt="velo logo" width={32} height={32} className="h-8 w-8" />
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}

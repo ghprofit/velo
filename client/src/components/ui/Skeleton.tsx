@@ -20,7 +20,7 @@ export function Skeleton({
   height,
   className
 }: SkeletonProps) {
-  const baseClasses = 'bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]';
+  const baseClasses = 'bg-linear-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]';
 
   const variantClasses = {
     text: 'h-4 rounded',

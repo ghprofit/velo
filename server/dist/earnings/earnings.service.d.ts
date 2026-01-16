@@ -5,6 +5,8 @@ export interface BalanceResponse {
     availableBalance: number;
     totalPayouts: number;
     currency: string;
+    lockedBonus?: number;
+    salesToUnlock?: number;
 }
 export interface Transaction {
     id: string;

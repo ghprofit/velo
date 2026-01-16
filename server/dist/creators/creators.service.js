@@ -14,11 +14,16 @@ exports.CreatorsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const veriff_service_1 = require("../veriff/veriff.service");
+const email_service_1 = require("../email/email.service");
+const notifications_service_1 = require("../notifications/notifications.service");
+const create_notification_dto_1 = require("../notifications/dto/create-notification.dto");
 const client_1 = require("@prisma/client");
 let CreatorsService = CreatorsService_1 = class CreatorsService {
-    constructor(prisma, veriffService) {
+    constructor(prisma, veriffService, emailService, notificationsService) {
         this.prisma = prisma;
         this.veriffService = veriffService;
+        this.emailService = emailService;
+        this.notificationsService = notificationsService;
         this.logger = new common_1.Logger(CreatorsService_1.name);
     }
     async initiateVerification(userId) {
@@ -40,9 +45,11 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             if (user.creatorProfile.veriffSessionId) {
                 this.logger.warn(`User ${userId} already has an active verification session`);
             }
+            const apiUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:8000';
+            this.logger.log(`Creator profile data: firstName=${user.creatorProfile.firstName}, lastName=${user.creatorProfile.lastName}, dateOfBirth=${user.creatorProfile.dateOfBirth}`);
             const sessionData = {
                 verification: {
-                    callback: `${process.env.APP_URL}/api/veriff/webhooks/decision`,
+                    callback: `${apiUrl}/api/veriff/webhooks/decision`,
                     person: {
                         firstName: user.creatorProfile.firstName || undefined,
                         lastName: user.creatorProfile.lastName || undefined,
@@ -53,6 +60,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                     vendorData: userId,
                 },
             };
+            this.logger.log(`Veriff session data: ${JSON.stringify(sessionData, null, 2)}`);
             const session = await this.veriffService.createSession(sessionData);
             await this.prisma.creatorProfile.update({
                 where: { id: user.creatorProfile.id },
@@ -99,6 +107,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             this.logger.log(`Processing Veriff webhook for session: ${sessionId}`);
             const creatorProfile = await this.prisma.creatorProfile.findUnique({
                 where: { veriffSessionId: sessionId },
+                include: { user: true },
             });
             if (!creatorProfile) {
                 this.logger.warn(`No creator profile found for session: ${sessionId}`);
@@ -132,6 +141,23 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 },
             });
             this.logger.log(`Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`);
+            const emailSubject = verificationStatus === client_1.VerificationStatus.VERIFIED
+                ? 'Identity Verification Approved'
+                : 'Identity Verification Update';
+            const emailMessage = verificationStatus === client_1.VerificationStatus.VERIFIED
+                ? `Congratulations! Your identity has been verified. You can now upload content.`
+                : `Your identity verification status has been updated to: ${verificationStatus}`;
+            try {
+                await this.emailService.sendEmail({
+                    to: creatorProfile.user.email,
+                    subject: emailSubject,
+                    html: emailMessage,
+                });
+                this.logger.log(`Verification status email sent to ${creatorProfile.user.email}`);
+            }
+            catch (error) {
+                this.logger.error('Failed to send verification email:', error);
+            }
         }
         catch (error) {
             this.logger.error(`Failed to process webhook for session ${sessionId}:`, error);
@@ -210,51 +236,114 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
     async requestPayout(userId, requestedAmount) {
         try {
             this.logger.log(`Payout request initiated by user: ${userId} for amount: ${requestedAmount}`);
-            const user = await this.prisma.user.findUnique({
-                where: { id: userId },
-                include: { creatorProfile: true },
-            });
-            if (!user || !user.creatorProfile) {
-                throw new common_1.NotFoundException('Creator profile not found');
-            }
-            if (requestedAmount < 100) {
-                throw new common_1.BadRequestException('Minimum payout amount is $100');
-            }
-            const availableBalance = user.creatorProfile.totalEarnings;
-            if (requestedAmount > availableBalance) {
-                throw new common_1.BadRequestException(`Insufficient balance. Available: $${availableBalance.toFixed(2)}, Requested: $${requestedAmount.toFixed(2)}`);
-            }
-            const existingPendingRequest = await this.prisma.payoutRequest.findFirst({
-                where: {
-                    creatorId: user.creatorProfile.id,
-                    status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
-                },
-            });
-            if (existingPendingRequest) {
-                throw new common_1.BadRequestException('You already have a pending payout request');
-            }
-            const payoutRequest = await this.prisma.payoutRequest.create({
-                data: {
-                    creatorId: user.creatorProfile.id,
-                    requestedAmount,
+            const result = await this.prisma.$transaction(async (tx) => {
+                const user = await tx.user.findUnique({
+                    where: { id: userId },
+                    include: { creatorProfile: true },
+                });
+                if (!user || !user.creatorProfile) {
+                    throw new common_1.NotFoundException('Creator profile not found');
+                }
+                if (requestedAmount < 100) {
+                    throw new common_1.BadRequestException('Minimum payout amount is $100');
+                }
+                const completedPayouts = await tx.payout.aggregate({
+                    where: {
+                        creatorId: user.creatorProfile.id,
+                        status: 'COMPLETED',
+                    },
+                    _sum: {
+                        amount: true,
+                    },
+                });
+                const totalPayouts = completedPayouts._sum.amount || 0;
+                let availableBalance = user.creatorProfile.totalEarnings - totalPayouts;
+                let bonusMessage = '';
+                if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
+                    if (user.creatorProfile.totalPurchases >= 5) {
+                        availableBalance = availableBalance + user.creatorProfile.waitlistBonus;
+                    }
+                    else {
+                        const remainingSales = 5 - user.creatorProfile.totalPurchases;
+                        bonusMessage = ` (Plus $${user.creatorProfile.waitlistBonus.toFixed(2)} bonus unlocks after ${remainingSales} more sale${remainingSales > 1 ? 's' : ''})`;
+                    }
+                }
+                if (requestedAmount > availableBalance) {
+                    throw new common_1.BadRequestException(`Insufficient balance. Available: $${availableBalance.toFixed(2)}${bonusMessage}, Requested: $${requestedAmount.toFixed(2)}`);
+                }
+                const existingPendingRequest = await tx.payoutRequest.findFirst({
+                    where: {
+                        creatorId: user.creatorProfile.id,
+                        status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
+                    },
+                });
+                if (existingPendingRequest) {
+                    throw new common_1.BadRequestException('You already have a pending payout request');
+                }
+                const payoutRequest = await tx.payoutRequest.create({
+                    data: {
+                        creatorId: user.creatorProfile.id,
+                        requestedAmount,
+                        currency: user.creatorProfile.bankCurrency || 'USD',
+                        status: 'PENDING',
+                        emailVerifiedAt: user.emailVerified ? new Date() : null,
+                        kycVerifiedAt: user.creatorProfile.verificationStatus === client_1.VerificationStatus.VERIFIED
+                            ? user.creatorProfile.verifiedAt
+                            : null,
+                        bankSetupAt: user.creatorProfile.payoutSetupCompleted ? new Date() : null,
+                    },
+                });
+                this.logger.log(`Payout request created: ${payoutRequest.id} for user ${userId}`);
+                return {
+                    payoutRequest,
+                    user,
                     availableBalance,
-                    currency: user.creatorProfile.bankCurrency || 'USD',
-                    status: 'PENDING',
-                    emailVerifiedAt: user.emailVerified ? new Date() : null,
-                    kycVerifiedAt: user.creatorProfile.verificationStatus === client_1.VerificationStatus.VERIFIED
-                        ? user.creatorProfile.verifiedAt
-                        : null,
-                    bankSetupAt: user.creatorProfile.payoutSetupCompleted ? new Date() : null,
-                },
-            });
-            this.logger.log(`Payout request created: ${payoutRequest.id} for user ${userId}`);
+                };
+            }, { maxWait: 5000, timeout: 10000 });
+            try {
+                if (!result.user.creatorProfile) {
+                    throw new Error('Creator profile not found after transaction');
+                }
+                await this.notificationsService.notifyAdmins(create_notification_dto_1.NotificationType.PAYOUT_REQUEST, 'New Payout Request', `${result.user.creatorProfile.displayName} has requested a payout of $${requestedAmount.toFixed(2)}`, {
+                    requestId: result.payoutRequest.id,
+                    creatorId: result.user.creatorProfile.id,
+                    creatorName: result.user.creatorProfile.displayName,
+                    amount: requestedAmount,
+                    availableBalance: result.availableBalance,
+                });
+                const admins = await this.prisma.user.findMany({
+                    where: {
+                        role: { in: ['ADMIN', 'SUPER_ADMIN'] },
+                        isActive: true,
+                    },
+                    select: { email: true },
+                });
+                const emailData = {
+                    creator_name: result.user.creatorProfile.displayName,
+                    amount: `${requestedAmount.toFixed(2)}`,
+                    request_id: result.payoutRequest.id,
+                    available_balance: `${result.availableBalance.toFixed(2)}`,
+                };
+                for (const admin of admins) {
+                    try {
+                        await this.emailService.sendAdminPayoutAlert(admin.email, emailData);
+                    }
+                    catch (emailError) {
+                        this.logger.error(`Failed to send payout alert email to ${admin.email}:`, emailError);
+                    }
+                }
+                this.logger.log(`Admin notifications sent for payout request: ${result.payoutRequest.id}`);
+            }
+            catch (notificationError) {
+                this.logger.error(`Failed to send admin notifications for payout request ${result.payoutRequest.id}:`, notificationError);
+            }
             return {
-                id: payoutRequest.id,
-                requestedAmount: payoutRequest.requestedAmount,
-                availableBalance: payoutRequest.availableBalance,
-                currency: payoutRequest.currency,
-                status: payoutRequest.status,
-                createdAt: payoutRequest.createdAt,
+                id: result.payoutRequest.id,
+                requestedAmount: result.payoutRequest.requestedAmount,
+                availableBalance: result.availableBalance,
+                currency: result.payoutRequest.currency,
+                status: result.payoutRequest.status,
+                createdAt: result.payoutRequest.createdAt,
                 message: 'Payout request submitted successfully. It will be reviewed by our team.',
             };
         }
@@ -287,10 +376,26 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                     },
                 },
             });
+            const completedPayouts = await this.prisma.payout.aggregate({
+                where: {
+                    creatorId: user.creatorProfile.id,
+                    status: 'COMPLETED',
+                },
+                _sum: {
+                    amount: true,
+                },
+            });
+            const totalPayouts = completedPayouts._sum.amount || 0;
+            let currentBalance = user.creatorProfile.totalEarnings - totalPayouts;
+            if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
+                if (user.creatorProfile.totalPurchases >= 5) {
+                    currentBalance = currentBalance + user.creatorProfile.waitlistBonus;
+                }
+            }
             return requests.map(request => ({
                 id: request.id,
                 requestedAmount: request.requestedAmount,
-                availableBalance: request.availableBalance,
+                availableBalance: currentBalance,
                 currency: request.currency,
                 status: request.status,
                 reviewedAt: request.reviewedAt,
@@ -334,10 +439,11 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             if (!request) {
                 throw new common_1.NotFoundException('Payout request not found');
             }
+            const currentBalance = user.creatorProfile.totalEarnings;
             return {
                 id: request.id,
                 requestedAmount: request.requestedAmount,
-                availableBalance: request.availableBalance,
+                availableBalance: currentBalance,
                 currency: request.currency,
                 status: request.status,
                 emailVerifiedAt: request.emailVerifiedAt,
@@ -361,6 +467,8 @@ exports.CreatorsService = CreatorsService;
 exports.CreatorsService = CreatorsService = CreatorsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        veriff_service_1.VeriffService])
+        veriff_service_1.VeriffService,
+        email_service_1.EmailService,
+        notifications_service_1.NotificationsService])
 ], CreatorsService);
 //# sourceMappingURL=creators.service.js.map

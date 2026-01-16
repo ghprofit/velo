@@ -1,10 +1,15 @@
 import { ConfigService } from '@nestjs/config';
+import { Readable } from 'stream';
 export declare class S3Service {
     private configService;
     private s3Client;
     private bucketName;
     constructor(configService: ConfigService);
     uploadFile(base64Data: string, fileName: string, contentType: string, folder?: string): Promise<{
+        key: string;
+        url: string;
+    }>;
+    uploadFileStream(fileStream: Buffer | Readable, fileName: string, contentType: string, folder?: string): Promise<{
         key: string;
         url: string;
     }>;

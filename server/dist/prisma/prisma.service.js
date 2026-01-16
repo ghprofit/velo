@@ -18,10 +18,19 @@ let PrismaService = class PrismaService extends client_1.PrismaClient {
     constructor() {
         const pool = new pg_1.Pool({
             connectionString: process.env.DATABASE_URL,
+            connectionTimeoutMillis: 30000,
+            idleTimeoutMillis: 30000,
+            statement_timeout: 60000,
+            max: 5,
+            min: 0,
+            ssl: {
+                rejectUnauthorized: true,
+            },
         });
         const adapter = new adapter_pg_1.PrismaPg(pool);
         super({ adapter });
         this.pool = pool;
+        console.log('✓ PostgreSQL connection pool configured for Neon serverless');
     }
     async onModuleInit() {
         await this.$connect();

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../../email/email.service';
 import { ConfigService } from '@nestjs/config';
+import { S3Service } from '../../s3/s3.service';
 import { QueryContentDto } from './dto/query-content.dto';
 import { UpdateContentDto, ReviewContentDto, RemoveContentDto } from './dto/update-content.dto';
 
@@ -11,6 +12,7 @@ export class ContentService {
     private prisma: PrismaService,
     private emailService: EmailService,
     private config: ConfigService,
+    private s3Service: S3Service,
   ) {}
 
   async getContent(query: QueryContentDto) {
@@ -140,6 +142,15 @@ export class ContentService {
           orderBy: { createdAt: 'desc' },
         },
         contentItems: true,
+        purchases: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            amount: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -367,14 +378,33 @@ export class ContentService {
     };
   }
 
-  private formatContentDetailResponse(content: any) {
+  private async formatContentDetailResponse(content: any) {
     const base = this.formatContentResponse(content);
+
+    // Generate signed URLs for content items (24-hour expiry for superadmin viewing)
+    const contentItemsWithUrls = await Promise.all(
+      (content.contentItems || []).map(async (item: any) => {
+        const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400); // 24 hours
+        return {
+          id: item.id,
+          s3Key: item.s3Key,
+          s3Bucket: this.config.get<string>('AWS_S3_BUCKET_NAME') || 'velo-content',
+          fileSize: item.fileSize,
+          order: item.order,
+          signedUrl,
+        };
+      })
+    );
+
     return {
       ...base,
       creatorEmail: content.creator?.user?.email,
       fileSize: content.fileSize,
       duration: content.duration,
       s3Key: content.s3Key,
+      s3Bucket: this.config.get<string>('AWS_S3_BUCKET_NAME') || 'velo-content',
+      mediaType: content.contentType,
+      updatedAt: content.updatedAt,
       complianceLogs: content.complianceLogs?.map((log: any) => ({
         id: log.id,
         checkType: log.checkType,
@@ -385,11 +415,11 @@ export class ContentService {
         notes: log.notes,
         createdAt: log.createdAt,
       })) || [],
-      contentItems: content.contentItems?.map((item: any) => ({
-        id: item.id,
-        s3Key: item.s3Key,
-        fileSize: item.fileSize,
-        order: item.order,
+      contentItems: contentItemsWithUrls,
+      recentPurchases: content.purchases?.map((purchase: any) => ({
+        id: purchase.id,
+        amount: purchase.amount,
+        createdAt: purchase.createdAt,
       })) || [],
     };
   }

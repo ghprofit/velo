@@ -33,14 +33,14 @@ Select.displayName = "Select"
 
 const SelectTrigger = React.forwardRef<
   HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement> & { 
-    isOpen?: boolean; 
+  React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    isOpen?: boolean;
     setIsOpen?: (open: boolean) => void;
     currentValue?: string;
     setCurrentValue?: (value: string) => void;
     onValueChange?: (value: string) => void;
   }
->(({ className = "", children, isOpen, setIsOpen, ...props }, ref) => {
+>(({ className = "", children, isOpen, setIsOpen, currentValue, setCurrentValue, onValueChange, ...props }, ref) => {
   return (
     <button
       ref={ref}

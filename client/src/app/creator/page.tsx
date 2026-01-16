@@ -37,7 +37,55 @@ interface ContentItem {
   views: number;
   unlocks: number;
   revenue: number;
+  status?: string;
+  complianceStatus?: string;
 }
+
+// Helper function to get status badge styling
+const getStatusBadge = (status?: string, complianceStatus?: string) => {
+  // If content is flagged or needs manual review
+  if (complianceStatus === 'MANUAL_REVIEW' || complianceStatus === 'FLAGGED') {
+    return {
+      label: 'Under Review',
+      bgColor: 'bg-amber-100',
+      textColor: 'text-amber-800',
+    };
+  }
+
+  // Check content status
+  switch (status) {
+    case 'APPROVED':
+      return {
+        label: 'Approved',
+        bgColor: 'bg-green-100',
+        textColor: 'text-green-800',
+      };
+    case 'PENDING_REVIEW':
+      return {
+        label: 'Pending Review',
+        bgColor: 'bg-yellow-100',
+        textColor: 'text-yellow-800',
+      };
+    case 'REJECTED':
+      return {
+        label: 'Rejected',
+        bgColor: 'bg-red-100',
+        textColor: 'text-red-800',
+      };
+    case 'DRAFT':
+      return {
+        label: 'Draft',
+        bgColor: 'bg-gray-100',
+        textColor: 'text-gray-800',
+      };
+    default:
+      return {
+        label: 'Active',
+        bgColor: 'bg-green-100',
+        textColor: 'text-green-800',
+      };
+  }
+};
 
 export default function CreatorDashboardPage() {
   const router = useRouter();
@@ -248,7 +296,7 @@ export default function CreatorDashboardPage() {
 
           {/* Floating Decorative Elements */}
           <motion.div
-            className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"
+            className="absolute top-20 left-10 w-32 h-32 bg-linear-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"
             animate={{
               x: [0, 50, -30, 0],
               y: [0, -40, 20, 0],
@@ -261,7 +309,7 @@ export default function CreatorDashboardPage() {
             }}
           />
           <motion.div
-            className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-blue-400/15 to-cyan-400/15 rounded-full blur-2xl"
+            className="absolute top-40 right-20 w-24 h-24 bg-linear-to-br from-blue-400/15 to-cyan-400/15 rounded-full blur-2xl"
             animate={{
               x: [0, -40, 30, 0],
               y: [0, 30, -20, 0],
@@ -275,7 +323,7 @@ export default function CreatorDashboardPage() {
             }}
           />
           <motion.div
-            className="absolute bottom-20 left-1/4 w-20 h-20 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-xl"
+            className="absolute bottom-20 left-1/4 w-20 h-20 bg-linear-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-xl"
             animate={{
               x: [0, 20, -15, 0],
               y: [0, -25, 15, 0],
@@ -302,7 +350,7 @@ export default function CreatorDashboardPage() {
           {error && !loading && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8">
               <div className="flex items-center gap-2 sm:gap-3">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-red-800 text-sm sm:text-base">{error}</p>
@@ -321,7 +369,7 @@ export default function CreatorDashboardPage() {
                 transition={{ duration: 0.6 }}
               >
                 <motion.h1 
-                  className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-indigo-800 to-purple-800 bg-clip-text text-transparent mb-2 sm:mb-3"
+                  className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-gray-900 via-indigo-800 to-purple-800 bg-clip-text text-transparent mb-2 sm:mb-3"
                   initial={{ scale: 0.9 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
@@ -357,7 +405,7 @@ export default function CreatorDashboardPage() {
                       rotateY: 5,
                       transition: { duration: 0.3 }
                     }}
-                    className="bg-gradient-to-br from-white via-white to-gray-50/50 rounded-2xl shadow-lg border border-gray-200/50 p-4 sm:p-6 backdrop-blur-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 ring-1 ring-white/20"
+                    className="bg-linear-to-br from-white via-white to-gray-50/50 rounded-2xl shadow-lg border border-gray-200/50 p-4 sm:p-6 backdrop-blur-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 ring-1 ring-white/20"
                   >
                     <div className="flex items-center gap-3 sm:gap-4">
                       <motion.div
@@ -372,7 +420,7 @@ export default function CreatorDashboardPage() {
                           transition: { duration: 0.5 }
                         }}
                       >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
+                        <div className="absolute inset-0 bg-linear-to-br from-white/20 to-transparent rounded-2xl"></div>
                         {renderIcon(stat.icon, 'w-6 h-6 sm:w-7 sm:h-7 relative z-10 text-white drop-shadow-lg')}
                       </motion.div>
                       <div>
@@ -614,16 +662,28 @@ export default function CreatorDashboardPage() {
                             <Image
                               src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                               alt={content.title}
-                              className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                              width={56}
+                              height={56}
+                              className="w-14 h-14 rounded-lg object-cover shrink-0"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
                               }}
                             />
                             <div className="flex-1 min-w-0">
                               <h3 className="text-sm font-medium text-gray-900 truncate">{content.title}</h3>
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mt-1">
-                                {content.type}
-                              </span>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  {content.type}
+                                </span>
+                                {(() => {
+                                  const badge = getStatusBadge(content.status, content.complianceStatus);
+                                  return (
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.bgColor} ${badge.textColor}`}>
+                                      {badge.label}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                             </div>
                           </div>
                           <div className="grid grid-cols-3 gap-2 text-center">
@@ -656,6 +716,9 @@ export default function CreatorDashboardPage() {
                               Type
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                               Views
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -667,7 +730,9 @@ export default function CreatorDashboardPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                          {contentItems.map((content) => (
+                          {contentItems.map((content) => {
+                            const statusBadge = getStatusBadge(content.status, content.complianceStatus);
+                            return (
                             <tr
                               key={content.id}
                               onClick={() => router.push(`/creator/content/${content.id}`)}
@@ -678,7 +743,9 @@ export default function CreatorDashboardPage() {
                                   <Image
                                     src={content.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
                                     alt={content.title}
-                                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                                    width={48}
+                                    height={48}
+                                    className="w-12 h-12 rounded-lg object-cover shrink-0"
                                     onError={(e) => {
                                       (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
                                     }}
@@ -692,6 +759,11 @@ export default function CreatorDashboardPage() {
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.bgColor} ${statusBadge.textColor}`}>
+                                  {statusBadge.label}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
                                 <span className="text-sm text-gray-600">{content.views.toLocaleString()}</span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
@@ -701,7 +773,8 @@ export default function CreatorDashboardPage() {
                                 <span className="text-sm font-medium text-gray-900">${content.revenue.toFixed(2)}</span>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -718,7 +791,7 @@ export default function CreatorDashboardPage() {
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-3 flex-1">
-                <svg className="w-5 h-5 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-sm text-gray-600">

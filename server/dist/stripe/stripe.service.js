@@ -28,8 +28,22 @@ let StripeService = StripeService_1 = class StripeService {
         }
         this.stripe = new stripe_1.default(stripeSecretKey, {
             apiVersion: '2025-11-17.clover',
+            timeout: 30000,
+            maxNetworkRetries: 2,
         });
-        this.logger.log('Stripe service initialized');
+        this.logger.log('✓ Stripe SDK initialized with 30s timeout and 2 retries');
+        const webhookSecret = this.config.get('STRIPE_WEBHOOK_SECRET');
+        if (!webhookSecret) {
+            this.logger.error('⚠️  CRITICAL: STRIPE_WEBHOOK_SECRET is not configured!');
+            this.logger.error('⚠️  Webhook signature verification will FAIL!');
+            this.logger.error('⚠️  This is a SECURITY VULNERABILITY!');
+        }
+        else if (!webhookSecret.startsWith('whsec_')) {
+            this.logger.warn('STRIPE_WEBHOOK_SECRET format may be invalid (should start with "whsec_")');
+        }
+        else {
+            this.logger.log('✓ STRIPE_WEBHOOK_SECRET configured correctly');
+        }
     }
     async createPaymentIntent(amount, currency = 'usd', metadata = {}) {
         try {
@@ -46,8 +60,7 @@ let StripeService = StripeService_1 = class StripeService {
         }
         catch (error) {
             this.logger.error('Failed to create payment intent:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            throw new common_1.BadRequestException(`Failed to create payment intent: ${errorMessage}`);
+            throw new common_1.BadRequestException('Failed to create payment intent');
         }
     }
     async retrievePaymentIntent(paymentIntentId) {

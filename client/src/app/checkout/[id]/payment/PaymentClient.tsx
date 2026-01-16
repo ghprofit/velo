@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
@@ -40,6 +40,9 @@ export function PaymentClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [purchaseInfo, setPurchaseInfo] = useState<PurchaseInfo | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // Prevent double initialization in React StrictMode
+  const initializingRef = useRef(false);
 
   // Animated price count-ups
   const contentPriceAnimated = useCurrencyCountUp(content?.price || 0, '$', 1000);
@@ -64,12 +67,19 @@ export function PaymentClient({ id }: { id: string }) {
       return;
     }
 
+    // Prevent double initialization from React StrictMode
+    if (initializingRef.current) {
+      console.log('[CHECKOUT] ⏭️ Skipping duplicate initialization');
+      return;
+    }
+
     const initializePayment = async () => {
       console.log('[CHECKOUT] ========== PAYMENT INITIALIZATION STARTED ==========');
       console.log('[CHECKOUT] Content ID:', id);
       console.log('[CHECKOUT] Email:', email);
 
       try {
+        initializingRef.current = true;
         setLoading(true);
         setError(null);
 
@@ -145,6 +155,7 @@ export function PaymentClient({ id }: { id: string }) {
         console.error('[CHECKOUT] ❌ ========== PAYMENT INITIALIZATION FAILED ==========');
         console.error('[CHECKOUT] Error:', err);
         const error = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
+        initializingRef.current = false; // Reset on error to allow retry
         console.error('[CHECKOUT] Error response:', error.response?.data);
         console.error('[CHECKOUT] Error message:', error.message);
         console.error('[CHECKOUT] HTTP status:', (error as { response?: { status?: number } }).response?.status);
@@ -166,37 +177,67 @@ export function PaymentClient({ id }: { id: string }) {
     paymentIntentId: string
   ) => {
     try {
-      // Confirm the purchase with the backend
-      const result = await buyerApi.confirmPurchase({
+      console.log('[PAYMENT] Confirming purchase with backend...');
+      console.log('[PAYMENT] Purchase ID:', purchaseId);
+      console.log('[PAYMENT] Purchase ID type:', typeof purchaseId);
+      console.log('[PAYMENT] Payment Intent ID:', paymentIntentId);
+      console.log('[PAYMENT] Payment Intent ID type:', typeof paymentIntentId);
+      
+      const requestData = {
         purchaseId,
         paymentIntentId,
-      });
+      };
+      console.log('[PAYMENT] Request data being sent:', JSON.stringify(requestData, null, 2));
+      
+      // Confirm the purchase with the backend
+      const result = await buyerApi.confirmPurchase(requestData);
+
+      console.log('[PAYMENT] ✅ Purchase confirmed:', result.data);
+      console.log('[PAYMENT] Confirmed access token:', result.data.accessToken);
+      console.log('[PAYMENT] Confirmed status:', result.data.status);
 
       // Only proceed if confirmation succeeded
       if (result.data.status === 'COMPLETED') {
+        // Use the confirmed access token from the response (most reliable)
+        const confirmedToken = result.data.accessToken;
+        
+        console.log('[PAYMENT] 💾 Saving purchase token to localStorage...');
         // Clear the cached fingerprint after successful purchase
         clearCachedBuyerFingerprint();
-        savePurchaseToken(id, accessToken);
-        router.push(`/checkout/${id}/success?token=${accessToken}`);
+        
+        // Save the confirmed token
+        savePurchaseToken(id, confirmedToken);
+        console.log('[PAYMENT] ✅ Token saved successfully');
+        
+        console.log('[PAYMENT] 🔄 Redirecting to success page...');
+        router.push(`/checkout/${id}/success?token=${confirmedToken}`);
       } else {
         throw new Error('Purchase confirmation incomplete');
       }
     } catch (error) {
-      console.error('Failed to confirm purchase:', error);
+      console.error('[PAYMENT] ❌ Failed to confirm purchase:', error);
+      const err = error as { response?: { data?: { message?: string; error?: any; statusCode?: number }; status?: number }; message?: string };
+      console.error('[PAYMENT] Error response data:', JSON.stringify(err.response?.data, null, 2));
+      console.error('[PAYMENT] Error response status:', err.response?.status);
+      console.error('[PAYMENT] Error message:', err.message);
 
       // Show error instead of silently continuing
       setError(
-        'Payment processed but verification failed. Please contact support with your payment confirmation. Your access token has been saved.'
+        `Payment processed but verification failed: ${err.response?.data?.message || err.message || 'Unknown error'}. Please contact support with your payment confirmation. Your access token has been saved.`
       );
 
+      console.log('[PAYMENT] ⚠️ Error occurred, but saving token anyway for webhook processing...');
       // Clear cached fingerprint even on error (purchase attempted)
       clearCachedBuyerFingerprint();
 
       // Save token anyway (webhook will handle completion)
+      // Use the original token since confirmation failed
       savePurchaseToken(id, accessToken);
+      console.log('[PAYMENT] ✅ Token saved (fallback)');
 
       // Show error for 5 seconds then redirect to success page
       setTimeout(() => {
+        console.log('[PAYMENT] 🔄 Redirecting to success page after error...');
         router.push(`/checkout/${id}/success?token=${accessToken}`);
       }, 5000);
     }
@@ -273,7 +314,7 @@ export function PaymentClient({ id }: { id: string }) {
 
   return (
     <PageTransition>
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col relative">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col relative">
       {/* Floating Brand Logo */}
       <FloatingLogo
         position="center"
@@ -290,11 +331,13 @@ export function PaymentClient({ id }: { id: string }) {
             <Image
               src="/assets/logo_svgs/Primary_Logo(black).svg"
               alt="Velo Link"
+              width={180}
+              height={32}
               className="h-7 sm:h-8 w-auto"
             />
           </Link>
           <motion.div
-            className="flex items-center gap-2 text-gray-600 bg-gradient-to-r from-green-50 to-emerald-50 px-3 py-1.5 rounded-full border border-green-200"
+            className="flex items-center gap-2 text-gray-600 bg-linear-to-r from-green-50 to-emerald-50 px-3 py-1.5 rounded-full border border-green-200"
             animate={{ scale: [1, 1.02, 1] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           >
@@ -356,14 +399,18 @@ export function PaymentClient({ id }: { id: string }) {
                 <Image
                   src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
                   alt={content.title}
+                  width={1280}
+                  height={720}
                   className="w-full h-full object-cover blur-sm"
                 />
-                <div className="absolute inset-0 bg-gradient-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
+                <div className="absolute inset-0 bg-linear-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
                   <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-5 shadow-2xl">
                     <div className="flex items-center gap-3">
                       <Image
                         src="/assets/logo_svgs/Brand_Icon(black).svg"
                         alt="Lock"
+                        width={28}
+                        height={28}
                         className="w-7 h-7"
                       />
                       <span className="text-gray-900 font-bold text-lg">Locked Content</span>
@@ -374,7 +421,7 @@ export function PaymentClient({ id }: { id: string }) {
 
               {/* Security Info - Desktop Only */}
               <motion.div
-                className="hidden lg:block bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 shadow-sm ring-1 ring-green-100"
+                className="hidden lg:block bg-linear-to-br from-green-50 to-emerald-50 rounded-xl p-6 shadow-sm ring-1 ring-green-100"
                 initial="hidden"
                 animate="visible"
                 variants={staggerContainer}
@@ -392,7 +439,7 @@ export function PaymentClient({ id }: { id: string }) {
                     className="flex items-center gap-3 bg-white/50 rounded-lg p-3"
                     variants={staggerItem}
                   >
-                    <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">256-bit SSL encryption</span>
@@ -401,7 +448,7 @@ export function PaymentClient({ id }: { id: string }) {
                     className="flex items-center gap-3 bg-white/50 rounded-lg p-3"
                     variants={staggerItem}
                   >
-                    <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">PCI DSS compliant</span>
@@ -410,7 +457,7 @@ export function PaymentClient({ id }: { id: string }) {
                     className="flex items-center gap-3 bg-white/50 rounded-lg p-3"
                     variants={staggerItem}
                   >
-                    <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">Powered by Stripe</span>
@@ -436,6 +483,7 @@ export function PaymentClient({ id }: { id: string }) {
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Details</h2>
                   {stripePromise && purchaseInfo.clientSecret && (
                     <Elements
+                      key={purchaseInfo.clientSecret} // Force remount when clientSecret changes
                       stripe={stripePromise}
                       options={{
                         clientSecret: purchaseInfo.clientSecret,
@@ -472,7 +520,7 @@ export function PaymentClient({ id }: { id: string }) {
                       transition={{ delay: 0.3, duration: 0.5 }}
                     >
                       <span>Total:</span>
-                      <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                      <span className="bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         {totalPriceAnimated}
                       </span>
                     </motion.div>
@@ -481,7 +529,7 @@ export function PaymentClient({ id }: { id: string }) {
                   {error && (
                     <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
                       <div className="flex items-center gap-3">
-                        <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-red-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <p className="text-red-800 text-sm font-medium">{error}</p>

@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { buttonTap } from '@/lib/animations';
 import FloatingLogo from '@/components/FloatingLogo';
+import { VideoPlayer } from '@/components/ui/VideoPlayer';
 
 interface ContentData {
   id: string;
@@ -31,16 +32,24 @@ interface ContentData {
 
 interface PurchasedContentData extends ContentData {
   s3Key: string;
-}
-
-interface AccessEligibility {
-  accessExpiresAt?: string;
-  s3Bucket: string;
-  contentItems: Array<{
+  contentItems?: Array<{
     id: string;
     s3Key: string;
     s3Bucket: string;
     order: number;
+    signedUrl: string;
+  }>;
+}
+
+interface AccessEligibility {
+  accessExpiresAt?: string;
+  s3Bucket?: string;
+  contentItems?: Array<{
+    id: string;
+    s3Key: string;
+    s3Bucket: string;
+    order: number;
+    signedUrl?: string;
   }>;
 }
 
@@ -63,6 +72,11 @@ export function ContentClient({ id }: { id: string }) {
   const [accessEligibility, setAccessEligibility] = useState<AccessEligibility | null>(null);
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
+
+
+  // Lightbox state for gallery items
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
     const initializeSession = async () => {
@@ -100,22 +114,37 @@ export function ContentClient({ id }: { id: string }) {
           }
 
           // Check eligibility BEFORE fetching content
-          const eligibilityResponse = await buyerApi.checkAccessEligibility(accessToken, fingerprint);
-          const eligibility = eligibilityResponse.data;
+          let eligibilityResponse = await buyerApi.checkAccessEligibility(accessToken, fingerprint);
+          let eligibility = eligibilityResponse.data;
+          console.log('[CONTENT] Access eligibility check:', eligibility);
+          
+          // If purchase is still PENDING, retry after a short delay (database consistency issue)
+          if (eligibility.reason?.includes('status is PENDING')) {
+            console.log('[CONTENT] ⏳ Purchase still PENDING, retrying in 2 seconds...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            eligibilityResponse = await buyerApi.checkAccessEligibility(accessToken, fingerprint);
+            eligibility = eligibilityResponse.data;
+            console.log('[CONTENT] Retry eligibility check:', eligibility);
+          }
+          
           setAccessEligibility(eligibility);
 
           if (eligibility.hasAccess) {
+            console.log('[CONTENT] ✅ Access granted, fetching content...');
             // Fetch content with fingerprint
             const response = await buyerApi.getContentAccess(accessToken, fingerprint);
             setPurchasedContent(response.data.content);
             setIsPurchased(true);
           } else if (eligibility.needsEmailVerification) {
+            console.log('[CONTENT] ⚠️ Needs email verification');
             setError(eligibility.reason);
             setShowVerificationModal(true);
           } else if (eligibility.isExpired) {
+            console.log('[CONTENT] ⏰ Access expired');
             setError(eligibility.reason);
             setIsPurchased(false);
           } else {
+            console.log('[CONTENT] ❌ Access denied:', eligibility.reason);
             setError(eligibility.reason || 'Access denied');
             setIsPurchased(false);
           }
@@ -238,6 +267,8 @@ export function ContentClient({ id }: { id: string }) {
                 <Image
                   src="/assets/logo_svgs/Secondary_Logo(white).svg"
                   alt="Velo Link"
+                  width={180}
+                  height={64}
                   className="h-16 w-auto mx-auto"
                 />
               </div>
@@ -249,7 +280,7 @@ export function ContentClient({ id }: { id: string }) {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -274,10 +305,44 @@ export function ContentClient({ id }: { id: string }) {
     );
   }
 
+  // Helper function to detect actual file type from S3 key
+  const getActualFileType = (s3Key: string): 'VIDEO' | 'IMAGE' | 'DOCUMENT' | 'AUDIO' | 'UNKNOWN' => {
+    const extension = s3Key.split('.').pop()?.toLowerCase();
+    
+    const videoExtensions = ['mp4', 'mov', 'avi', 'webm', 'mkv', 'flv', 'wmv'];
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+    const documentExtensions = ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'];
+    const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
+    
+    if (!extension) return 'UNKNOWN';
+    
+    if (videoExtensions.includes(extension)) return 'VIDEO';
+    if (imageExtensions.includes(extension)) return 'IMAGE';
+    if (documentExtensions.includes(extension)) return 'DOCUMENT';
+    if (audioExtensions.includes(extension)) return 'AUDIO';
+    
+    return 'UNKNOWN';
+  };
+
   // Render purchased content view
   if (isPurchased && purchasedContent) {
+    console.log('[CONTENT] Rendering purchased content view');
+    console.log('[CONTENT] Purchased content data:', JSON.stringify(purchasedContent, null, 2));
+    console.log('[CONTENT] Content type:', purchasedContent.contentType);
+    console.log('[CONTENT] Content items:', purchasedContent.contentItems);
+    console.log('[CONTENT] First content item signedUrl:', purchasedContent.contentItems?.[0]?.signedUrl);
+    
+    // Detect actual file type from the first content item
+    const firstItem = purchasedContent.contentItems?.[0];
+    const actualFileType = firstItem ? getActualFileType(firstItem.s3Key) : 'UNKNOWN';
+    const effectiveContentType = actualFileType !== 'UNKNOWN' ? actualFileType : purchasedContent.contentType;
+    
+    console.log('[CONTENT] Declared content type:', purchasedContent.contentType);
+    console.log('[CONTENT] Detected file type:', actualFileType);
+    console.log('[CONTENT] Effective content type:', effectiveContentType);
+    
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50/30 flex flex-col relative">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-indigo-50/30 flex flex-col relative">
         {/* Floating Brand Logo */}
         <FloatingLogo
           position="top-right"
@@ -293,10 +358,12 @@ export function ContentClient({ id }: { id: string }) {
               <Image
                 src="/assets/logo_svgs/Primary_Logo(black).svg"
                 alt="Velo Link"
+                width={120}
+                height={32}
                 className="h-8 w-auto"
               />
             </Link>
-            <div className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-2 rounded-full border border-green-200 shadow-sm">
+            <div className="flex items-center gap-2 bg-linear-to-r from-green-50 to-emerald-50 px-4 py-2 rounded-full border border-green-200 shadow-sm">
               <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
@@ -310,9 +377,9 @@ export function ContentClient({ id }: { id: string }) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
             {/* Expiration Timer */}
             {accessEligibility?.accessExpiresAt && (
-              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-4 mb-6 shadow-sm">
+              <div className="bg-linear-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-4 mb-6 shadow-sm">
                 <div className="flex items-start gap-3">
-                  <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div className="flex-1">
@@ -327,24 +394,211 @@ export function ContentClient({ id }: { id: string }) {
 
             {/* Video/Content Player */}
             <div className="mb-6">
-              <div className="relative bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden shadow-2xl aspect-video ring-1 ring-gray-200">
-                {/* Placeholder for actual video player */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="relative inline-block mb-4">
-                      <div className="absolute inset-0 bg-indigo-500 rounded-full blur-2xl opacity-30"></div>
-                      <svg className="relative w-20 h-20 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                      </svg>
-                    </div>
-                    <p className="text-xl font-semibold mb-2">Content Player</p>
-                    <p className="text-sm text-gray-300 mb-4">Integrate your video/content player here</p>
-                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <p className="text-xs text-gray-300">Content Type: {purchasedContent.contentType}</p>
+              <div className="relative bg-linear-to-br from-gray-900 to-black rounded-2xl overflow-hidden shadow-2xl ring-1 ring-gray-200">
+                {/* Render based on ACTUAL file type (detected from extension) */}
+                {/* GALLERY: Show all items in a grid */}
+                {purchasedContent.contentType === 'GALLERY' && purchasedContent.contentItems && purchasedContent.contentItems.length > 1 ? (
+                  <div className="p-4 sm:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {purchasedContent.contentItems.map((item, index) => {
+                        const itemFileType = getActualFileType(item.s3Key);
+                        return (
+                          <div 
+                            key={item.id} 
+                            className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer group relative"
+                            onClick={() => {
+                              setLightboxIndex(index);
+                              setLightboxOpen(true);
+                            }}
+                            onContextMenu={(e) => e.preventDefault()}
+                          >
+                            {itemFileType === 'VIDEO' && item.signedUrl && (
+                              <div className="relative aspect-video">
+                                <video
+                                  className="w-full h-full object-contain pointer-events-none"
+                                  preload="metadata"
+                                  onContextMenu={(e) => e.preventDefault()}
+                                >
+                                  <source src={item.signedUrl} type="video/mp4" />
+                                </video>
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                            {itemFileType === 'IMAGE' && item.signedUrl && (
+                              <div className="relative aspect-video">
+                                <Image
+                                  src={item.signedUrl}
+                                  alt={`${purchasedContent.title} - Image ${index + 1}`}
+                                  fill
+                                  className="object-contain pointer-events-none select-none"
+                                  sizes="(max-width: 640px) 100vw, 50vw"
+                                  draggable={false}
+                                  onContextMenu={(e) => e.preventDefault()}
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                            {itemFileType === 'AUDIO' && item.signedUrl && (
+                              <div className="p-4">
+                                <audio controls className="w-full pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                                  <source src={item.signedUrl} type="audio/mpeg" />
+                                  Your browser does not support the audio tag.
+                                </audio>
+                              </div>
+                            )}
+                            {itemFileType === 'DOCUMENT' && item.signedUrl && (
+                              <div className="aspect-video relative">
+                                <iframe
+                                  src={item.signedUrl}
+                                  className="w-full h-full pointer-events-auto"
+                                  title={`${purchasedContent.title} - Document ${index + 1}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                            )}
+                            <div className="p-2 text-xs text-gray-400 bg-gray-900">
+                              Item {index + 1} of {purchasedContent.contentItems?.length ?? 0}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {effectiveContentType === 'VIDEO' && (
+                  <div className="aspect-video">
+                    {purchasedContent.contentItems && purchasedContent.contentItems.length > 0 && purchasedContent.contentItems[0].signedUrl ? (
+                      <VideoPlayer
+                        src={purchasedContent.contentItems[0].signedUrl}
+                        poster={purchasedContent.thumbnailUrl}
+                        title={purchasedContent.title}
+                        protectContent={true}
+                        className="w-full h-full"
+                        onError={(err) => console.error('[VIDEO] Error:', err)}
+                        onPlay={() => console.log('[VIDEO] Started playing')}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-white bg-red-900/50">
+                        <div className="text-center p-8">
+                          <svg className="w-20 h-20 mx-auto mb-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-lg font-semibold mb-2">No Content URL Available</p>
+                          <p className="text-sm text-gray-300">
+                            contentItems: {JSON.stringify(purchasedContent.contentItems || 'null')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {effectiveContentType === 'IMAGE' && (
+                  <div className="aspect-video relative">
+                    {purchasedContent.contentItems && purchasedContent.contentItems.length > 0 && purchasedContent.contentItems[0].signedUrl ? (
+                      <Image
+                        src={purchasedContent.contentItems[0].signedUrl}
+                        alt={purchasedContent.title}
+                        fill
+                        className="object-contain select-none"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                        draggable={false}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-white">
+                        <div className="text-center">
+                          <svg className="w-20 h-20 mx-auto mb-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-lg">Loading image...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {effectiveContentType === 'DOCUMENT' && (
+                  <div className="aspect-video relative">
+                    {purchasedContent.contentItems && purchasedContent.contentItems.length > 0 && purchasedContent.contentItems[0].signedUrl ? (
+                      <iframe
+                        src={purchasedContent.contentItems[0].signedUrl}
+                        className="w-full h-full"
+                        title={purchasedContent.title}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-white">
+                        <div className="text-center">
+                          <svg className="w-20 h-20 mx-auto mb-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-lg">Loading document...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {effectiveContentType === 'AUDIO' && (
+                  <div className="aspect-video relative bg-linear-to-br from-purple-900 to-indigo-900">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
+                      <div className="mb-8">
+                        <svg className="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
+                        </svg>
+                      </div>
+                      {purchasedContent.contentItems && purchasedContent.contentItems.length > 0 && purchasedContent.contentItems[0].signedUrl && (
+                        <audio
+                          controls
+                          controlsList="nodownload"
+                          className="w-full max-w-md"
+                          preload="metadata"
+                        >
+                          <source
+                            src={purchasedContent.contentItems[0].signedUrl}
+                            type="audio/mpeg"
+                          />
+                          Your browser does not support the audio tag.
+                        </audio>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {!['VIDEO', 'IMAGE', 'DOCUMENT', 'AUDIO'].includes(effectiveContentType) && (
+                  <div className="aspect-video">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <div className="relative inline-block mb-4">
+                          <div className="absolute inset-0 bg-indigo-500 rounded-full blur-2xl opacity-30"></div>
+                          <svg className="relative w-20 h-20 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                          </svg>
+                        </div>
+                        <p className="text-xl font-semibold mb-2">Content Player</p>
+                        <p className="text-sm text-gray-300 mb-4">Integrate your video/content player here</p>
+                        <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          <p className="text-xs text-gray-300">
+                            Declared: {purchasedContent.contentType} | Detected: {effectiveContentType}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                  </>
+                )}
               </div>
             </div>
 
@@ -357,9 +611,9 @@ export function ContentClient({ id }: { id: string }) {
             </div>
 
             {/* Access Info */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm">
+            <div className="bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div className="flex-1">
@@ -371,6 +625,139 @@ export function ContentClient({ id }: { id: string }) {
           </div>
         </main>
 
+        {/* Lightbox Modal for Gallery Items */}
+        {lightboxOpen && purchasedContent.contentItems && purchasedContent.contentItems.length > 0 && (
+          <div 
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+            onClick={() => setLightboxOpen(false)}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Previous Button */}
+            {purchasedContent.contentItems.length > 1 && lightboxIndex > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex(lightboxIndex - 1);
+                }}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 bg-black/50 rounded-full p-2 z-10"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+
+            {/* Next Button */}
+            {purchasedContent.contentItems.length > 1 && lightboxIndex < purchasedContent.contentItems.length - 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex(lightboxIndex + 1);
+                }}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 bg-black/50 rounded-full p-2 z-10"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+
+            {/* Content Display */}
+            <div className="max-w-7xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
+              {(() => {
+                const currentItem = purchasedContent.contentItems[lightboxIndex];
+                const itemFileType = getActualFileType(currentItem.s3Key);
+
+                return (
+                  <div className="relative">
+                    {/* Watermark Overlay to prevent screenshots */}
+                    <div className="absolute inset-0 pointer-events-none z-10 select-none">
+                      <div className="absolute top-0 left-0 right-0 h-16 bg-linear-to-b from-black/30 to-transparent flex items-center justify-center">
+                        <p className="text-white/40 text-sm font-medium">Protected Content</p>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-black/30 to-transparent flex items-center justify-center">
+                        <p className="text-white/40 text-xs">© VeloLink - Unauthorized distribution prohibited</p>
+                      </div>
+                    </div>
+
+                    {itemFileType === 'VIDEO' && currentItem.signedUrl && (
+                      <VideoPlayer
+                        src={currentItem.signedUrl}
+                        autoPlay
+                        protectContent={true}
+                        className="max-w-full max-h-[90vh] mx-auto rounded-lg"
+                      />
+                    )}
+
+                    {itemFileType === 'IMAGE' && currentItem.signedUrl && (
+                      <div className="relative max-h-[90vh] mx-auto flex items-center justify-center">
+                        <Image
+                          src={currentItem.signedUrl}
+                          alt={`${purchasedContent.title} - Item ${lightboxIndex + 1}`}
+                          width={1920}
+                          height={1080}
+                          className="max-w-full max-h-[90vh] object-contain select-none pointer-events-none"
+                          draggable={false}
+                          onContextMenu={(e) => e.preventDefault()}
+                          priority
+                        />
+                      </div>
+                    )}
+
+                    {itemFileType === 'AUDIO' && currentItem.signedUrl && (
+                      <div className="bg-linear-to-br from-purple-900 to-indigo-900 rounded-xl p-8 max-w-2xl mx-auto">
+                        <div className="text-center mb-8">
+                          <svg className="w-24 h-24 text-white mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
+                          </svg>
+                          <h3 className="text-white text-xl font-semibold">{purchasedContent.title}</h3>
+                        </div>
+                        <audio
+                          controls
+                          autoPlay
+                          className="w-full"
+                          controlsList="nodownload"
+                        >
+                          <source src={currentItem.signedUrl} type="audio/mpeg" />
+                          Your browser does not support the audio tag.
+                        </audio>
+                      </div>
+                    )}
+
+                    {itemFileType === 'DOCUMENT' && currentItem.signedUrl && (
+                      <div className="bg-white rounded-xl overflow-hidden max-w-5xl mx-auto" style={{ height: '90vh' }}>
+                        <iframe
+                          src={currentItem.signedUrl}
+                          className="w-full h-full"
+                          title={`${purchasedContent.title} - Document ${lightboxIndex + 1}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Item Counter */}
+              {purchasedContent.contentItems.length > 1 && (
+                <div className="text-center mt-4">
+                  <p className="text-white text-sm">
+                    {lightboxIndex + 1} / {purchasedContent.contentItems.length}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <Footer />
       </div>
     );
@@ -379,10 +766,10 @@ export function ContentClient({ id }: { id: string }) {
   // Render preview/purchase view
   if (!isPurchased && content) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col relative overflow-hidden">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-indigo-50/30 flex flex-col relative overflow-hidden">
         {/* Floating Decorative Elements */}
         <motion.div
-          className="absolute top-20 right-10 w-40 h-40 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"
+          className="absolute top-20 right-10 w-40 h-40 bg-linear-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"
           animate={{
             x: [0, -60, 40, 0],
             y: [0, 40, -30, 0],
@@ -395,7 +782,7 @@ export function ContentClient({ id }: { id: string }) {
           }}
         />
         <motion.div
-          className="absolute bottom-40 left-20 w-32 h-32 bg-gradient-to-br from-blue-400/8 to-cyan-400/8 rounded-full blur-2xl"
+          className="absolute bottom-40 left-20 w-32 h-32 bg-linear-to-br from-blue-400/8 to-cyan-400/8 rounded-full blur-2xl"
           animate={{
             x: [0, 50, -35, 0],
             y: [0, -45, 25, 0],
@@ -409,7 +796,7 @@ export function ContentClient({ id }: { id: string }) {
           }}
         />
         <motion.div
-          className="absolute top-1/2 left-1/4 w-24 h-24 bg-gradient-to-br from-indigo-400/6 to-purple-400/6 rounded-full blur-xl"
+          className="absolute top-1/2 left-1/4 w-24 h-24 bg-linear-to-br from-indigo-400/6 to-purple-400/6 rounded-full blur-xl"
           animate={{
             x: [0, -25, 20, 0],
             y: [0, 30, -15, 0],
@@ -429,6 +816,8 @@ export function ContentClient({ id }: { id: string }) {
               <Image
                 src="/assets/logo_svgs/Primary_Logo(black).svg"
                 alt="Velo Link"
+                width={180}
+                height={32}
                 className="h-7 sm:h-8 w-auto"
               />
             </Link>
@@ -458,14 +847,18 @@ export function ContentClient({ id }: { id: string }) {
                   <Image
                     src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
                     alt={content.title}
+                    width={1280}
+                    height={720}
                     className="w-full h-full object-cover blur-sm"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
+                  <div className="absolute inset-0 bg-linear-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
                     <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-5 shadow-2xl">
                       <div className="flex items-center gap-3">
                         <Image
                           src="/assets/logo_svgs/Brand_Icon(black).svg"
                           alt="Lock"
+                          width={28}
+                          height={28}
                           className="w-7 h-7"
                         />
                         <span className="text-gray-900 font-bold text-lg">Locked Content</span>
@@ -518,7 +911,7 @@ export function ContentClient({ id }: { id: string }) {
                   {/* Price */}
                   <div className="mb-6 pb-6 border-b border-gray-200">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                      <span className="text-4xl sm:text-5xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         ${(content.price * 1.10).toFixed(2)}
                       </span>
                       <span className="text-gray-500 text-sm">one-time</span>
@@ -532,7 +925,7 @@ export function ContentClient({ id }: { id: string }) {
                   {/* Purchase Button */}
                   <motion.button
                     onClick={handlePurchase}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-purple-500/40 flex items-center justify-center gap-2 relative overflow-hidden group"
+                    className="w-full px-6 py-4 bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-purple-500/40 flex items-center justify-center gap-2 relative overflow-hidden group"
                     variants={buttonTap}
                     whileHover={{ 
                       scale: 1.02,
@@ -540,7 +933,7 @@ export function ContentClient({ id }: { id: string }) {
                     }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                    <div className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                     <motion.svg 
                       className="w-5 h-5 relative z-10" 
                       fill="none" 
@@ -565,7 +958,7 @@ export function ContentClient({ id }: { id: string }) {
                       <span className="font-medium">Secure payment • Instant access</span>
                     </div>
                     <div className="flex items-center justify-center gap-4 pt-2">
-                      <Image src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" className="h-5" />
+                      <Image src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" width={80} height={20} className="h-5" />
                       <span className="text-xs font-medium text-gray-400">•</span>
                       <span className="text-xs font-medium text-gray-500">VISA</span>
                       <span className="text-xs font-medium text-gray-500">Mastercard</span>

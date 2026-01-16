@@ -267,7 +267,7 @@ export function AlertModal({
       }
     >
       <div className={cn('flex gap-3 p-4 rounded-lg', config.bgColor)}>
-        <div className="flex-shrink-0">{config.icon}</div>
+        <div className="shrink-0">{config.icon}</div>
         <p className={cn('text-sm', config.textColor)}>{message}</p>
       </div>
     </Modal>

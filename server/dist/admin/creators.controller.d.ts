@@ -39,6 +39,7 @@ export declare class CreatorsController {
             id: string;
             name: string;
             email: string;
+            bio: string | null;
             profileImage: string | null;
             coverImage: string | null;
             kycStatus: import(".prisma/client").$Enums.VerificationStatus;

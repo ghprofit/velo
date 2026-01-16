@@ -191,6 +191,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
             <Image
               src="/assets/logo_svgs/Primary_Logo(black).svg"
               alt="Velo Link"
+              width={180}
+              height={32}
               className="h-7 sm:h-8 w-auto"
             />
           </Link>
@@ -254,7 +256,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                     {content.itemCount} {content.itemCount === 1 ? 'item' : 'items'}
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
+                <div className="absolute inset-0 bg-linear-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
                   <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-5 shadow-2xl">
                     <div className="flex items-center gap-3">
                       <Image
@@ -338,7 +340,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                   {error && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <div className="flex items-center gap-3">
-                        <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-red-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <p className="text-red-800 text-sm">{error}</p>
@@ -349,7 +351,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                   <button
                     type="submit"
                     disabled={isProcessing || !email}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full px-6 py-4 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isProcessing ? (
                       <>
@@ -387,7 +389,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                       transition={{ delay: 0.5, duration: 0.4 }}
                     >
                       <span>Total:</span>
-                      <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                      <span className="bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         {totalPrice}
                       </span>
                     </motion.div>
@@ -402,7 +404,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                       <span className="font-medium">Secure payment • Instant access</span>
                     </div>
                     <div className="flex items-center justify-center gap-4 pt-1">
-                      <Image src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" className="h-5" />
+                      <Image src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" width={80} height={20} className="h-5" />
                       <span className="text-xs font-medium text-gray-400">•</span>
                       <span className="text-xs font-medium text-gray-500">VISA</span>
                       <span className="text-xs font-medium text-gray-500">Mastercard</span>

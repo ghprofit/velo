@@ -21,6 +21,7 @@ const login_dto_1 = require("./dto/login.dto");
 const refresh_token_dto_1 = require("./dto/refresh-token.dto");
 const logout_dto_1 = require("./dto/logout.dto");
 const verify_email_dto_1 = require("./dto/verify-email.dto");
+const verify_email_code_dto_1 = require("./dto/verify-email-code.dto");
 const resend_verification_dto_1 = require("./dto/resend-verification.dto");
 const forgot_password_dto_1 = require("./dto/forgot-password.dto");
 const reset_password_dto_1 = require("./dto/reset-password.dto");
@@ -29,13 +30,48 @@ const enable_2fa_dto_1 = require("./dto/enable-2fa.dto");
 const verify_2fa_dto_1 = require("./dto/verify-2fa.dto");
 const disable_2fa_dto_1 = require("./dto/disable-2fa.dto");
 const verify_backup_code_dto_1 = require("./dto/verify-backup-code.dto");
-const verify_email_code_dto_1 = require("./dto/verify-email-code.dto");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 const twofactor_service_1 = require("../twofactor/twofactor.service");
 let AuthController = class AuthController {
     constructor(authService, twofactorService) {
         this.authService = authService;
         this.twofactorService = twofactorService;
+    }
+    setAuthCookies(res, accessToken, refreshToken, rememberMe = false) {
+        const accessTokenMaxAge = 15 * 60 * 1000;
+        const refreshTokenMaxAge = rememberMe
+            ? 30 * 24 * 60 * 60 * 1000
+            : 7 * 24 * 60 * 60 * 1000;
+        res.cookie('accessToken', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: accessTokenMaxAge,
+            path: '/',
+        });
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: refreshTokenMaxAge,
+            path: '/',
+        });
+    }
+    clearAuthCookies(res) {
+        res.cookie('accessToken', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 0,
+            path: '/',
+        });
+        res.cookie('refreshToken', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 0,
+            path: '/',
+        });
     }
     async register(dto) {
         const result = await this.authService.register(dto);
@@ -45,10 +81,13 @@ let AuthController = class AuthController {
             data: result,
         };
     }
-    async login(dto, req) {
+    async login(dto, req, res) {
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
         const result = await this.authService.login(dto, ipAddress, userAgent);
+        if (!result.requiresTwoFactor && result.tokens) {
+            this.setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken, dto.rememberMe);
+        }
         return {
             success: true,
             message: result.requiresTwoFactor
@@ -57,16 +96,18 @@ let AuthController = class AuthController {
             data: result,
         };
     }
-    async refresh(dto) {
+    async refresh(dto, res) {
         const result = await this.authService.refresh(dto);
+        this.setAuthCookies(res, result.accessToken, result.refreshToken);
         return {
             success: true,
             message: 'Token refreshed successfully.',
             data: result,
         };
     }
-    async logout(dto) {
+    async logout(dto, res) {
         const result = await this.authService.logout(dto);
+        this.clearAuthCookies(res);
         return {
             success: true,
             message: result.message,
@@ -86,8 +127,8 @@ let AuthController = class AuthController {
             message: result.message,
         };
     }
-    async verifyEmailCode(req, dto) {
-        const result = await this.authService.verifyEmailCode(req.user.userId, dto.code);
+    async verifyEmailCode(dto) {
+        const result = await this.authService.verifyEmail({ token: dto.code });
         return {
             success: true,
             message: result.message,
@@ -142,8 +183,11 @@ let AuthController = class AuthController {
             data: result,
         };
     }
-    async verify2FA(dto) {
+    async verify2FA(dto, res) {
         const result = await this.authService.verify2FALogin(dto);
+        if (result.tokens) {
+            this.setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+        }
         return {
             success: true,
             message: 'Login successful with 2FA.',
@@ -173,8 +217,11 @@ let AuthController = class AuthController {
             data: { backupCodes },
         };
     }
-    async verifyBackupCode(dto) {
+    async verifyBackupCode(dto, res) {
         const result = await this.authService.verifyBackupCodeLogin(dto);
+        if (result.tokens) {
+            this.setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+        }
         return {
             success: true,
             message: result.message || 'Login successful with backup code.',
@@ -254,24 +301,27 @@ __decorate([
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Req)()),
+    __param(2, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
     (0, common_1.Post)('refresh'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [refresh_token_dto_1.RefreshTokenDto]),
+    __metadata("design:paramtypes", [refresh_token_dto_1.RefreshTokenDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "refresh", null);
 __decorate([
     (0, common_1.Post)('logout'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [logout_dto_1.LogoutDto]),
+    __metadata("design:paramtypes", [logout_dto_1.LogoutDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "logout", null);
 __decorate([
@@ -294,12 +344,10 @@ __decorate([
 __decorate([
     (0, common_1.Post)('verify-email-code'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)()),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, verify_email_code_dto_1.VerifyEmailCodeDto]),
+    __metadata("design:paramtypes", [verify_email_code_dto_1.VerifyEmailCodeDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verifyEmailCode", null);
 __decorate([
@@ -365,8 +413,9 @@ __decorate([
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 300000 } }),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [verify_2fa_dto_1.Verify2FADto]),
+    __metadata("design:paramtypes", [verify_2fa_dto_1.Verify2FADto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verify2FA", null);
 __decorate([
@@ -405,8 +454,9 @@ __decorate([
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 300000 } }),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [verify_backup_code_dto_1.VerifyBackupCodeDto]),
+    __metadata("design:paramtypes", [verify_backup_code_dto_1.VerifyBackupCodeDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verifyBackupCode", null);
 __decorate([

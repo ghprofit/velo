@@ -11,12 +11,14 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const stripe_service_1 = require("./stripe.service");
 const stripe_controller_1 = require("./stripe.controller");
+const prisma_module_1 = require("../prisma/prisma.module");
+const email_module_1 = require("../email/email.module");
 let StripeModule = class StripeModule {
 };
 exports.StripeModule = StripeModule;
 exports.StripeModule = StripeModule = __decorate([
     (0, common_1.Module)({
-        imports: [config_1.ConfigModule],
+        imports: [config_1.ConfigModule, prisma_module_1.PrismaModule, email_module_1.EmailModule],
         controllers: [stripe_controller_1.StripeController],
         providers: [stripe_service_1.StripeService],
         exports: [stripe_service_1.StripeService],

@@ -28,21 +28,33 @@ __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.MinLength)(4),
+    (0, class_validator_1.Matches)(/^[0-9]{4,17}$/, {
+        message: 'Bank account number must be 4-17 digits',
+    }),
     __metadata("design:type", String)
 ], SetupBankAccountDto.prototype, "bankAccountNumber", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Matches)(/^[0-9]{9}$/, {
+        message: 'Routing number must be exactly 9 digits',
+    }),
     __metadata("design:type", String)
 ], SetupBankAccountDto.prototype, "bankRoutingNumber", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Matches)(/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, {
+        message: 'SWIFT code must be 8 or 11 characters (e.g., BOFAUS3N)',
+    }),
     __metadata("design:type", String)
 ], SetupBankAccountDto.prototype, "bankSwiftCode", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Matches)(/^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/, {
+        message: 'Invalid IBAN format',
+    }),
     __metadata("design:type", String)
 ], SetupBankAccountDto.prototype, "bankIban", void 0);
 __decorate([

@@ -1,6 +1,7 @@
+import { Request } from 'express';
 import { VeriffService } from './veriff.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateSessionDto, SessionResponseDto, VerificationStatusDto, WebhookDecisionDto } from './dto';
+import { CreateSessionDto, SessionResponseDto, VerificationStatusDto } from './dto';
 export declare class VeriffController {
     private readonly veriffService;
     private readonly prisma;
@@ -11,7 +12,7 @@ export declare class VeriffController {
     getSessionMedia(sessionId: string): Promise<any>;
     resubmitSession(sessionId: string, updateData?: Partial<CreateSessionDto>): Promise<SessionResponseDto>;
     cancelSession(sessionId: string): Promise<void>;
-    handleWebhook(webhookData: WebhookDecisionDto, signature: string): Promise<{
+    handleWebhook(request: Request): Promise<{
         received: boolean;
     }>;
     healthCheck(): {

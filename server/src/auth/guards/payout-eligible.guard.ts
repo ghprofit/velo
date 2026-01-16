@@ -51,6 +51,9 @@ export class PayoutEligibleGuard implements CanActivate {
       missingRequirements.push('Bank details setup');
     }
 
+    // Note: stripeAccountId validation is done at payout processing time
+    // This allows creators to set up bank details first, then complete Stripe onboarding
+
     if (missingRequirements.length > 0) {
       throw new ForbiddenException(
         `Payout request not allowed. Please complete the following requirements: ${missingRequirements.join(', ')}`,

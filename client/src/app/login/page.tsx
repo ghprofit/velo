@@ -49,7 +49,7 @@ export default function LoginPage() {
         <main className="min-h-screen bg-gradient-playful-2 flex flex-col md:flex-row md:items-center md:justify-center p-0 md:p-6">
         {/* Mobile: Sticky Header */}
         <header className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 py-4 border-b border-gray-100 md:hidden">
-          <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
+          <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" width={180} height={48} className="h-12"/>
         </header>
 
         <div className="flex-1 flex items-center justify-center px-4 py-6 md:py-0">
@@ -63,7 +63,7 @@ export default function LoginPage() {
             >
               {/* Logo */}
               <motion.div variants={staggerItem} className="flex items-center gap-6">
-                <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-20"/>
+                <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" width={300} height={80} className="h-20"/>
               </motion.div>
 
               {/* Tagline */}
@@ -215,7 +215,7 @@ export default function LoginPage() {
 
       {/* Mobile: Sticky Header */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 py-4 border-b border-gray-100 md:hidden">
-        <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
+        <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" width={180} height={48} className="h-12"/>
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 py-6 md:py-0">
@@ -229,7 +229,7 @@ export default function LoginPage() {
           >
             {/* Logo */}
             <motion.div variants={staggerItem} className="flex items-center gap-6">
-              <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-40"/>
+              <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" width={600} height={160} className="h-40"/>
             </motion.div>
 
             {/* Tagline */}
@@ -286,7 +286,7 @@ export default function LoginPage() {
               {/* Welcome Text */}
               <motion.div variants={staggerItem} className="text-center md:text-left">
                 <motion.h2 
-                  className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2"
+                  className="text-2xl md:text-3xl font-bold bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2"
                   initial={{ scale: 0.9 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring", stiffness: 200 }}

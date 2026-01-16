@@ -17,6 +17,8 @@ exports.VerifyEmailDto = VerifyEmailDto;
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Length)(6, 6, { message: 'Verification code must be 6 digits' }),
+    (0, class_validator_1.Matches)(/^[0-9]{6}$/, { message: 'Verification code must be numeric' }),
     __metadata("design:type", String)
 ], VerifyEmailDto.prototype, "token", void 0);
 //# sourceMappingURL=verify-email.dto.js.map

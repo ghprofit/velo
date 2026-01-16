@@ -3,7 +3,6 @@ export declare const SENDGRID_TEMPLATE_ID: string;
 export declare const EMAIL_TEMPLATES: {
     WELCOME: EmailTemplate;
     EMAIL_VERIFICATION: EmailTemplate;
-    EMAIL_VERIFICATION_CODE: EmailTemplate;
     PASSWORD_RESET: EmailTemplate;
     TWO_FACTOR_ENABLED: EmailTemplate;
     TWO_FACTOR_DISABLED: EmailTemplate;
@@ -13,6 +12,9 @@ export declare const EMAIL_TEMPLATES: {
     PURCHASE_RECEIPT: EmailTemplate;
     CREATOR_SALE_NOTIFICATION: EmailTemplate;
     PAYOUT_PROCESSED: EmailTemplate;
+    ADMIN_PAYOUT_REQUEST_ALERT: EmailTemplate;
+    PAYOUT_APPROVED: EmailTemplate;
+    PAYOUT_REJECTED: EmailTemplate;
     CONTENT_APPROVED: EmailTemplate;
     CONTENT_REJECTED: EmailTemplate;
     ACCOUNT_DELETION: EmailTemplate;
@@ -25,11 +27,6 @@ export declare const HTML_TEMPLATES: {
         user_name: string;
     }) => string;
     EMAIL_VERIFICATION: (data: {
-        user_name: string;
-        verification_link: string;
-        expiry_time: string;
-    }) => string;
-    EMAIL_VERIFICATION_CODE: (data: {
         user_name: string;
         verification_code: string;
         expiry_time: string;
@@ -83,6 +80,22 @@ export declare const HTML_TEMPLATES: {
         amount: string;
         payout_date: string;
         transaction_id: string;
+    }) => string;
+    ADMIN_PAYOUT_REQUEST_ALERT: (data: {
+        creator_name: string;
+        amount: string;
+        request_id: string;
+        available_balance: string;
+    }) => string;
+    PAYOUT_APPROVED: (data: {
+        creator_name: string;
+        amount: string;
+        request_id: string;
+    }) => string;
+    PAYOUT_REJECTED: (data: {
+        creator_name: string;
+        amount: string;
+        reason: string;
     }) => string;
     CONTENT_APPROVED: (data: {
         creator_name: string;

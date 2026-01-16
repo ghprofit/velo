@@ -3,13 +3,15 @@ import Link from 'next/link';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center px-4">
+    <div className="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center px-4">
       <div className="text-center max-w-2xl mx-auto">
         {/* Logo */}
         <div className="mb-8">
           <Image
             src="/assets/logo_svgs/Secondary_Logo(white).svg"
             alt="Velolink Logo"
+            width={150}
+            height={48}
             className="h-12 mx-auto"
           />
         </div>

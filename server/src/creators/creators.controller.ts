@@ -200,4 +200,48 @@ export class CreatorsController {
       throw error;
     }
   }
+
+  /**
+   * Get Stripe Connect onboarding link
+   * GET /api/creators/payout/stripe-onboarding
+   */
+  @Get('payout/stripe-onboarding')
+  @HttpCode(HttpStatus.OK)
+  async getStripeOnboardingLink(@Request() req: any) {
+    this.logger.log(`Getting Stripe onboarding link for user: ${req.user.id}`);
+
+    try {
+      const result = await this.creatorsService.getStripeOnboardingLink(req.user.id);
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get Stripe onboarding link:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Stripe account status
+   * GET /api/creators/payout/stripe-status
+   */
+  @Get('payout/stripe-status')
+  @HttpCode(HttpStatus.OK)
+  async getStripeAccountStatus(@Request() req: any) {
+    this.logger.log(`Getting Stripe account status for user: ${req.user.id}`);
+
+    try {
+      const result = await this.creatorsService.getStripeAccountStatus(req.user.id);
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get Stripe account status:', error);
+      throw error;
+    }
+  }
 }

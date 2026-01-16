@@ -211,7 +211,7 @@ export default function AdminDashboard() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                 </div>
               ) : (
-                <div className="h-64 bg-gradient-to-br from-indigo-50 via-purple-50 to-green-50 rounded-lg flex items-end justify-around p-4">
+                <div className="h-64 bg-linear-to-br from-indigo-50 via-purple-50 to-green-50 rounded-lg flex items-end justify-around p-4">
                   {chartBars.map((height, i) => (
                     <div
                       key={i}

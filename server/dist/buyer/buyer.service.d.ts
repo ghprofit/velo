@@ -1,7 +1,9 @@
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../stripe/stripe.service';
 import { EmailService } from '../email/email.service';
 import { S3Service } from '../s3/s3.service';
+import { RedisService } from '../redis/redis.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 export declare class BuyerService {
@@ -9,15 +11,24 @@ export declare class BuyerService {
     private stripeService;
     private emailService;
     private s3Service;
+    private redisService;
+    private config;
     private readonly logger;
+    private readonly SESSION_EXPIRY_MS;
     private readonly MAX_TRUSTED_DEVICES;
     private readonly ACCESS_WINDOW_HOURS;
+    private readonly ACCESS_BUFFER_MINUTES;
+    private readonly VIEW_COOLDOWN_MS;
     private readonly VERIFICATION_CODE_EXPIRY_MINUTES;
-    constructor(prisma: PrismaService, stripeService: StripeService, emailService: EmailService, s3Service: S3Service);
+    constructor(prisma: PrismaService, stripeService: StripeService, emailService: EmailService, s3Service: S3Service, redisService: RedisService, config: ConfigService);
     createOrGetSession(dto: CreateSessionDto, ipAddress?: string, userAgent?: string): Promise<{
+        id: string;
         sessionToken: string;
+        fingerprint: string | null;
+        ipAddress: string | null;
         expiresAt: Date;
     }>;
+    private validateSession;
     getContentDetails(contentId: string): Promise<{
         id: string;
         title: string;
@@ -28,6 +39,7 @@ export declare class BuyerService {
         duration: number | null;
         viewCount: number;
         purchaseCount: number;
+        itemCount: number;
         creator: {
             id: string;
             displayName: string;
@@ -43,7 +55,7 @@ export declare class BuyerService {
         amount?: undefined;
     } | {
         purchaseId: string;
-        clientSecret: string | null;
+        clientSecret: any;
         amount: number;
         accessToken: string;
         alreadyPurchased?: undefined;
@@ -58,7 +70,7 @@ export declare class BuyerService {
             contentType: string;
         };
     }>;
-    getContentAccess(accessToken: string, fingerprint: string, ipAddress?: string): Promise<{
+    getContentAccess(accessToken: string): Promise<{
         content: {
             id: string;
             title: string;
@@ -135,11 +147,16 @@ export declare class BuyerService {
         needsEmailVerification?: undefined;
         canAddMoreDevices?: undefined;
     }>;
-    requestDeviceVerification(accessToken: string, fingerprint: string, email: string): Promise<{
+    requestDeviceVerification(accessToken: string, fingerprint: string): Promise<{
         success: boolean;
     }>;
     verifyDeviceCode(accessToken: string, fingerprint: string, verificationCode: string): Promise<{
         success: boolean;
+    }>;
+    cleanupExpiredData(): Promise<{
+        success: boolean;
+        deletedPurchases: number;
+        deletedSessions: number;
     }>;
 }
 //# sourceMappingURL=buyer.service.d.ts.map

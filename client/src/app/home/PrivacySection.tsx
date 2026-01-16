@@ -62,19 +62,19 @@ export default function PrivacySection() {
 
               {/* Floating user avatars with enhanced styling */}
               <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full overflow-hidden flex items-center justify-center shadow-xl border-4 border-white animate-float">
-                <Image src="assets/images/p1.jpg" alt="User avatar" className="w-full h-full object-cover"/>
+                <Image src="/assets/images/p1.jpg" alt="User avatar" width={80} height={80} className="w-full h-full object-cover"/>
               </div>
               <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full overflow-hidden flex items-center justify-center shadow-xl border-4 border-white animate-float animation-delay-1000">
-                <Image src="assets/images/p2.webp" alt="User avatar" className="w-full h-full object-cover"/>
+                <Image src="/assets/images/p2.webp" alt="User avatar" width={80} height={80} className="w-full h-full object-cover"/>
               </div>
               <div className="absolute top-1/4 -right-2 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center shadow-xl border-4 border-white animate-float animation-delay-2000">
-                <Image src="assets/images/p3.webp" alt="User avatar" className="w-full h-full object-cover"/>
+                <Image src="/assets/images/p3.webp" alt="User avatar" width={64} height={64} className="w-full h-full object-cover"/>
               </div>
               <div className="absolute bottom-1/4 -left-8 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center shadow-xl border-4 border-white animate-float animation-delay-3000">
-                <Image src="assets/images/p4.jpg" alt="User avatar" className="w-full h-full object-cover"/>
+                <Image src="/assets/images/p4.jpg" alt="User avatar" width={64} height={64} className="w-full h-full object-cover"/>
               </div>
               <div className="absolute -top-8 left-1/4 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center shadow-xl border-4 border-white animate-float animation-delay-4000">
-                <Image src="assets/images/p5.webp" alt="User avatar" className="w-full h-full object-cover"/>
+                <Image src="/assets/images/p5.webp" alt="User avatar" width={64} height={64} className="w-full h-full object-cover"/>
               </div>
             </div>
           </ScrollReveal>

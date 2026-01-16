@@ -325,12 +325,13 @@ export const contentApi = {
     apiClient.post('/content', data),
 
   // Create new content using multipart/form-data (streaming)
-  createContentMultipart: (formData: FormData) =>
+  createContentMultipart: (formData: FormData, onUploadProgress?: (progressEvent: any) => void) =>
     apiClient.post('/content/multipart', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
       timeout: 600000, // 10 minutes for large uploads
+      onUploadProgress,
     }),
 
   // Get creator's content

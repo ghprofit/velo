@@ -16,9 +16,10 @@ import { ReportsService } from './reports.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EmailModule } from '../email/email.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { StripeModule } from '../stripe/stripe.module';
 
 @Module({
-  imports: [PrismaModule, EmailModule, NotificationsModule],
+  imports: [PrismaModule, EmailModule, NotificationsModule, StripeModule],
   controllers: [AdminController, CreatorsController, ContentController, PaymentsController, SupportController, NotificationsController, ReportsController],
   providers: [AdminService, CreatorsService, ContentService, PaymentsService, SupportService, AdminNotificationsService, ReportsService],
   exports: [AdminService, CreatorsService, ContentService, PaymentsService, SupportService, AdminNotificationsService, ReportsService],

@@ -27,35 +27,8 @@ let EarningsService = class EarningsService {
     }
     async getBalance(userId) {
         const creatorProfile = await this.getCreatorProfile(userId);
-        const purchasesAggregation = await this.prisma.purchase.aggregate({
-            where: {
-                content: {
-                    creatorId: creatorProfile.id,
-                },
-                status: 'COMPLETED',
-            },
-            _sum: {
-                amount: true,
-            },
-        });
-        const lifetimeEarnings = purchasesAggregation._sum.amount || 0;
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const pendingPurchasesAggregation = await this.prisma.purchase.aggregate({
-            where: {
-                content: {
-                    creatorId: creatorProfile.id,
-                },
-                status: 'COMPLETED',
-                createdAt: {
-                    gte: sevenDaysAgo,
-                },
-            },
-            _sum: {
-                amount: true,
-            },
-        });
-        const pendingBalance = pendingPurchasesAggregation._sum.amount || 0;
+        const lifetimeEarnings = creatorProfile.totalEarnings || 0;
+        const pendingBalance = 0;
         const payoutsAggregation = await this.prisma.payout.aggregate({
             where: {
                 creatorId: creatorProfile.id,
@@ -66,13 +39,26 @@ let EarningsService = class EarningsService {
             },
         });
         const totalPayouts = payoutsAggregation._sum.amount || 0;
-        const availableBalance = lifetimeEarnings - pendingBalance - totalPayouts;
+        let availableBalance = Math.max(0, lifetimeEarnings - totalPayouts);
+        let lockedBonus = 0;
+        let salesToUnlock = 0;
+        if (creatorProfile.waitlistBonus > 0 && !creatorProfile.bonusWithdrawn) {
+            if (creatorProfile.totalPurchases >= 5) {
+                availableBalance = availableBalance + creatorProfile.waitlistBonus;
+            }
+            else {
+                lockedBonus = creatorProfile.waitlistBonus;
+                salesToUnlock = 5 - creatorProfile.totalPurchases;
+            }
+        }
         return {
             lifetimeEarnings,
             pendingBalance,
-            availableBalance: Math.max(0, availableBalance),
+            availableBalance,
             totalPayouts,
             currency: 'USD',
+            lockedBonus: lockedBonus > 0 ? lockedBonus : undefined,
+            salesToUnlock: salesToUnlock > 0 ? salesToUnlock : undefined,
         };
     }
     async getPayouts(userId, page = 1, limit = 10) {

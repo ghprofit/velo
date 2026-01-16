@@ -189,7 +189,23 @@ interface UpdateCreatorRequest {
     verificationNotes?: string;
 }
 
+interface RecentPurchaseItem {
+    id: string;
+    buyerEmail?: string;
+    amount: number;
+    createdAt: string;
+}
+
 // Content Management Types
+interface ContentItem {
+    id: string;
+    s3Key: string;
+    s3Bucket: string;
+    fileSize?: number;
+    order: number;
+    signedUrl: string;
+}
+
 interface Content {
     id: string;
     title: string;
@@ -197,7 +213,10 @@ interface Content {
     creatorName: string;
     creatorId: string;
     contentType: string;
+    mediaType: string;
     thumbnailUrl: string;
+    s3Key?: string;
+    s3Bucket?: string;
     price: number;
     status: string;
     complianceStatus: string;
@@ -207,7 +226,10 @@ interface Content {
     purchaseCount: number;
     totalRevenue: number;
     createdAt: string;
+    updatedAt: string;
     publishedAt?: string;
+    recentPurchases?: RecentPurchaseItem[];
+    contentItems?: ContentItem[];
 }
 
 interface ContentListResponse {
@@ -568,13 +590,6 @@ interface AdminContentStatsResponse {
     };
 }
 
-interface RecentPurchaseItem {
-    id: string;
-    buyerEmail: string;
-    amount: number;
-    createdAt: string;
-}
-
 interface AdminContentDetailsResponse {
     success: boolean;
     data: AdminContent & {
@@ -891,7 +906,7 @@ export const api = createApi({
             query: () => '/api/superadmin/content/stats',
             providesTags: ['Content'],
         }),
-        getContentById: build.query<ContentResponse, string>({
+        getSuperAdminContentById: build.query<ContentResponse, string>({
             query: (id) => `/api/superadmin/content/${id}`,
             providesTags: ['Content'],
         }),
@@ -911,7 +926,7 @@ export const api = createApi({
             }),
             invalidatesTags: ['Content'],
         }),
-        removeContent: build.mutation<ContentResponse, { id: string; data: RemoveContentRequest }>({
+        superAdminRemoveContent: build.mutation<ContentResponse, { id: string; data: RemoveContentRequest }>({
             query: ({ id, data }) => ({
                 url: `/api/superadmin/content/${id}/remove`,
                 method: 'POST',
@@ -1156,10 +1171,10 @@ export const {
     // Superadmin content hooks
     useGetContentQuery,
     useGetContentStatsQuery,
-    useGetContentByIdQuery,
+    useGetSuperAdminContentByIdQuery,
     useUpdateContentMutation,
     useSuperAdminReviewContentMutation,
-    useRemoveContentMutation,
+    useSuperAdminRemoveContentMutation,
     // Superadmin financial reports hooks
     useGetFinancialOverviewQuery,
     useGetRevenueReportQuery,

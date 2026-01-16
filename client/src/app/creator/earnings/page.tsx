@@ -303,7 +303,7 @@ export default function EarningsPage() {
           {/* Balance Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {/* Available Balance */}
-            <div className="sm:col-span-2 lg:col-span-1 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-4 sm:p-6 text-white">
+            <div className="sm:col-span-2 lg:col-span-1 bg-linear-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-4 sm:p-6 text-white">
               <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div>
                   <p className="text-green-100 text-xs sm:text-sm mb-1 sm:mb-2">Available Balance</p>
@@ -344,7 +344,7 @@ export default function EarningsPage() {
                 </div>
               </div>
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 sm:p-3 flex items-start gap-2">
-                <svg className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
@@ -401,7 +401,7 @@ export default function EarningsPage() {
                   return (
                     <div key={payout.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                       <div className="flex items-center gap-3 sm:gap-4">
-                        <div className={`w-9 h-9 sm:w-10 sm:h-10 ${styles.iconBg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <div className={`w-9 h-9 sm:w-10 sm:h-10 ${styles.iconBg} rounded-full flex items-center justify-center shrink-0`}>
                           {payout.status === 'COMPLETED' ? (
                             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

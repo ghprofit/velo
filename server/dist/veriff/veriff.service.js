@@ -123,16 +123,16 @@ let VeriffService = VeriffService_1 = class VeriffService {
     verifyWebhookSignature(payload, signature) {
         try {
             if (!this.webhookSecret) {
-                this.logger.warn('Webhook secret not configured, skipping verification');
+                this.logger.error('Webhook secret not configured - cannot verify signature');
                 return false;
             }
             const expectedSignature = crypto
                 .createHmac('sha256', this.webhookSecret)
-                .update(payload, 'utf8')
+                .update(payload)
                 .digest('hex');
             this.logger.debug(`Received signature: ${signature}`);
             this.logger.debug(`Expected signature: ${expectedSignature}`);
-            return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+            return crypto.timingSafeEqual(Buffer.from(signature, 'utf-8'), Buffer.from(expectedSignature, 'utf-8'));
         }
         catch (error) {
             this.logger.error('Webhook signature verification failed:', error);

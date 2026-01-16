@@ -1,9 +1,13 @@
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmailService } from '../../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { QueryContentDto } from './dto/query-content.dto';
 import { UpdateContentDto, ReviewContentDto, RemoveContentDto } from './dto/update-content.dto';
 export declare class ContentService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private emailService;
+    private config;
+    constructor(prisma: PrismaService, emailService: EmailService, config: ConfigService);
     getContent(query: QueryContentDto): Promise<{
         data: {
             id: any;

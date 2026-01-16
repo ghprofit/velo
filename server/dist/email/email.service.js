@@ -1,77 +1,49 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 var EmailService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailService = void 0;
 const common_1 = require("@nestjs/common");
 const client_ses_1 = require("@aws-sdk/client-ses");
-const nodemailer = __importStar(require("nodemailer"));
+const nodemailer_1 = __importDefault(require("nodemailer"));
 const email_templates_1 = require("./templates/email-templates");
 let EmailService = EmailService_1 = class EmailService {
     constructor() {
         this.logger = new common_1.Logger(EmailService_1.name);
         this.isConfigured = false;
         this.config = {
-            apiKey: '',
+            apiKey: process.env.AWS_ACCESS_KEY_ID || '',
             fromEmail: process.env.SES_FROM_EMAIL || 'noreply@example.com',
             fromName: process.env.SES_FROM_NAME || 'VeloLink',
             replyToEmail: process.env.SES_REPLY_TO_EMAIL,
         };
-        const hasCredentials = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY;
-        if (hasCredentials) {
+        const awsRegion = process.env.AWS_REGION || 'us-east-1';
+        const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+        const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+        if (awsAccessKeyId && awsSecretAccessKey) {
             this.sesClient = new client_ses_1.SESClient({
-                region: process.env.AWS_REGION || 'us-east-1',
+                region: awsRegion,
                 credentials: {
-                    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                    accessKeyId: awsAccessKeyId,
+                    secretAccessKey: awsSecretAccessKey,
                 },
             });
             this.isConfigured = true;
             this.logger.log('AWS SES configured successfully');
         }
         else {
-            this.sesClient = new client_ses_1.SESClient({ region: 'us-east-1' });
+            this.sesClient = new client_ses_1.SESClient({ region: awsRegion });
             this.logger.warn('AWS SES credentials not found. Email sending will be simulated.');
         }
     }
@@ -81,59 +53,57 @@ let EmailService = EmailService_1 = class EmailService {
             if (!options.to) {
                 throw new common_1.BadRequestException('Recipient email is required');
             }
-            if (!options.subject && !options.templateId) {
-                throw new common_1.BadRequestException('Either subject or templateId is required');
+            if (!options.subject && !options.html) {
+                throw new common_1.BadRequestException('Either subject or html content is required');
             }
             if (options.attachments && options.attachments.length > 0) {
                 return this.sendEmailWithAttachments(options);
             }
             const toAddresses = Array.isArray(options.to) ? options.to : [options.to];
-            const ccAddresses = options.cc ? (Array.isArray(options.cc) ? options.cc : [options.cc]) : undefined;
-            const bccAddresses = options.bcc ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc]) : undefined;
-            const fromAddress = options.from || `${this.config.fromName} <${this.config.fromEmail}>`;
-            const replyToAddresses = options.replyTo ? [options.replyTo] : (this.config.replyToEmail ? [this.config.replyToEmail] : undefined);
             const params = {
-                Source: fromAddress,
+                Source: `${this.config.fromName} <${options.from || this.config.fromEmail}>`,
                 Destination: {
                     ToAddresses: toAddresses,
-                    CcAddresses: ccAddresses,
-                    BccAddresses: bccAddresses,
+                    CcAddresses: options.cc || [],
+                    BccAddresses: options.bcc || [],
                 },
                 Message: {
                     Subject: {
-                        Data: options.subject || '',
+                        Data: options.subject || 'Notification',
                         Charset: 'UTF-8',
                     },
-                    Body: {},
+                    Body: {
+                        Html: {
+                            Data: options.html || options.text || '',
+                            Charset: 'UTF-8',
+                        },
+                        ...(options.text && {
+                            Text: {
+                                Data: options.text,
+                                Charset: 'UTF-8',
+                            },
+                        }),
+                    },
                 },
+                ...(options.replyTo || this.config.replyToEmail
+                    ? {
+                        ReplyToAddresses: [options.replyTo || this.config.replyToEmail || ''],
+                    }
+                    : {}),
             };
-            if (options.html) {
-                params.Message.Body.Html = {
-                    Data: options.html,
-                    Charset: 'UTF-8',
-                };
-            }
-            if (options.text) {
-                params.Message.Body.Text = {
-                    Data: options.text,
-                    Charset: 'UTF-8',
-                };
-            }
-            if (replyToAddresses) {
-                params.ReplyToAddresses = replyToAddresses;
-            }
             if (this.isConfigured) {
                 const command = new client_ses_1.SendEmailCommand(params);
                 const response = await this.sesClient.send(command);
                 this.logger.log(`Email sent successfully to ${options.to}. MessageId: ${response.MessageId}`);
                 return {
                     success: true,
-                    messageId: response.MessageId || `ses-${Date.now()}`,
-                    statusCode: response.$metadata.httpStatusCode || 200,
+                    messageId: response.MessageId || `sent-${Date.now()}`,
+                    statusCode: 200,
                 };
             }
             else {
                 this.logger.warn(`[SIMULATED] Email would be sent to: ${options.to}`);
+                this.logger.warn(`[SIMULATED] Subject: ${options.subject}`);
                 return {
                     success: true,
                     messageId: `simulated-${Date.now()}`,
@@ -150,46 +120,47 @@ let EmailService = EmailService_1 = class EmailService {
     }
     async sendEmailWithAttachments(options) {
         try {
+            this.logger.log(`Sending email with attachments to: ${options.to}`);
+            const transporter = nodemailer_1.default.createTransport({
+                streamTransport: true,
+                newline: 'unix',
+            });
             const mailOptions = {
-                from: options.from || `${this.config.fromName} <${this.config.fromEmail}>`,
-                to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
+                from: `${this.config.fromName} <${options.from || this.config.fromEmail}>`,
+                to: options.to,
+                cc: options.cc?.join(', '),
+                bcc: options.bcc?.join(', '),
+                replyTo: options.replyTo || this.config.replyToEmail,
                 subject: options.subject,
                 text: options.text,
                 html: options.html,
-                cc: options.cc,
-                bcc: options.bcc,
-                replyTo: options.replyTo || this.config.replyToEmail,
                 attachments: options.attachments,
             };
+            const info = await transporter.sendMail(mailOptions);
+            const chunks = [];
+            for await (const chunk of info.message) {
+                chunks.push(chunk);
+            }
+            const rawMessage = Buffer.concat(chunks);
             if (this.isConfigured) {
-                const transporter = nodemailer.createTransport({
-                    streamTransport: true,
-                    newline: 'unix',
-                });
-                const info = await transporter.sendMail(mailOptions);
-                const chunks = [];
-                for await (const chunk of info.message) {
-                    chunks.push(chunk);
-                }
-                const message = Buffer.concat(chunks);
                 const command = new client_ses_1.SendRawEmailCommand({
                     RawMessage: {
-                        Data: message,
+                        Data: rawMessage,
                     },
                 });
                 const response = await this.sesClient.send(command);
                 this.logger.log(`Email with attachments sent successfully to ${options.to}. MessageId: ${response.MessageId}`);
                 return {
                     success: true,
-                    messageId: response.MessageId || `ses-${Date.now()}`,
-                    statusCode: response.$metadata.httpStatusCode || 200,
+                    messageId: response.MessageId || `sent-${Date.now()}`,
+                    statusCode: 200,
                 };
             }
             else {
                 this.logger.warn(`[SIMULATED] Email with attachments would be sent to: ${options.to}`);
                 return {
                     success: true,
-                    messageId: `simulated-attach-${Date.now()}`,
+                    messageId: `simulated-${Date.now()}`,
                 };
             }
         }
@@ -201,27 +172,6 @@ let EmailService = EmailService_1 = class EmailService {
             };
         }
     }
-    async sendTemplateEmail(to, templateKey, templateData, options) {
-        const template = email_templates_1.EMAIL_TEMPLATES[templateKey];
-        if (!template) {
-            throw new common_1.BadRequestException(`Template ${templateKey} not found`);
-        }
-        const missingVars = template.requiredVariables.filter((varName) => !(varName in templateData));
-        if (missingVars.length > 0) {
-            throw new common_1.BadRequestException(`Missing required template variables: ${missingVars.join(', ')}`);
-        }
-        const htmlGenerator = email_templates_1.HTML_TEMPLATES[templateKey];
-        if (!htmlGenerator) {
-            throw new common_1.BadRequestException(`HTML template ${templateKey} not found`);
-        }
-        const htmlMessage = htmlGenerator(templateData);
-        return this.sendEmail({
-            to,
-            subject: template.subject || '',
-            html: htmlMessage,
-            ...options,
-        });
-    }
     async sendBulkEmails(recipients, options) {
         this.logger.log(`Sending bulk email to ${recipients.length} recipients`);
         const result = {
@@ -230,36 +180,20 @@ let EmailService = EmailService_1 = class EmailService {
             failureCount: 0,
             failures: [],
         };
-        const batchSize = 50;
-        const batches = this.chunkArray(recipients, batchSize);
-        for (const batch of batches) {
-            try {
-                for (const recipient of batch) {
-                    const emailResult = await this.sendEmail({
-                        to: recipient.email,
-                        ...options,
-                    });
-                    if (emailResult.success) {
-                        result.successCount++;
-                    }
-                    else {
-                        result.failureCount++;
-                        result.failures.push({
-                            email: recipient.email,
-                            error: emailResult.error || 'Unknown error',
-                        });
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
+        for (const recipient of recipients) {
+            const emailResult = await this.sendEmail({
+                to: recipient.email,
+                ...options,
+                html: options.html || '',
+            });
+            if (emailResult.success) {
+                result.successCount++;
             }
-            catch (error) {
-                this.logger.error(`Failed to send batch of ${batch.length} emails:`, error);
-                result.failureCount += batch.length;
-                batch.forEach((recipient) => {
-                    result.failures.push({
-                        email: recipient.email,
-                        error: error?.message || 'Batch send failed',
-                    });
+            else {
+                result.failureCount++;
+                result.failures.push({
+                    email: recipient.email,
+                    error: emailResult.error || 'Unknown error',
                 });
             }
         }
@@ -272,16 +206,14 @@ let EmailService = EmailService_1 = class EmailService {
             throw new common_1.BadRequestException(`HTML template ${templateKey} not found`);
         }
         const htmlMessage = htmlGenerator(templateData);
-        const template = email_templates_1.EMAIL_TEMPLATES[templateKey];
         return this.sendEmail({
             to,
-            subject: subject || template?.subject || 'Notification',
+            subject: subject || 'Notification',
             html: htmlMessage,
         });
     }
     async scheduleEmail(options, sendAt) {
-        this.logger.warn(`AWS SES does not support native scheduling. Email will be sent immediately. ` +
-            `Scheduled time ${sendAt.toISOString()} was requested but ignored.`);
+        this.logger.warn('AWS SES does not support scheduled emails natively. Sending immediately instead.');
         return this.sendEmail(options);
     }
     async sendWelcomeEmail(to, userName) {
@@ -290,10 +222,10 @@ let EmailService = EmailService_1 = class EmailService {
             app_name: this.config.fromName,
         }, `Welcome to ${this.config.fromName}!`);
     }
-    async sendEmailVerification(to, userName, verificationLink, expiryMinutes = 60) {
+    async sendEmailVerification(to, userName, verificationCode, expiryMinutes = 20) {
         return this.sendHTMLTemplateEmail(to, 'EMAIL_VERIFICATION', {
             user_name: userName,
-            verification_link: verificationLink,
+            verification_code: verificationCode,
             expiry_time: `${expiryMinutes} minutes`,
         }, 'Verify your email address');
     }
@@ -307,19 +239,12 @@ let EmailService = EmailService_1 = class EmailService {
     async getEmailStats(days = 7) {
         this.logger.log(`Getting email stats for last ${days} days`);
         return {
-            message: 'Stats endpoint not implemented. Use AWS CloudWatch or SES console for metrics.',
+            message: 'AWS SES stats require CloudWatch integration. Use AWS Console for detailed metrics.',
         };
     }
     isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
-    }
-    chunkArray(array, size) {
-        const chunks = [];
-        for (let i = 0; i < array.length; i += size) {
-            chunks.push(array.slice(i, i + size));
-        }
-        return chunks;
     }
     async testConfiguration(testEmail) {
         this.logger.log(`Testing email configuration by sending to ${testEmail}`);
@@ -338,6 +263,15 @@ let EmailService = EmailService_1 = class EmailService {
     }
     async sendPayoutProcessed(to, data) {
         return this.sendHTMLTemplateEmail(to, 'PAYOUT_PROCESSED', data, 'Your payout has been processed');
+    }
+    async sendAdminPayoutAlert(to, data) {
+        return this.sendHTMLTemplateEmail(to, 'ADMIN_PAYOUT_REQUEST_ALERT', data, 'New Payout Request - Action Required');
+    }
+    async sendPayoutApproved(to, data) {
+        return this.sendHTMLTemplateEmail(to, 'PAYOUT_APPROVED', data, 'Payout Request Approved');
+    }
+    async sendPayoutRejected(to, data) {
+        return this.sendHTMLTemplateEmail(to, 'PAYOUT_REJECTED', data, 'Payout Request Status Update');
     }
     async sendContentApproved(to, data) {
         return this.sendHTMLTemplateEmail(to, 'CONTENT_APPROVED', data, 'Your content has been approved!');
@@ -406,13 +340,19 @@ let EmailService = EmailService_1 = class EmailService {
             newsletter_content: newsletterContent,
         }, 'Velo Newsletter');
     }
-    async sendEmailVerificationCode(to, userName, verificationCode, expiryMinutes = 15) {
-        const expiryTime = `${expiryMinutes} minutes`;
-        return this.sendHTMLTemplateEmail(to, 'EMAIL_VERIFICATION_CODE', {
-            user_name: userName,
-            verification_code: verificationCode,
-            expiry_time: expiryTime,
-        }, 'Your Velo verification code');
+    async sendContentApproval(to, creatorName, contentTitle, contentLink) {
+        return this.sendContentApproved(to, {
+            creator_name: creatorName,
+            content_title: contentTitle,
+            content_link: contentLink,
+        });
+    }
+    async sendContentRejection(to, creatorName, contentTitle, rejectionReason) {
+        return this.sendContentRejected(to, {
+            creator_name: creatorName,
+            content_title: contentTitle,
+            rejection_reason: rejectionReason,
+        });
     }
 };
 exports.EmailService = EmailService;

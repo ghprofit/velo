@@ -45,57 +45,140 @@ var BuyerService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BuyerService = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
+const schedule_1 = require("@nestjs/schedule");
 const prisma_service_1 = require("../prisma/prisma.service");
 const stripe_service_1 = require("../stripe/stripe.service");
 const email_service_1 = require("../email/email.service");
 const s3_service_1 = require("../s3/s3.service");
+const redis_service_1 = require("../redis/redis.service");
 const crypto = __importStar(require("crypto"));
 let BuyerService = BuyerService_1 = class BuyerService {
-    constructor(prisma, stripeService, emailService, s3Service) {
+    constructor(prisma, stripeService, emailService, s3Service, redisService, config) {
         this.prisma = prisma;
         this.stripeService = stripeService;
         this.emailService = emailService;
         this.s3Service = s3Service;
+        this.redisService = redisService;
+        this.config = config;
         this.logger = new common_1.Logger(BuyerService_1.name);
-        this.MAX_TRUSTED_DEVICES = 3;
-        this.ACCESS_WINDOW_HOURS = 24;
         this.VERIFICATION_CODE_EXPIRY_MINUTES = 15;
+        this.SESSION_EXPIRY_MS =
+            (this.config.get('BUYER_SESSION_EXPIRY_HOURS') || 24) * 60 * 60 * 1000;
+        this.ACCESS_WINDOW_HOURS =
+            this.config.get('BUYER_ACCESS_WINDOW_HOURS') || 24;
+        this.ACCESS_BUFFER_MINUTES =
+            this.config.get('BUYER_ACCESS_BUFFER_MINUTES') || 30;
+        this.MAX_TRUSTED_DEVICES =
+            this.config.get('BUYER_MAX_DEVICES') || 3;
+        this.VIEW_COOLDOWN_MS =
+            (this.config.get('BUYER_VIEW_COOLDOWN_MINUTES') || 5) * 60 * 1000;
+        this.logger.log('✓ Buyer service configuration loaded from environment');
     }
     async createOrGetSession(dto, ipAddress, userAgent) {
-        if (dto.fingerprint) {
-            const existingSession = await this.prisma.buyerSession.findFirst({
-                where: {
-                    fingerprint: dto.fingerprint,
-                    expiresAt: { gt: new Date() },
-                },
-            });
-            if (existingSession) {
-                await this.prisma.buyerSession.update({
-                    where: { id: existingSession.id },
-                    data: { lastActive: new Date() },
+        try {
+            const result = await this.prisma.$transaction(async (tx) => {
+                if (dto.fingerprint) {
+                    const existingSession = await tx.buyerSession.findFirst({
+                        where: {
+                            fingerprint: dto.fingerprint,
+                            expiresAt: { gt: new Date() },
+                        },
+                    });
+                    if (existingSession) {
+                        this.logger.log(`Returning existing session for fingerprint: ${dto.fingerprint}`);
+                        await tx.buyerSession.update({
+                            where: { id: existingSession.id },
+                            data: { lastActive: new Date() },
+                        });
+                        return {
+                            id: existingSession.id,
+                            sessionToken: existingSession.sessionToken,
+                            fingerprint: existingSession.fingerprint,
+                            ipAddress: existingSession.ipAddress,
+                            expiresAt: existingSession.expiresAt,
+                        };
+                    }
+                }
+                const sessionToken = crypto.randomBytes(32).toString('hex');
+                const expiresAt = new Date(Date.now() + this.SESSION_EXPIRY_MS);
+                const session = await tx.buyerSession.create({
+                    data: {
+                        sessionToken,
+                        fingerprint: dto.fingerprint || null,
+                        ipAddress: ipAddress || null,
+                        userAgent: userAgent || null,
+                        email: dto.email || null,
+                        expiresAt,
+                    },
                 });
+                this.logger.log(`Created new buyer session: ${session.sessionToken}`);
                 return {
-                    sessionToken: existingSession.sessionToken,
-                    expiresAt: existingSession.expiresAt,
+                    id: session.id,
+                    sessionToken: session.sessionToken,
+                    fingerprint: session.fingerprint,
+                    ipAddress: session.ipAddress,
+                    expiresAt: session.expiresAt,
                 };
+            });
+            if (this.redisService.isAvailable()) {
+                const cacheKey = `buyer_session:${result.sessionToken}`;
+                const sessionData = {
+                    id: result.id,
+                    sessionToken: result.sessionToken,
+                    fingerprint: result.fingerprint,
+                    ipAddress: result.ipAddress,
+                    expiresAt: result.expiresAt
+                };
+                await this.redisService.set(cacheKey, JSON.stringify(sessionData), 300);
+            }
+            return result;
+        }
+        catch (error) {
+            this.logger.error('Failed to create or get session:', error);
+            throw new common_1.InternalServerErrorException('Failed to create session');
+        }
+    }
+    async validateSession(sessionToken, expectedFingerprint, ipAddress) {
+        if (this.redisService.isAvailable()) {
+            const cacheKey = `buyer_session:${sessionToken}`;
+            const cachedSession = await this.redisService.get(cacheKey);
+            if (cachedSession) {
+                const session = typeof cachedSession === 'string' ? JSON.parse(cachedSession) : cachedSession;
+                if (new Date(session.expiresAt) > new Date()) {
+                    if (session.fingerprint !== expectedFingerprint) {
+                        this.logger.warn(`Fingerprint mismatch for cached session ${sessionToken}: expected ${session.fingerprint}, got ${expectedFingerprint}`);
+                        throw new common_1.UnauthorizedException('Session fingerprint mismatch - possible session hijacking');
+                    }
+                    return session;
+                }
             }
         }
-        const sessionToken = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        const session = await this.prisma.buyerSession.create({
-            data: {
-                sessionToken,
-                fingerprint: dto.fingerprint || null,
-                ipAddress: ipAddress || null,
-                userAgent: userAgent || null,
-                email: dto.email || null,
-                expiresAt,
-            },
+        const session = await this.prisma.buyerSession.findUnique({
+            where: { sessionToken },
         });
-        return {
-            sessionToken: session.sessionToken,
-            expiresAt: session.expiresAt,
-        };
+        if (!session) {
+            throw new common_1.UnauthorizedException('Session not found');
+        }
+        if (session.expiresAt < new Date()) {
+            throw new common_1.UnauthorizedException('Session expired');
+        }
+        if (session.fingerprint !== expectedFingerprint) {
+            this.logger.warn(`Fingerprint mismatch for session ${sessionToken}: expected ${session.fingerprint}, got ${expectedFingerprint}`);
+            throw new common_1.UnauthorizedException('Session fingerprint mismatch - possible session hijacking');
+        }
+        if (ipAddress && session.ipAddress && session.ipAddress !== ipAddress) {
+            this.logger.warn(`IP address changed for session ${sessionToken}: ${session.ipAddress} → ${ipAddress}`);
+            await this.prisma.buyerSession.update({
+                where: { id: session.id },
+                data: { ipAddress },
+            });
+        }
+        if (this.redisService.isAvailable()) {
+            const cacheKey = `buyer_session:${sessionToken}`;
+            await this.redisService.set(cacheKey, JSON.stringify(session), 300);
+        }
+        return session;
     }
     async getContentDetails(contentId) {
         const content = await this.prisma.content.findUnique({
@@ -108,6 +191,11 @@ let BuyerService = BuyerService_1 = class BuyerService {
                         profileImage: true,
                         verificationStatus: true,
                         allowBuyerProfileView: true,
+                    },
+                },
+                contentItems: {
+                    select: {
+                        id: true,
                     },
                 },
             },
@@ -131,94 +219,136 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 profileImage: null,
                 verificationStatus: content.creator.verificationStatus,
             };
-        const thumbnailUrl = content.s3Key
-            ? await this.s3Service.getSignedUrl(content.s3Key, 86400)
-            : content.thumbnailUrl;
         return {
             id: content.id,
             title: content.title,
             description: content.description,
             price: content.price,
-            thumbnailUrl,
+            thumbnailUrl: content.thumbnailUrl,
             contentType: content.contentType,
             duration: content.duration,
             viewCount: content.viewCount,
             purchaseCount: content.purchaseCount,
+            itemCount: content.contentItems.length,
             creator: creatorInfo,
         };
     }
     async createPurchase(dto, ipAddress) {
-        const session = await this.prisma.buyerSession.findUnique({
-            where: { sessionToken: dto.sessionToken },
-        });
-        if (!session || session.expiresAt < new Date()) {
-            throw new common_1.UnauthorizedException('Invalid or expired session');
-        }
-        if (dto.email && !session.email) {
-            await this.prisma.buyerSession.update({
-                where: { id: session.id },
-                data: { email: dto.email },
-            });
-        }
-        const content = await this.prisma.content.findUnique({
-            where: { id: dto.contentId },
-            include: {
-                creator: {
-                    select: {
-                        displayName: true,
+        this.logger.log(`[PURCHASE] Starting purchase creation for content: ${dto.contentId}`);
+        this.logger.log(`[PURCHASE] IP Address: ${ipAddress}, Fingerprint: ${dto.fingerprint ? 'present' : 'missing'}`);
+        try {
+            this.logger.log(`[PURCHASE] Validating session: ${dto.sessionToken}`);
+            const session = await this.validateSession(dto.sessionToken, dto.fingerprint, ipAddress);
+            this.logger.log(`[PURCHASE] Session validated successfully: ${session.id}`);
+            if (dto.email && !session.email) {
+                this.logger.log(`[PURCHASE] Updating session with email: ${dto.email}`);
+                await this.prisma.buyerSession.update({
+                    where: { id: session.id },
+                    data: { email: dto.email },
+                });
+            }
+            this.logger.log(`[PURCHASE] Fetching content: ${dto.contentId}`);
+            const content = await this.prisma.content.findUnique({
+                where: { id: dto.contentId },
+                include: {
+                    creator: {
+                        select: {
+                            displayName: true,
+                        },
                     },
                 },
-            },
-        });
-        if (!content) {
-            throw new common_1.NotFoundException('Content not found');
-        }
-        if (!content.isPublished || content.status !== 'APPROVED') {
-            throw new common_1.BadRequestException('Content not available for purchase');
-        }
-        const existingPurchase = await this.prisma.purchase.findFirst({
-            where: {
-                contentId: dto.contentId,
-                buyerSessionId: session.id,
-                status: 'COMPLETED',
-            },
-        });
-        if (existingPurchase) {
+            });
+            if (!content) {
+                this.logger.error(`[PURCHASE] Content not found: ${dto.contentId}`);
+                throw new common_1.NotFoundException('Content not found');
+            }
+            this.logger.log(`[PURCHASE] Content found: "${content.title}" by ${content.creator.displayName}`);
+            this.logger.log(`[PURCHASE] Content status: isPublished=${content.isPublished}, status=${content.status}, price=$${content.price}`);
+            if (!content.isPublished || content.status !== 'APPROVED') {
+                this.logger.error(`[PURCHASE] Content not available: isPublished=${content.isPublished}, status=${content.status}`);
+                throw new common_1.BadRequestException('Content not available for purchase');
+            }
+            if (!content.price || content.price <= 0) {
+                this.logger.error(`[PURCHASE] Invalid price: $${content.price}`);
+                throw new common_1.BadRequestException('This content is free or price is not set correctly');
+            }
+            this.logger.log(`[PURCHASE] Checking for existing purchase`);
+            const existingPurchase = await this.prisma.purchase.findFirst({
+                where: {
+                    contentId: dto.contentId,
+                    buyerSessionId: session.id,
+                    status: 'COMPLETED',
+                },
+            });
+            if (existingPurchase) {
+                this.logger.warn(`[PURCHASE] Duplicate purchase detected: ${existingPurchase.id}`);
+                return {
+                    alreadyPurchased: true,
+                    accessToken: existingPurchase.accessToken,
+                };
+            }
+            const buyerAmount = content.price * 1.1;
+            this.logger.log(`[PURCHASE] Calculated amount: base=$${content.price}, buyer pays=$${buyerAmount} (110%)`);
+            this.logger.log(`[PURCHASE] Creating Stripe PaymentIntent for $${buyerAmount}`);
+            let paymentIntent;
+            try {
+                paymentIntent = await this.stripeService.createPaymentIntent(buyerAmount, 'usd', {
+                    contentId: content.id,
+                    contentTitle: content.title,
+                    creatorName: content.creator.displayName,
+                    sessionId: session.id.toString(),
+                });
+                this.logger.log(`[PURCHASE] PaymentIntent created successfully: ${paymentIntent.id}`);
+            }
+            catch (stripeError) {
+                this.logger.error('[PURCHASE] Stripe payment intent creation failed:', stripeError);
+                throw new common_1.BadRequestException('Failed to initialize payment. Please try again.');
+            }
+            const accessToken = crypto.randomBytes(32).toString('hex');
+            this.logger.log(`[PURCHASE] Generated access token for purchase`);
+            this.logger.log(`[PURCHASE] Creating purchase record in database`);
+            const purchase = await this.prisma.purchase.create({
+                data: {
+                    contentId: dto.contentId,
+                    buyerSessionId: session.id,
+                    amount: buyerAmount,
+                    basePrice: content.price,
+                    currency: 'USD',
+                    paymentProvider: 'STRIPE',
+                    paymentIntentId: paymentIntent.id,
+                    status: 'PENDING',
+                    accessToken,
+                    purchaseFingerprint: dto.fingerprint || null,
+                    trustedFingerprints: dto.fingerprint ? [dto.fingerprint] : [],
+                    purchaseIpAddress: ipAddress || null,
+                },
+            });
+            this.logger.log(`[PURCHASE] ✅ Purchase created successfully: ${purchase.id} for content ${dto.contentId}`);
             return {
-                alreadyPurchased: true,
-                accessToken: existingPurchase.accessToken,
+                purchaseId: purchase.id,
+                clientSecret: paymentIntent.client_secret,
+                amount: buyerAmount,
+                accessToken: purchase.accessToken,
             };
         }
-        const buyerAmount = content.price * 1.10;
-        const paymentIntent = await this.stripeService.createPaymentIntent(buyerAmount, 'usd', {
-            contentId: content.id,
-            contentTitle: content.title,
-            creatorName: content.creator.displayName,
-            sessionId: session.id.toString(),
-        });
-        const accessToken = crypto.randomBytes(32).toString('hex');
-        const purchase = await this.prisma.purchase.create({
-            data: {
-                contentId: dto.contentId,
-                buyerSessionId: session.id,
-                amount: buyerAmount,
-                basePrice: content.price,
-                currency: 'USD',
-                paymentProvider: 'STRIPE',
-                paymentIntentId: paymentIntent.id,
-                status: 'PENDING',
-                accessToken,
-                purchaseFingerprint: dto.fingerprint || null,
-                trustedFingerprints: dto.fingerprint ? [dto.fingerprint] : [],
-                purchaseIpAddress: ipAddress || null,
-            },
-        });
-        return {
-            purchaseId: purchase.id,
-            clientSecret: paymentIntent.client_secret,
-            amount: buyerAmount,
-            accessToken: purchase.accessToken,
-        };
+        catch (error) {
+            this.logger.error(`[PURCHASE] ❌ Purchase creation FAILED for content ${dto.contentId}`);
+            this.logger.error(`[PURCHASE] Error:`, error);
+            if (error instanceof Error) {
+                this.logger.error(`[PURCHASE] Error message: ${error.message}`);
+                this.logger.error(`[PURCHASE] Error stack:`, error.stack);
+            }
+            if (error instanceof common_1.UnauthorizedException) {
+                throw error;
+            }
+            if (error instanceof common_1.NotFoundException) {
+                throw error;
+            }
+            if (error instanceof common_1.BadRequestException) {
+                throw error;
+            }
+            throw new common_1.BadRequestException('An error occurred while processing your purchase. Please try again.');
+        }
     }
     async verifyPurchase(purchaseId) {
         const purchase = await this.prisma.purchase.findUnique({
@@ -243,7 +373,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
             content: purchase.content,
         };
     }
-    async getContentAccess(accessToken, fingerprint, ipAddress) {
+    async getContentAccess(accessToken) {
         const purchase = await this.prisma.purchase.findUnique({
             where: { accessToken },
             include: {
@@ -267,37 +397,52 @@ let BuyerService = BuyerService_1 = class BuyerService {
         if (purchase.status !== 'COMPLETED') {
             throw new common_1.UnauthorizedException('Purchase not completed');
         }
-        if (!purchase.trustedFingerprints.includes(fingerprint)) {
-            throw new common_1.UnauthorizedException('Device not verified');
-        }
         if (purchase.accessExpiresAt && purchase.accessExpiresAt < new Date()) {
             throw new common_1.UnauthorizedException('Access has expired');
         }
         if (!purchase.accessWindowStartedAt) {
             const now = new Date();
-            const expiry = new Date(now.getTime() + this.ACCESS_WINDOW_HOURS * 60 * 60 * 1000);
+            const totalMinutes = this.ACCESS_WINDOW_HOURS * 60 + this.ACCESS_BUFFER_MINUTES;
+            const expiryMs = totalMinutes * 60 * 1000;
+            const expiry = new Date(now.getTime() + expiryMs);
             await this.prisma.purchase.update({
                 where: { id: purchase.id },
                 data: {
                     accessWindowStartedAt: now,
                     accessExpiresAt: expiry,
-                    firstAccessIpAddress: ipAddress,
+                    firstAccessIpAddress: null,
                 },
             });
         }
-        await this.prisma.purchase.update({
-            where: { id: purchase.id },
-            data: {
-                viewCount: { increment: 1 },
-                lastViewedAt: new Date(),
-            },
-        });
-        await this.prisma.content.update({
-            where: { id: purchase.contentId },
-            data: {
-                viewCount: { increment: 1 },
-            },
-        });
+        const now = new Date();
+        const VIEW_COOLDOWN_MS = 5 * 60 * 1000;
+        const shouldIncrementView = !purchase.lastViewedAt ||
+            now.getTime() - purchase.lastViewedAt.getTime() > VIEW_COOLDOWN_MS;
+        if (shouldIncrementView) {
+            await this.prisma.$transaction(async (tx) => {
+                await tx.purchase.update({
+                    where: { id: purchase.id },
+                    data: {
+                        viewCount: { increment: 1 },
+                        lastViewedAt: now,
+                    },
+                });
+                await tx.content.update({
+                    where: { id: purchase.contentId },
+                    data: {
+                        viewCount: { increment: 1 },
+                    },
+                });
+            });
+            this.logger.log(`View count incremented for purchase ${purchase.id} and content ${purchase.contentId}`);
+        }
+        else {
+            await this.prisma.purchase.update({
+                where: { id: purchase.id },
+                data: { lastViewedAt: now },
+            });
+            this.logger.log(`View refreshed for purchase ${purchase.id} (within cooldown)`);
+        }
         const creatorInfo = purchase.content.creator.allowBuyerProfileView
             ? {
                 displayName: purchase.content.creator.displayName,
@@ -307,15 +452,23 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 displayName: purchase.content.creator.displayName,
                 profileImage: null,
             };
-        const thumbnailUrl = purchase.content.s3Key
-            ? await this.s3Service.getSignedUrl(purchase.content.s3Key, 86400)
-            : purchase.content.thumbnailUrl;
-        const contentItemsWithUrls = await Promise.all(purchase.content.contentItems.map(async (item) => ({
+        console.log('[BUYER SERVICE] Generating signed URLs for', purchase.content.contentItems.length, 'content items');
+        const contentItemsWithUrls = await Promise.all(purchase.content.contentItems.map(async (item, index) => {
+            console.log(`[BUYER SERVICE] Generating signed URL for item ${index}:`, item.s3Key);
+            const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400);
+            console.log(`[BUYER SERVICE] Generated signed URL for item ${index}:`, signedUrl?.substring(0, 100) + '...');
+            return {
+                id: item.id,
+                s3Key: item.s3Key,
+                s3Bucket: item.s3Bucket,
+                order: item.order,
+                signedUrl,
+            };
+        }));
+        console.log('[BUYER SERVICE] Content items with URLs:', contentItemsWithUrls.map(item => ({
             id: item.id,
-            s3Key: item.s3Key,
-            s3Bucket: item.s3Bucket,
-            order: item.order,
-            signedUrl: await this.s3Service.getSignedUrl(item.s3Key, 86400),
+            hasSignedUrl: !!item.signedUrl,
+            signedUrlPreview: item.signedUrl?.substring(0, 100),
         })));
         return {
             content: {
@@ -325,7 +478,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 contentType: purchase.content.contentType,
                 s3Key: purchase.content.s3Key,
                 s3Bucket: purchase.content.s3Bucket,
-                thumbnailUrl,
+                thumbnailUrl: purchase.content.thumbnailUrl,
                 duration: purchase.content.duration,
                 creator: creatorInfo,
                 contentItems: contentItemsWithUrls,
@@ -372,67 +525,83 @@ let BuyerService = BuyerService_1 = class BuyerService {
     }
     async confirmPurchase(purchaseId, paymentIntentId) {
         this.logger.log(`Confirming purchase ${purchaseId} with payment intent ${paymentIntentId}`);
-        const purchase = await this.prisma.purchase.findUnique({
-            where: { id: purchaseId },
-            include: {
-                content: {
-                    include: {
-                        creator: true,
+        const idempotencyKey = `client_${paymentIntentId}_${Date.now()}`;
+        return await this.prisma.$transaction(async (tx) => {
+            const purchase = await tx.purchase.findUnique({
+                where: { id: purchaseId },
+                include: {
+                    content: {
+                        include: { creator: true },
                     },
                 },
-            },
-        });
-        if (!purchase) {
-            this.logger.error(`Purchase not found: ${purchaseId}`);
-            throw new common_1.NotFoundException('Purchase not found');
-        }
-        if (purchase.paymentIntentId !== paymentIntentId) {
-            this.logger.error(`Payment intent mismatch for purchase ${purchaseId}: expected ${purchase.paymentIntentId}, got ${paymentIntentId}`);
-            throw new common_1.BadRequestException('Payment intent mismatch');
-        }
-        const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);
-        if (paymentIntent.status !== 'succeeded') {
-            this.logger.error(`Payment intent ${paymentIntentId} status is ${paymentIntent.status}, expected succeeded`);
-            throw new common_1.BadRequestException('Payment not completed');
-        }
-        if (purchase.status === 'COMPLETED') {
-            this.logger.log(`Purchase ${purchase.id} already completed, returning existing data`);
+            });
+            if (!purchase) {
+                this.logger.error(`Purchase not found: ${purchaseId}`);
+                throw new common_1.NotFoundException('Purchase not found');
+            }
+            if (!purchase.content.isPublished) {
+                this.logger.error(`Cannot complete purchase ${purchaseId}: content ${purchase.contentId} is no longer published`);
+                throw new common_1.BadRequestException('Content is no longer available for purchase');
+            }
+            if (purchase.content.status !== 'APPROVED') {
+                this.logger.error(`Cannot complete purchase ${purchaseId}: content ${purchase.contentId} status is ${purchase.content.status}`);
+                throw new common_1.BadRequestException('Content is not approved for purchase');
+            }
+            if (purchase.paymentIntentId !== paymentIntentId) {
+                this.logger.error(`Payment intent mismatch for purchase ${purchaseId}: expected ${purchase.paymentIntentId}, got ${paymentIntentId}`);
+                throw new common_1.BadRequestException('Payment intent mismatch');
+            }
+            if (purchase.status === 'COMPLETED') {
+                this.logger.log(`Purchase ${purchaseId} already completed by ${purchase.completedBy}`);
+                return {
+                    purchaseId: purchase.id,
+                    accessToken: purchase.accessToken,
+                    status: 'COMPLETED',
+                };
+            }
+            const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);
+            if (paymentIntent.status !== 'succeeded') {
+                this.logger.error(`Payment intent ${paymentIntentId} status is ${paymentIntent.status}, expected succeeded`);
+                throw new common_1.BadRequestException('Payment not completed');
+            }
+            const updatedPurchase = await tx.purchase.update({
+                where: { id: purchase.id },
+                data: {
+                    status: 'COMPLETED',
+                    transactionId: paymentIntentId,
+                    completionIdempotencyKey: idempotencyKey,
+                    completedBy: 'CLIENT',
+                    completedAt: new Date(),
+                },
+            });
+            this.logger.log(`✅ Purchase ${updatedPurchase.id} updated to COMPLETED status`);
+            this.logger.log(`💾 Transaction ID: ${updatedPurchase.transactionId}`);
+            this.logger.log(`🔑 Access Token: ${updatedPurchase.accessToken.substring(0, 20)}...`);
+            await tx.content.update({
+                where: { id: purchase.contentId },
+                data: {
+                    purchaseCount: { increment: 1 },
+                    totalRevenue: { increment: purchase.amount },
+                },
+            });
+            const creatorEarnings = purchase.basePrice
+                ? purchase.basePrice * 0.9
+                : purchase.amount * 0.85;
+            await tx.creatorProfile.update({
+                where: { id: purchase.content.creatorId },
+                data: {
+                    totalEarnings: { increment: creatorEarnings },
+                    totalPurchases: { increment: 1 },
+                },
+            });
+            this.logger.log(`Purchase ${purchaseId} confirmed by CLIENT with idempotency key ${idempotencyKey}`);
+            this.logger.log(`💰 Creator earnings updated: +$${creatorEarnings.toFixed(2)}`);
             return {
                 purchaseId: purchase.id,
                 accessToken: purchase.accessToken,
-                status: purchase.status,
-            };
-        }
-        await this.prisma.purchase.update({
-            where: { id: purchase.id },
-            data: {
                 status: 'COMPLETED',
-                transactionId: paymentIntentId,
-            },
-        });
-        await this.prisma.content.update({
-            where: { id: purchase.contentId },
-            data: {
-                purchaseCount: { increment: 1 },
-                totalRevenue: { increment: purchase.amount },
-            },
-        });
-        const creatorEarnings = purchase.basePrice
-            ? purchase.basePrice * 0.90
-            : purchase.amount * 0.85;
-        await this.prisma.creatorProfile.update({
-            where: { id: purchase.content.creatorId },
-            data: {
-                totalEarnings: { increment: creatorEarnings },
-                totalPurchases: { increment: 1 },
-            },
-        });
-        this.logger.log(`Purchase ${purchase.id} confirmed by client`);
-        return {
-            purchaseId: purchase.id,
-            accessToken: purchase.accessToken,
-            status: 'COMPLETED',
-        };
+            };
+        }, { maxWait: 5000, timeout: 10000 });
     }
     async checkAccessEligibility(accessToken, fingerprint) {
         this.logger.log(`Checking access eligibility for token: ${accessToken?.substring(0, 10)}...`);
@@ -477,7 +646,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 : null,
         };
     }
-    async requestDeviceVerification(accessToken, fingerprint, email) {
+    async requestDeviceVerification(accessToken, fingerprint) {
         const purchase = await this.prisma.purchase.findUnique({
             where: { accessToken },
             include: {
@@ -487,8 +656,9 @@ let BuyerService = BuyerService_1 = class BuyerService {
         if (!purchase) {
             throw new common_1.NotFoundException('Purchase not found');
         }
-        if (purchase.buyerSession.email !== email) {
-            throw new common_1.UnauthorizedException('Email mismatch');
+        const email = purchase.buyerSession.email;
+        if (!email) {
+            throw new common_1.BadRequestException('No email associated with this purchase');
         }
         if (purchase.trustedFingerprints.length >= this.MAX_TRUSTED_DEVICES) {
             throw new common_1.BadRequestException('Maximum devices reached');
@@ -538,13 +708,66 @@ let BuyerService = BuyerService_1 = class BuyerService {
         });
         return { success: true };
     }
+    async cleanupExpiredData() {
+        this.logger.log('Starting cleanup of expired purchases and sessions');
+        try {
+            const cutoffDate = new Date(Date.now() - 48 * 60 * 60 * 1000);
+            const deletedPurchases = await this.prisma.purchase.deleteMany({
+                where: {
+                    accessWindowStartedAt: {
+                        not: null,
+                    },
+                    OR: [
+                        {
+                            accessWindowStartedAt: {
+                                lt: new Date(cutoffDate.getTime() -
+                                    this.ACCESS_WINDOW_HOURS * 60 * 60 * 1000 -
+                                    this.ACCESS_BUFFER_MINUTES * 60 * 1000),
+                            },
+                        },
+                        {
+                            status: 'FAILED',
+                            createdAt: {
+                                lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+                            },
+                        },
+                    ],
+                },
+            });
+            const deletedSessions = await this.prisma.buyerSession.deleteMany({
+                where: {
+                    expiresAt: {
+                        lt: new Date(),
+                    },
+                },
+            });
+            this.logger.log(`Cleanup completed successfully: ${deletedPurchases.count} purchases and ${deletedSessions.count} sessions deleted`);
+            return {
+                success: true,
+                deletedPurchases: deletedPurchases.count,
+                deletedSessions: deletedSessions.count,
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to cleanup expired data:', error);
+            throw error;
+        }
+    }
 };
 exports.BuyerService = BuyerService;
+__decorate([
+    (0, schedule_1.Cron)(schedule_1.CronExpression.EVERY_DAY_AT_2AM),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], BuyerService.prototype, "cleanupExpiredData", null);
 exports.BuyerService = BuyerService = BuyerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         stripe_service_1.StripeService,
         email_service_1.EmailService,
-        s3_service_1.S3Service])
+        s3_service_1.S3Service,
+        redis_service_1.RedisService,
+        config_1.ConfigService])
 ], BuyerService);
 //# sourceMappingURL=buyer.service.js.map

@@ -54,4 +54,5 @@ export class BankAccountResponseDto {
   bankCountry: string;
   bankCurrency: string;
   payoutSetupCompleted: boolean;
+  stripeAccountId?: string;
 }

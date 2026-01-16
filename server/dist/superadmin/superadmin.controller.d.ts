@@ -109,10 +109,10 @@ export declare class SuperadminController {
     getAdminActivity(id: string): Promise<{
         success: boolean;
         data: {
+            reason: string | null;
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
-            reason: string | null;
             action: string;
             adminId: string;
             targetType: string;

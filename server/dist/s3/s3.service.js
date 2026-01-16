@@ -46,6 +46,7 @@ let S3Service = class S3Service {
             const fileExtension = fileName.split('.').pop() || 'bin';
             const uniqueFileName = `${(0, nanoid_1.nanoid)(16)}.${fileExtension}`;
             const key = `${folder}/${uniqueFileName}`;
+            const isPublic = folder === 'thumbnails';
             const upload = new lib_storage_1.Upload({
                 client: this.s3Client,
                 params: {
@@ -53,16 +54,54 @@ let S3Service = class S3Service {
                     Key: key,
                     Body: fileBuffer,
                     ContentType: contentType,
-                    ACL: 'public-read',
+                    ACL: isPublic ? 'public-read' : undefined,
                 },
             });
             await upload.done();
             const region = this.configService.get('AWS_REGION') || 'us-east-1';
-            const url = `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
+            let url;
+            if (isPublic) {
+                url = `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
+            }
+            else {
+                url = await this.getSignedUrl(key, 86400);
+            }
             return { key, url };
         }
         catch (error) {
             console.error('Error uploading file to S3:', error);
+            throw new common_1.InternalServerErrorException('Failed to upload file to S3');
+        }
+    }
+    async uploadFileStream(fileStream, fileName, contentType, folder = 'content') {
+        try {
+            const fileExtension = fileName.split('.').pop() || 'bin';
+            const uniqueFileName = `${(0, nanoid_1.nanoid)(16)}.${fileExtension}`;
+            const key = `${folder}/${uniqueFileName}`;
+            const isPublic = folder === 'thumbnails';
+            const upload = new lib_storage_1.Upload({
+                client: this.s3Client,
+                params: {
+                    Bucket: this.bucketName,
+                    Key: key,
+                    Body: fileStream,
+                    ContentType: contentType,
+                    ACL: isPublic ? 'public-read' : undefined,
+                },
+            });
+            await upload.done();
+            const region = this.configService.get('AWS_REGION') || 'us-east-1';
+            let url;
+            if (isPublic) {
+                url = `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
+            }
+            else {
+                url = await this.getSignedUrl(key, 86400);
+            }
+            return { key, url };
+        }
+        catch (error) {
+            console.error('Error uploading file stream to S3:', error);
             throw new common_1.InternalServerErrorException('Failed to upload file to S3');
         }
     }

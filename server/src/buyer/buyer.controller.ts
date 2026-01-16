@@ -63,7 +63,17 @@ export class BuyerController {
    */
   @Post('access')
   async getContentAccess(@Body() dto: VerifyAccessDto) {
-    return this.buyerService.getContentAccess(dto.accessToken);
+    console.log('[BUYER CONTROLLER] getContentAccess called with token:', dto.accessToken?.substring(0, 20) + '...');
+    const result = await this.buyerService.getContentAccess(dto.accessToken);
+    console.log('[BUYER CONTROLLER] getContentAccess result:', {
+      contentId: result.content.id,
+      contentType: result.content.contentType,
+      itemsCount: result.content.contentItems?.length || 0,
+      firstItemHasSignedUrl: result.content.contentItems?.[0]?.signedUrl ? 'YES' : 'NO',
+      firstItemSignedUrlPreview: result.content.contentItems?.[0]?.signedUrl?.substring(0, 100),
+    });
+    console.log('[BUYER CONTROLLER] Full contentItems:', JSON.stringify(result.content.contentItems, null, 2));
+    return result;
   }
 
   /**
@@ -88,6 +98,10 @@ export class BuyerController {
    */
   @Post('purchase/confirm')
   async confirmPurchase(@Body() dto: ConfirmPurchaseDto) {
+    console.log('[BUYER CONTROLLER] confirmPurchase called');
+    console.log('[BUYER CONTROLLER] DTO:', JSON.stringify(dto, null, 2));
+    console.log('[BUYER CONTROLLER] purchaseId:', dto.purchaseId);
+    console.log('[BUYER CONTROLLER] paymentIntentId:', dto.paymentIntentId);
     return this.buyerService.confirmPurchase(dto.purchaseId, dto.paymentIntentId);
   }
 

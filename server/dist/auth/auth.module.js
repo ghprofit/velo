@@ -14,13 +14,9 @@ const config_1 = require("@nestjs/config");
 const auth_controller_1 = require("./auth.controller");
 const auth_service_1 = require("./auth.service");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
-const email_verified_guard_1 = require("./guards/email-verified.guard");
-const verified_creator_guard_1 = require("./guards/verified-creator.guard");
-const payout_eligible_guard_1 = require("./guards/payout-eligible.guard");
 const prisma_module_1 = require("../prisma/prisma.module");
 const email_module_1 = require("../email/email.module");
 const twofactor_module_1 = require("../twofactor/twofactor.module");
-const redis_module_1 = require("../redis/redis.module");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -30,7 +26,6 @@ exports.AuthModule = AuthModule = __decorate([
             prisma_module_1.PrismaModule,
             email_module_1.EmailModule,
             twofactor_module_1.TwofactorModule,
-            redis_module_1.RedisModule,
             passport_1.PassportModule,
             jwt_1.JwtModule.registerAsync({
                 imports: [config_1.ConfigModule],
@@ -50,20 +45,8 @@ exports.AuthModule = AuthModule = __decorate([
             }),
         ],
         controllers: [auth_controller_1.AuthController],
-        providers: [
-            auth_service_1.AuthService,
-            jwt_strategy_1.JwtStrategy,
-            email_verified_guard_1.EmailVerifiedGuard,
-            verified_creator_guard_1.VerifiedCreatorGuard,
-            payout_eligible_guard_1.PayoutEligibleGuard,
-        ],
-        exports: [
-            auth_service_1.AuthService,
-            jwt_strategy_1.JwtStrategy,
-            email_verified_guard_1.EmailVerifiedGuard,
-            verified_creator_guard_1.VerifiedCreatorGuard,
-            payout_eligible_guard_1.PayoutEligibleGuard,
-        ],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy],
+        exports: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

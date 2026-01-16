@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { StripeService } from '../stripe/stripe.service';
 import { NotificationType } from '../notifications/dto/create-notification.dto';
 import {
   QueryPaymentsDto,
@@ -12,10 +13,13 @@ import {
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly notificationsService: NotificationsService,
+    private readonly stripeService: StripeService,
   ) {}
 
   async getPaymentStats(): Promise<PaymentStatsDto> {
@@ -294,66 +298,150 @@ export class PaymentsService {
     });
 
     if (!payout) {
-      return {
-        success: false,
-        message: 'Payout not found',
-      };
+      throw new NotFoundException('Payout not found');
     }
 
     if (payout.status !== 'PENDING') {
-      return {
-        success: false,
-        message: `Cannot process payout with status: ${payout.status}`,
-      };
+      throw new BadRequestException(
+        `Cannot process payout with status: ${payout.status}`,
+      );
     }
 
-    // Update payout status to PROCESSING and mark waitlist bonus as withdrawn if applicable
-    const updatedPayout = await this.prisma.$transaction(async (tx) => {
-      // If creator has waitlist bonus and hasn't withdrawn it yet, and has 5+ sales
-      if (
-        payout.creator.waitlistBonus > 0 &&
-        !payout.creator.bonusWithdrawn &&
-        payout.creator.totalPurchases >= 5
-      ) {
-        // Mark bonus as withdrawn
-        await tx.creatorProfile.update({
-          where: { id: payout.creator.id },
-          data: { bonusWithdrawn: true },
-        });
+    // Validate creator has Stripe Connect account
+    if (!payout.creator.stripeAccountId) {
+      throw new BadRequestException(
+        'Creator does not have a connected payout account. Please complete payout setup.',
+      );
+    }
+
+    this.logger.log(`Processing payout ${payoutId} for creator ${payout.creator.id}`);
+
+    try {
+      // Update payout status to PROCESSING
+      await this.prisma.payout.update({
+        where: { id: payoutId },
+        data: { status: 'PROCESSING' },
+      });
+
+      // Verify Stripe account is active and capable
+      const stripeAccount = await this.stripeService.getConnectAccount(
+        payout.creator.stripeAccountId,
+      );
+
+      if (!stripeAccount.charges_enabled || !stripeAccount.payouts_enabled) {
+        throw new BadRequestException(
+          'Creator Stripe account is not fully set up. Please complete onboarding.',
+        );
       }
 
-      // Update payout status
-      return tx.payout.update({
-        where: { id: payoutId },
-        data: {
-          status: 'PROCESSING',
-        },
-      });
-    });
-
-    // Send payout processing email
-    try {
-      await this.emailService.sendPayoutProcessed(
-        payout.creator.user.email,
+      // Create Stripe payout to creator's connected account
+      const stripePayout = await this.stripeService.createPayout(
+        payout.amount,
+        payout.currency,
+        payout.creator.stripeAccountId,
         {
-          creator_name: payout.creator.displayName,
-          amount: payout.amount.toFixed(2),
-          payout_date: new Date().toLocaleDateString(),
-          transaction_id: payout.id,
+          payoutId: payout.id,
+          creatorId: payout.creator.id,
+          creatorEmail: payout.creator.user.email,
         },
       );
-    } catch (error) {
-      console.error('Failed to send payout email:', error);
+
+      this.logger.log(`Stripe payout created: ${stripePayout.id} for payout ${payoutId}`);
+
+      // Update payout with Stripe payment ID and mark as completed (or processing depending on Stripe response)
+      const updatedPayout = await this.prisma.$transaction(async (tx) => {
+        // If creator has waitlist bonus and hasn't withdrawn it yet, and has 5+ sales
+        if (
+          payout.creator.waitlistBonus > 0 &&
+          !payout.creator.bonusWithdrawn &&
+          payout.creator.totalPurchases >= 5
+        ) {
+          // Mark bonus as withdrawn
+          await tx.creatorProfile.update({
+            where: { id: payout.creator.id },
+            data: { bonusWithdrawn: true },
+          });
+        }
+
+        // Update payout with Stripe details
+        // Stripe payouts are typically 'in_transit' initially, then 'paid' later
+        const status = stripePayout.status === 'paid' ? 'COMPLETED' : 'PROCESSING';
+
+        return tx.payout.update({
+          where: { id: payoutId },
+          data: {
+            status,
+            paymentId: stripePayout.id,
+            processedAt: status === 'COMPLETED' ? new Date() : null,
+            notes: `Stripe payout: ${stripePayout.id}. Status: ${stripePayout.status}`,
+          },
+        });
+      });
+
+      // Send notification to creator
+      await this.notificationsService.createNotification({
+        userId: payout.creator.userId,
+        type: NotificationType.PAYOUT_SENT,
+        title: 'Payout Processed',
+        message: `Your payout of $${payout.amount.toFixed(2)} has been processed and is on its way to your bank account.`,
+        metadata: {
+          payoutId: payout.id,
+          amount: payout.amount,
+          stripePayoutId: stripePayout.id,
+        },
+      });
+
+      // Send email notification
+      await this.emailService.sendPayoutProcessed(payout.creator.user.email, {
+        creator_name: payout.creator.displayName,
+        amount: payout.amount.toFixed(2),
+        payout_date: new Date().toLocaleDateString(),
+        transaction_id: stripePayout.id,
+      });
+
+      this.logger.log(`Payout ${payoutId} processed successfully`);
+
+      return {
+        success: true,
+        message: 'Payout processed successfully',
+        data: {
+          id: updatedPayout.id,
+          amount: updatedPayout.amount,
+          status: updatedPayout.status,
+          paymentId: updatedPayout.paymentId,
+          stripeStatus: stripePayout.status,
+          estimatedArrival: stripePayout.arrival_date
+            ? new Date(stripePayout.arrival_date * 1000).toLocaleDateString()
+            : 'Processing',
+        },
+      };
+    } catch (error: any) {
+      this.logger.error(`Failed to process payout ${payoutId}:`, error);
+
+      // Update payout status to FAILED
+      await this.prisma.payout.update({
+        where: { id: payoutId },
+        data: {
+          status: 'FAILED',
+          notes: `Failed to process: ${error?.message || 'Unknown error'}`,
+        },
+      });
+
+      // Notify creator of failure
+      await this.notificationsService.createNotification({
+        userId: payout.creator.userId,
+        type: NotificationType.PAYOUT_REJECTED,
+        title: 'Payout Failed',
+        message: `Your payout of $${payout.amount.toFixed(2)} failed to process. Please contact support.`,
+        metadata: {
+          payoutId: payout.id,
+          amount: payout.amount,
+          error: error?.message || 'Unknown error',
+        },
+      });
+
+      throw new BadRequestException(`Failed to process payout: ${error?.message || 'Unknown error'}`);
     }
-
-    // In a real application, you would integrate with payment processors here
-    // For now, we'll just mark it as processing
-
-    return {
-      success: true,
-      message: 'Payout is being processed',
-      data: updatedPayout,
-    };
   }
 
   async getRevenueChart(period: 'weekly' | 'monthly' | 'yearly'): Promise<RevenueChartDto[]> {

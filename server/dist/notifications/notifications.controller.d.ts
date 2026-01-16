@@ -17,10 +17,10 @@ export declare class NotificationsController {
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
-            type: string;
             message: string;
             userId: string;
             title: string;
+            type: string;
             isRead: boolean;
         }[];
     }>;
@@ -40,10 +40,10 @@ export declare class NotificationsController {
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
-            type: string;
             message: string;
             userId: string;
             title: string;
+            type: string;
             isRead: boolean;
         };
     }>;
@@ -71,10 +71,10 @@ export declare class NotificationsController {
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
-            type: string;
             message: string;
             userId: string;
             title: string;
+            type: string;
             isRead: boolean;
         })[];
         pagination: {
@@ -102,10 +102,10 @@ export declare class NotificationsController {
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
-            type: string;
             message: string;
             userId: string;
             title: string;
+            type: string;
             isRead: boolean;
         };
         message: string;
@@ -151,10 +151,10 @@ export declare class NotificationsController {
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
-            type: string;
             message: string;
             userId: string;
             title: string;
+            type: string;
             isRead: boolean;
         }[];
     }>;

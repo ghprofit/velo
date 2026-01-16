@@ -23,4 +23,9 @@ __decorate([
     (0, class_validator_1.MinLength)(1, { message: 'Password is required' }),
     __metadata("design:type", String)
 ], LoginDto.prototype, "password", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], LoginDto.prototype, "rememberMe", void 0);
 //# sourceMappingURL=login.dto.js.map

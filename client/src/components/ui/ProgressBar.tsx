@@ -185,7 +185,7 @@ export function StepProgress({
                 {labels && labels[index] && (
                   <span
                     className={cn(
-                      'text-xs font-medium text-center max-w-[80px]',
+                      'text-xs font-medium text-center max-w-20',
                       (isCompleted || isCurrent) ? 'text-gray-900' : 'text-gray-500'
                     )}
                   >

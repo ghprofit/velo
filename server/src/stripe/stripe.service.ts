@@ -203,4 +203,153 @@ export class StripeService {
   getStripeInstance(): Stripe {
     return this.stripe;
   }
+
+  /**
+   * Create a Stripe Connect account for creator payouts
+   */
+  async createConnectAccount(
+    email: string,
+    metadata: Record<string, string> = {},
+  ): Promise<Stripe.Account> {
+    try {
+      const account = await this.stripe.accounts.create({
+        type: 'express',
+        email,
+        capabilities: {
+          card_payments: { requested: false },
+          transfers: { requested: true },
+        },
+        metadata,
+      });
+
+      this.logger.log(`Connect account created: ${account.id} for ${email}`);
+      return account;
+    } catch (error) {
+      this.logger.error('Failed to create Connect account:', error);
+      throw new BadRequestException('Failed to create payout account');
+    }
+  }
+
+  /**
+   * Create account link for Connect onboarding
+   */
+  async createAccountLink(
+    accountId: string,
+    refreshUrl: string,
+    returnUrl: string,
+  ): Promise<Stripe.AccountLink> {
+    try {
+      return await this.stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: refreshUrl,
+        return_url: returnUrl,
+        type: 'account_onboarding',
+      });
+    } catch (error) {
+      this.logger.error('Failed to create account link:', error);
+      throw new BadRequestException('Failed to create account link');
+    }
+  }
+
+  /**
+   * Get Connect account details
+   */
+  async getConnectAccount(accountId: string): Promise<Stripe.Account> {
+    try {
+      return await this.stripe.accounts.retrieve(accountId);
+    } catch (error) {
+      this.logger.error(`Failed to retrieve account ${accountId}:`, error);
+      throw new BadRequestException('Failed to retrieve account');
+    }
+  }
+
+  /**
+   * Create a transfer (payout) to a connected account
+   */
+  async createTransfer(
+    amount: number,
+    currency: string,
+    destination: string,
+    metadata: Record<string, string> = {},
+  ): Promise<Stripe.Transfer> {
+    try {
+      const transfer = await this.stripe.transfers.create({
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: currency.toLowerCase(),
+        destination,
+        metadata,
+      });
+
+      this.logger.log(`Transfer created: ${transfer.id} for ${amount} ${currency} to ${destination}`);
+      return transfer;
+    } catch (error) {
+      this.logger.error('Failed to create transfer:', error);
+      throw new BadRequestException('Failed to create transfer');
+    }
+  }
+
+  /**
+   * Create a payout to external bank account
+   * Note: Requires Stripe Connect account with external_account setup
+   */
+  async createPayout(
+    amount: number,
+    currency: string,
+    stripeAccountId: string,
+    metadata: Record<string, string> = {},
+  ): Promise<Stripe.Payout> {
+    try {
+      const payout = await this.stripe.payouts.create(
+        {
+          amount: Math.round(amount * 100), // Convert to cents
+          currency: currency.toLowerCase(),
+          metadata,
+        },
+        {
+          stripeAccount: stripeAccountId,
+        },
+      );
+
+      this.logger.log(`Payout created: ${payout.id} for ${amount} ${currency} on account ${stripeAccountId}`);
+      return payout;
+    } catch (error) {
+      this.logger.error('Failed to create payout:', error);
+      throw new BadRequestException('Failed to create payout');
+    }
+  }
+
+  /**
+   * Retrieve transfer details
+   */
+  async retrieveTransfer(transferId: string): Promise<Stripe.Transfer> {
+    try {
+      return await this.stripe.transfers.retrieve(transferId);
+    } catch (error) {
+      this.logger.error(`Failed to retrieve transfer ${transferId}:`, error);
+      throw new BadRequestException('Failed to retrieve transfer');
+    }
+  }
+
+  /**
+   * Add external bank account to Connect account
+   */
+  async addExternalBankAccount(
+    accountId: string,
+    bankAccountToken: string,
+  ): Promise<Stripe.BankAccount> {
+    try {
+      const bankAccount = await this.stripe.accounts.createExternalAccount(
+        accountId,
+        {
+          external_account: bankAccountToken,
+        },
+      );
+
+      this.logger.log(`Bank account added to Connect account: ${accountId}`);
+      return bankAccount as Stripe.BankAccount;
+    } catch (error) {
+      this.logger.error('Failed to add bank account:', error);
+      throw new BadRequestException('Failed to add bank account');
+    }
+  }
 }

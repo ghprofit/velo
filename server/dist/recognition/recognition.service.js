@@ -20,18 +20,29 @@ let RecognitionService = RecognitionService_1 = class RecognitionService {
         this.isConfigured = false;
         this.region = process.env.AWS_REGION || 'us-east-1';
         this.s3Bucket = process.env.AWS_S3_BUCKET;
-        const accessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
-        const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
-        if (accessKeyId && secretAccessKey) {
-            this.rekognitionClient = new client_rekognition_1.RekognitionClient({
-                region: this.region,
-                credentials: { accessKeyId, secretAccessKey },
-            });
-            this.isConfigured = true;
-            this.logger.log('AWS Rekognition configured for content safety');
+    }
+    async onModuleInit() {
+        try {
+            const accessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
+            const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
+            if (accessKeyId && secretAccessKey) {
+                this.rekognitionClient = new client_rekognition_1.RekognitionClient({
+                    region: this.region,
+                    credentials: { accessKeyId, secretAccessKey },
+                });
+                this.isConfigured = true;
+                this.logger.log('✅ AWS Rekognition configured successfully');
+            }
+            else {
+                this.logger.warn('⚠️  AWS credentials not found. Content safety checks will be simulated.');
+            }
         }
-        else {
-            this.logger.warn('AWS credentials not found. Content safety checks will be simulated.');
+        catch (error) {
+            const err = error;
+            this.initializationError = err.message;
+            this.logger.error(`❌ Failed to initialize AWS Rekognition: ${err.message}. Falling back to simulated checks.`);
+            this.isConfigured = false;
+            this.rekognitionClient = null;
         }
     }
     async checkImageSafety(content, minConfidence = 50) {
@@ -54,33 +65,28 @@ let RecognitionService = RecognitionService_1 = class RecognitionService {
                 parentName: label.ParentName,
                 taxonomyLevel: label.TaxonomyLevel,
             }));
-            const seriousCategoriesOnly = ['Explicit Nudity', 'Suggestive', 'Violence', 'Visually Disturbing'];
-            const filteredLabels = moderationLabels.filter((label) => {
-                const category = label.parentName || label.name;
-                return seriousCategoriesOnly.some((serious) => category.includes(serious));
-            });
             const flaggedCategories = [
-                ...new Set(filteredLabels
+                ...new Set(moderationLabels
                     .map((l) => l.parentName || l.name)
                     .filter((name) => name)),
             ];
-            const isSafe = filteredLabels.length === 0;
-            const maxConfidence = filteredLabels.length > 0
-                ? Math.max(...filteredLabels.map((l) => l.confidence))
+            const isSafe = moderationLabels.length === 0;
+            const maxConfidence = moderationLabels.length > 0
+                ? Math.max(...moderationLabels.map((l) => l.confidence))
                 : 100;
             this.logger.log(`Image safety check complete: ${isSafe ? 'SAFE' : 'UNSAFE'}`);
             return {
                 isSafe,
                 confidence: isSafe ? 100 : maxConfidence,
                 flaggedCategories,
-                moderationLabels: filteredLabels,
+                moderationLabels,
                 timestamp: new Date(),
             };
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.logger.error('Failed to check image safety:', errorMessage);
-            throw new common_1.BadRequestException(`Safety check failed: ${errorMessage}`);
+            const err = error;
+            this.logger.error('Failed to check image safety:', error);
+            throw new common_1.BadRequestException(`Safety check failed: ${err.message || 'Unknown error'}`);
         }
     }
     async checkBatchSafety(items, minConfidence = 50) {
@@ -107,12 +113,12 @@ let RecognitionService = RecognitionService_1 = class RecognitionService {
                 }
             }
             catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Check failed';
+                const err = error;
                 result.results.push({
                     id: item.id,
                     isSafe: false,
                     flaggedCategories: [],
-                    error: errorMessage,
+                    error: err.message || 'Check failed',
                 });
                 result.unsafeCount++;
             }
@@ -157,9 +163,9 @@ let RecognitionService = RecognitionService_1 = class RecognitionService {
             };
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.logger.error('Failed to start video safety check:', errorMessage);
-            throw new common_1.BadRequestException(`Video safety check failed: ${errorMessage}`);
+            const err = error;
+            this.logger.error('Failed to start video safety check:', error);
+            throw new common_1.BadRequestException(`Video safety check failed: ${err.message || 'Unknown error'}`);
         }
     }
     async getVideoSafetyResults(jobId, nextToken) {
@@ -195,9 +201,9 @@ let RecognitionService = RecognitionService_1 = class RecognitionService {
             };
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.logger.error('Failed to get video safety results:', errorMessage);
-            throw new common_1.BadRequestException(`Failed to get results: ${errorMessage}`);
+            const err = error;
+            this.logger.error('Failed to get video safety results:', error);
+            throw new common_1.BadRequestException(`Failed to get results: ${err.message || 'Unknown error'}`);
         }
     }
     async isContentSafe(content, minConfidence = 50) {

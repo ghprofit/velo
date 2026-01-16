@@ -122,11 +122,11 @@ let RecognitionController = RecognitionController_1 = class RecognitionControlle
             };
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Safety check failed';
+            const err = error;
             return {
                 success: false,
                 isSafe: false,
-                error: errorMessage,
+                error: err.message || 'Safety check failed',
                 timestamp: new Date(),
             };
         }
@@ -148,11 +148,11 @@ let RecognitionController = RecognitionController_1 = class RecognitionControlle
             };
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Safety check failed';
+            const err = error;
             return {
                 success: false,
                 isSafe: false,
-                error: errorMessage,
+                error: err.message || 'Safety check failed',
                 timestamp: new Date(),
             };
         }
@@ -181,10 +181,10 @@ let RecognitionController = RecognitionController_1 = class RecognitionControlle
             };
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Batch safety check failed';
+            const err = error;
             return {
                 success: false,
-                error: errorMessage,
+                error: err.message || 'Batch safety check failed',
                 timestamp: new Date(),
             };
         }
@@ -207,10 +207,10 @@ let RecognitionController = RecognitionController_1 = class RecognitionControlle
             };
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Video safety check failed';
+            const err = error;
             return {
                 success: false,
-                error: errorMessage,
+                error: err.message || 'Video safety check failed',
                 timestamp: new Date(),
             };
         }
@@ -236,10 +236,10 @@ let RecognitionController = RecognitionController_1 = class RecognitionControlle
             };
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to get video results';
+            const err = error;
             return {
                 success: false,
-                error: errorMessage,
+                error: err.message || 'Failed to get video results',
                 timestamp: new Date(),
             };
         }

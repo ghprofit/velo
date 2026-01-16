@@ -55,6 +55,8 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
             <Image
               src="/assets/logo_svgs/Primary_Logo(black).svg"
               alt="Velo Link"
+              width={180}
+              height={32}
               className="h-7 sm:h-8 w-auto"
             />
           </Link>

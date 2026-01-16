@@ -19,9 +19,4 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], VerifyAccessDto.prototype, "accessToken", void 0);
-__decorate([
-    (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], VerifyAccessDto.prototype, "fingerprint", void 0);
 //# sourceMappingURL=verify-access.dto.js.map

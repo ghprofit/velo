@@ -383,7 +383,7 @@ export default function RegisterPage() {
 
       {/* Floating Decorative Elements */}
       <motion.div
-        className="absolute top-20 left-10 w-48 h-48 bg-gradient-to-br from-purple-400/15 to-pink-400/15 rounded-full blur-3xl"
+        className="absolute top-20 left-10 w-48 h-48 bg-linear-to-br from-purple-400/15 to-pink-400/15 rounded-full blur-3xl"
         animate={{
           x: [0, 80, -60, 0],
           y: [0, -60, 40, 0],
@@ -396,7 +396,7 @@ export default function RegisterPage() {
         }}
       />
       <motion.div
-        className="absolute bottom-20 right-20 w-40 h-40 bg-gradient-to-br from-blue-400/12 to-cyan-400/12 rounded-full blur-2xl"
+        className="absolute bottom-20 right-20 w-40 h-40 bg-linear-to-br from-blue-400/12 to-cyan-400/12 rounded-full blur-2xl"
         animate={{
           x: [0, -70, 50, 0],
           y: [0, 50, -35, 0],
@@ -410,7 +410,7 @@ export default function RegisterPage() {
         }}
       />
       <motion.div
-        className="absolute top-1/2 right-1/4 w-32 h-32 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-xl"
+        className="absolute top-1/2 right-1/4 w-32 h-32 bg-linear-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-xl"
         animate={{
           x: [0, 40, -30, 0],
           y: [0, -40, 25, 0],
@@ -448,7 +448,7 @@ export default function RegisterPage() {
             {/* Title */}
             <motion.div variants={staggerItem} className="text-center mb-8 md:mb-10">
               <motion.h1 
-                className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2"
+                className="text-2xl md:text-3xl font-bold bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2"
                 initial={{ scale: 0.9 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
@@ -811,7 +811,7 @@ export default function RegisterPage() {
               {/* Trust Badges - Responsive layout */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 py-6 md:py-8 border-t border-gray-200">
                 <div className="flex items-center sm:flex-col sm:items-center sm:text-center gap-3 sm:gap-2">
-                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
@@ -823,7 +823,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="flex items-center sm:flex-col sm:items-center sm:text-center gap-3 sm:gap-2">
-                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -835,7 +835,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="flex items-center sm:flex-col sm:items-center sm:text-center gap-3 sm:gap-2">
-                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>

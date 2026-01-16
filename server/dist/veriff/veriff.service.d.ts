@@ -11,7 +11,7 @@ export declare class VeriffService {
     private setupInterceptors;
     private generateSignature;
     private generateSignatureFromString;
-    verifyWebhookSignature(payload: string, signature: string): boolean;
+    verifyWebhookSignature(payload: Buffer, signature: string): boolean;
     private handleApiError;
     createSession(createSessionDto: CreateSessionDto): Promise<SessionResponseDto>;
     getVerificationStatus(sessionId: string): Promise<VerificationStatusDto>;

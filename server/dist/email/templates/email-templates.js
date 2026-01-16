@@ -1,6 +1,53 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HTML_TEMPLATES = exports.EMAIL_TEMPLATES = exports.SENDGRID_TEMPLATE_ID = void 0;
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const getLogoBase64 = () => {
+    try {
+        const logoPath = path.join(__dirname, '../../assets/logo_pngs/Secondary_Logo_white.png');
+        const pngBuffer = fs.readFileSync(logoPath);
+        const base64 = pngBuffer.toString('base64');
+        return `data:image/png;base64,${base64}`;
+    }
+    catch (error) {
+        console.error('Failed to load email logo:', error);
+        return '';
+    }
+};
 exports.SENDGRID_TEMPLATE_ID = process.env.SENDGRID_TEMPLATE_ID || 'd-your-template-id';
 exports.EMAIL_TEMPLATES = {
     WELCOME: {
@@ -16,13 +63,6 @@ exports.EMAIL_TEMPLATES = {
         description: 'Verify user email address',
         subject: 'Verify your email address',
         requiredVariables: ['user_name', 'verification_link', 'expiry_time'],
-    },
-    EMAIL_VERIFICATION_CODE: {
-        id: exports.SENDGRID_TEMPLATE_ID,
-        name: 'Email Verification Code',
-        description: 'Verify user email address with 6-digit code',
-        subject: 'Your Velo verification code',
-        requiredVariables: ['user_name', 'verification_code', 'expiry_time'],
     },
     PASSWORD_RESET: {
         id: exports.SENDGRID_TEMPLATE_ID,
@@ -86,6 +126,27 @@ exports.EMAIL_TEMPLATES = {
         description: 'Notify creator of payout',
         subject: 'Your payout has been processed',
         requiredVariables: ['creator_name', 'amount', 'payout_date', 'transaction_id'],
+    },
+    ADMIN_PAYOUT_REQUEST_ALERT: {
+        id: exports.SENDGRID_TEMPLATE_ID,
+        name: 'Admin Payout Request Alert',
+        description: 'Alert admins of new payout request',
+        subject: 'New Payout Request - Action Required',
+        requiredVariables: ['creator_name', 'amount', 'request_id', 'available_balance'],
+    },
+    PAYOUT_APPROVED: {
+        id: exports.SENDGRID_TEMPLATE_ID,
+        name: 'Payout Approved',
+        description: 'Notify creator that payout request was approved',
+        subject: 'Payout Request Approved',
+        requiredVariables: ['creator_name', 'amount', 'request_id'],
+    },
+    PAYOUT_REJECTED: {
+        id: exports.SENDGRID_TEMPLATE_ID,
+        name: 'Payout Rejected',
+        description: 'Notify creator that payout request was rejected',
+        subject: 'Payout Request Status Update',
+        requiredVariables: ['creator_name', 'amount', 'reason'],
     },
     CONTENT_APPROVED: {
         id: exports.SENDGRID_TEMPLATE_ID,
@@ -166,6 +227,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>🎉 Welcome to Velo!</h1>
     </div>
     <div class="content">
@@ -211,56 +279,23 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>📧 Verify Your Email</h1>
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Thank you for signing up with Velo! To complete your registration and start using your account, please verify your email address.</p>
+      <p>Thank you for signing up with Velo! To complete your registration and start using your account, please use this verification code:</p>
 
-      <div class="text-center mt-20">
-        <a href="${data.verification_link}" class="button">Verify Email Address</a>
-      </div>
-
-      <div class="warning-box">
-        <p style="margin: 0;"><strong>⏱ Important:</strong> This verification link expires in ${data.expiry_time}.</p>
-      </div>
-
-      <p class="text-sm">If the button doesn't work, copy and paste this link into your browser:</p>
-      <p class="text-xs" style="color: #6b7280; word-break: break-all;">${data.verification_link}</p>
-
-      <div class="divider"></div>
-
-      <p class="text-sm" style="color: #6b7280;">If you didn't create a Velo account, you can safely ignore this email.</p>
-    </div>
-    <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
-      <p class="text-xs">This is an automated message, please do not reply.</p>
-    </div>
-  </div>
-</body>
-</html>
-  `,
-    EMAIL_VERIFICATION_CODE: (data) => `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>${baseStyles}</style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>📧 Verify Your Email</h1>
-    </div>
-    <div class="content">
-      <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Thank you for signing up with Velo! To complete your registration and start using your account, please enter the verification code below:</p>
-
-      <div style="text-align: center; margin: 40px 0;">
-        <div style="display: inline-block; background: #f3f4f6; border: 2px solid #4f46e5; border-radius: 12px; padding: 20px 40px;">
-          <p style="margin: 0; color: #6b7280; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
-          <p style="margin: 10px 0 0 0; font-size: 36px; font-weight: bold; color: #4f46e5; letter-spacing: 8px; font-family: 'Courier New', monospace;">${data.verification_code}</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <div style="background: #f3f4f6; border: 2px solid #4f46e5; border-radius: 8px; padding: 20px; display: inline-block;">
+          <p style="margin: 0 0 5px 0; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+          <p style="margin: 0; font-size: 32px; font-weight: bold; color: #4f46e5; letter-spacing: 8px; font-family: 'Courier New', monospace;">${data.verification_code}</p>
         </div>
       </div>
 
@@ -268,13 +303,13 @@ exports.HTML_TEMPLATES = {
         <p style="margin: 0;"><strong>⏱ Important:</strong> This verification code expires in ${data.expiry_time}.</p>
       </div>
 
+      <p class="text-sm">Enter this code on the verification page to activate your account.</p>
+
       <div class="info-box">
-        <p style="margin: 0;"><strong>🔒 Security Tip:</strong> Never share this code with anyone. Velo will never ask for your verification code via email or phone.</p>
+        <p style="margin: 0;"><strong>🔒 Security Tip:</strong> Never share this code with anyone. Velo will never ask for your verification code via phone or email.</p>
       </div>
 
-      <div class="divider"></div>
-
-      <p class="text-sm" style="color: #6b7280;">If you didn't create a Velo account, you can safely ignore this email.</p>
+      <p class="text-sm" style="margin-top: 30px; color: #6b7280;">If you didn't create a Velo account, you can safely ignore this email.</p>
     </div>
     <div class="footer">
       <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
@@ -295,6 +330,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>🔐 Reset Your Password</h1>
     </div>
     <div class="content">
@@ -335,6 +377,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>🔒 2FA Enabled</h1>
     </div>
     <div class="content">
@@ -375,6 +424,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>🔓 2FA Disabled</h1>
     </div>
     <div class="content">
@@ -415,6 +471,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>✅ Account Verified!</h1>
     </div>
     <div class="content">
@@ -455,6 +518,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>🔐 Password Changed</h1>
     </div>
     <div class="content">
@@ -495,6 +565,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>⚠️ Security Alert</h1>
     </div>
     <div class="content">
@@ -542,6 +619,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>🎉 Purchase Successful!</h1>
     </div>
     <div class="content">
@@ -601,6 +685,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>💰 New Sale!</h1>
     </div>
     <div class="content">
@@ -657,6 +748,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>💸 Payout Processed</h1>
     </div>
     <div class="content">
@@ -699,6 +797,187 @@ exports.HTML_TEMPLATES = {
 </body>
 </html>
   `,
+    ADMIN_PAYOUT_REQUEST_ALERT: (data) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
+      <h1>⚡ New Payout Request</h1>
+    </div>
+    <div class="content">
+      <p><strong>Admin Alert:</strong> A creator has submitted a payout request that requires review.</p>
+
+      <div class="warning-box">
+        <p style="margin: 0;"><strong>⏱ Action Required:</strong> Please review and approve or reject this payout request.</p>
+      </div>
+
+      <h3 style="color: #1f2937; margin-top: 30px;">Request Details</h3>
+      <table>
+        <tr>
+          <th>Creator</th>
+          <td><strong>${data.creator_name}</strong></td>
+        </tr>
+        <tr>
+          <th>Amount Requested</th>
+          <td class="amount">$${data.amount}</td>
+        </tr>
+        <tr>
+          <th>Available Balance</th>
+          <td>$${data.available_balance}</td>
+        </tr>
+        <tr>
+          <th>Request ID</th>
+          <td>${data.request_id}</td>
+        </tr>
+      </table>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>💡 Next Steps:</strong> Review the creator's balance and payout history before approving. Ensure all requirements are met.</p>
+      </div>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/admin/payouts?request=${data.request_id}" class="button">Review Request</a>
+      </div>
+
+      <p class="text-sm" style="margin-top: 30px; color: #6b7280;">This is an automated notification. Please process payout requests within 2 business days.</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">Request ID: ${data.request_id}</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+    PAYOUT_APPROVED: (data) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
+      <h1>✅ Payout Request Approved</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.creator_name}</strong>,</p>
+      <p>Great news! Your payout request has been approved by our admin team.</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>🎉 Your payout is now being processed!</strong></p>
+      </div>
+
+      <h3 style="color: #1f2937; margin-top: 30px;">Payout Details</h3>
+      <table>
+        <tr>
+          <th>Amount</th>
+          <td class="amount">$${data.amount}</td>
+        </tr>
+        <tr>
+          <th>Request ID</th>
+          <td>${data.request_id}</td>
+        </tr>
+        <tr>
+          <th>Status</th>
+          <td><span style="color: #10b981; font-weight: 600;">Processing</span></td>
+        </tr>
+      </table>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>⏱ What's Next:</strong> Your funds will be transferred to your bank account within 2-5 business days. You'll receive another email once the transfer is complete.</p>
+      </div>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/creator/payouts" class="button">View Payout Status</a>
+      </div>
+
+      <p class="text-sm" style="margin-top: 30px;">Questions about your payout? Contact our support team anytime.</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">Request ID: ${data.request_id}</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+    PAYOUT_REJECTED: (data) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
+      <h1>Payout Request Status Update</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.creator_name}</strong>,</p>
+      <p>We've reviewed your payout request for <strong>$${data.amount}</strong>. Unfortunately, we're unable to approve it at this time.</p>
+
+      <div class="danger-box">
+        <p style="margin: 0 0 8px 0;"><strong>Reason for rejection:</strong></p>
+        <p style="margin: 0;">${data.reason}</p>
+      </div>
+
+      <h3 style="color: #1f2937; margin-top: 30px;">What you can do:</h3>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li>Review the rejection reason above</li>
+        <li>Address any issues mentioned</li>
+        <li>Contact support if you need clarification</li>
+        <li>Submit a new request once requirements are met</li>
+      </ul>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>💡 Note:</strong> Your earnings remain in your account balance. You can submit a new payout request once the issues are resolved.</p>
+      </div>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL}/creator/payouts" class="button">View Balance</a>
+      </div>
+
+      <p class="text-sm" style="margin-top: 30px;">If you have questions or need assistance, our support team is here to help.</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
     CONTENT_APPROVED: (data) => `
 <!DOCTYPE html>
 <html>
@@ -710,6 +989,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>✅ Content Approved!</h1>
     </div>
     <div class="content">
@@ -752,6 +1038,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>📋 Content Review Update</h1>
     </div>
     <div class="content">
@@ -795,6 +1088,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>Account Deletion Confirmation</h1>
     </div>
     <div class="content">
@@ -837,6 +1137,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>📰 Velo Newsletter</h1>
     </div>
     <div class="content">
@@ -862,6 +1169,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>🎫 Support Ticket Received</h1>
     </div>
     <div class="content">
@@ -909,6 +1223,13 @@ exports.HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
+      <img
+        src="${getLogoBase64()}"
+        alt="VeloLink Logo"
+        width="200"
+        height="165"
+        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
       <h1>💬 Support Team Reply</h1>
     </div>
     <div class="content">

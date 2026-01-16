@@ -22,7 +22,12 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
             throw new Error('JWT_SECRET is not defined in environment variables. Please set JWT_SECRET in your .env file.');
         }
         super({
-            jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+            jwtFromRequest: passport_jwt_1.ExtractJwt.fromExtractors([
+                (request) => {
+                    return request?.cookies?.accessToken || null;
+                },
+                passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+            ]),
             secretOrKey: secret,
         });
         this.config = config;

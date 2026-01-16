@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import * as bodyParser from 'body-parser';
@@ -54,6 +54,19 @@ async function bootstrap() {
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,
+      },
+      exceptionFactory: (errors) => {
+        console.error('[VALIDATION ERROR] Validation failed:', JSON.stringify(errors, null, 2));
+        const formattedErrors = errors.map(err => ({
+          property: err.property,
+          constraints: err.constraints,
+          value: err.value,
+        }));
+        console.error('[VALIDATION ERROR] Formatted:', JSON.stringify(formattedErrors, null, 2));
+        return new BadRequestException({
+          message: 'Validation failed',
+          errors: formattedErrors,
+        });
       },
     }),
   );

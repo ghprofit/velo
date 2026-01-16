@@ -11,14 +11,15 @@ const common_1 = require("@nestjs/common");
 const creators_controller_1 = require("./creators.controller");
 const creators_service_1 = require("./creators.service");
 const prisma_module_1 = require("../prisma/prisma.module");
-const auth_module_1 = require("../auth/auth.module");
 const veriff_module_1 = require("../veriff/veriff.module");
+const email_module_1 = require("../email/email.module");
+const notifications_module_1 = require("../notifications/notifications.module");
 let CreatorsModule = class CreatorsModule {
 };
 exports.CreatorsModule = CreatorsModule;
 exports.CreatorsModule = CreatorsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, auth_module_1.AuthModule, veriff_module_1.VeriffModule.forRoot()],
+        imports: [prisma_module_1.PrismaModule, veriff_module_1.VeriffModule.forRoot(), email_module_1.EmailModule, notifications_module_1.NotificationsModule],
         controllers: [creators_controller_1.CreatorsController],
         providers: [creators_service_1.CreatorsService],
         exports: [creators_service_1.CreatorsService],

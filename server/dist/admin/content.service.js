@@ -8,13 +8,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var ContentService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContentService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
-let ContentService = class ContentService {
-    constructor(prisma) {
+const email_service_1 = require("../email/email.service");
+let ContentService = ContentService_1 = class ContentService {
+    constructor(prisma, emailService) {
         this.prisma = prisma;
+        this.emailService = emailService;
+        this.logger = new common_1.Logger(ContentService_1.name);
     }
     async getContent(query) {
         const { search, status, creatorId, page = 1, limit = 20 } = query;
@@ -165,6 +169,18 @@ let ContentService = class ContentService {
     async reviewContent(id, dto) {
         const content = await this.prisma.content.findUnique({
             where: { id },
+            include: {
+                creator: {
+                    include: {
+                        user: {
+                            select: {
+                                email: true,
+                                displayName: true,
+                            },
+                        },
+                    },
+                },
+            },
         });
         if (!content) {
             return {
@@ -176,9 +192,27 @@ let ContentService = class ContentService {
             where: { id },
             data: {
                 status: dto.status,
+                complianceStatus: dto.status === 'APPROVED' ? 'PASSED' : 'FAILED',
+                complianceCheckedAt: new Date(),
                 updatedAt: new Date(),
             },
         });
+        try {
+            const creatorName = content.creator.displayName || content.creator.user.displayName || 'Creator';
+            const creatorEmail = content.creator.user.email;
+            if (dto.status === 'APPROVED') {
+                this.logger.log(`Sending approval email for content ${id} to ${creatorEmail}`);
+                await this.emailService.sendContentApproval(creatorEmail, creatorName, content.title, `${process.env.CLIENT_URL || 'https://velolink.com'}/c/${content.id}`);
+            }
+            else if (dto.status === 'REJECTED') {
+                this.logger.log(`Sending rejection email for content ${id} to ${creatorEmail}`);
+                await this.emailService.sendContentRejection(creatorEmail, creatorName, content.title, 'Content does not meet our community guidelines');
+            }
+        }
+        catch (emailError) {
+            const error = emailError;
+            this.logger.error(`Failed to send email notification: ${error.message}`);
+        }
         return {
             success: true,
             message: `Content ${dto.status.toLowerCase()} successfully`,
@@ -242,8 +276,9 @@ let ContentService = class ContentService {
     }
 };
 exports.ContentService = ContentService;
-exports.ContentService = ContentService = __decorate([
+exports.ContentService = ContentService = ContentService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        email_service_1.EmailService])
 ], ContentService);
 //# sourceMappingURL=content.service.js.map

@@ -41,9 +41,6 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
@@ -75,6 +72,11 @@ let AuthService = AuthService_1 = class AuthService {
         if (existingUser) {
             throw new common_1.ConflictException('An account with this email already exists.');
         }
+        const waitlistEntry = await this.prisma.waitlist.findUnique({
+            where: { email: dto.email.toLowerCase() },
+        });
+        const hasWaitlistBonus = !!waitlistEntry;
+        const bonusAmount = hasWaitlistBonus ? 50.0 : 0.0;
         const hashedPassword = await this.hashPassword(dto.password);
         try {
             const user = await this.prisma.user.create({
@@ -82,15 +84,15 @@ let AuthService = AuthService_1 = class AuthService {
                     email: dto.email.toLowerCase(),
                     password: hashedPassword,
                     role: 'CREATOR',
-                    displayName: dto.displayName,
-                    firstName: dto.firstName,
-                    lastName: dto.lastName,
                     creatorProfile: {
                         create: {
                             displayName: dto.displayName,
-                            firstName: dto.firstName,
-                            lastName: dto.lastName,
-                            country: dto.country,
+                            firstName: dto.firstName || null,
+                            lastName: dto.lastName || null,
+                            country: dto.country || waitlistEntry?.country || null,
+                            waitlistBonus: bonusAmount,
+                            totalEarnings: bonusAmount,
+                            bonusWithdrawn: false,
                         },
                     },
                 },
@@ -112,15 +114,17 @@ let AuthService = AuthService_1 = class AuthService {
                     lastUsedAt: new Date(),
                 },
             });
-            let emailSent = false;
-            let emailError = null;
             try {
-                await this.generateVerificationCode(user.id, user.email, dto.displayName);
-                emailSent = true;
+                await this.generateVerificationToken(user.id, user.email);
             }
             catch (error) {
-                console.error('Failed to generate verification code:', error);
-                emailError = error?.message || 'Failed to send verification email';
+                console.error('Failed to generate verification token:', error);
+            }
+            if (waitlistEntry) {
+                await this.prisma.waitlist.delete({
+                    where: { id: waitlistEntry.id },
+                }).catch(() => {
+                });
             }
             return {
                 user: {
@@ -128,9 +132,6 @@ let AuthService = AuthService_1 = class AuthService {
                     email: user.email,
                     role: user.role,
                     emailVerified: user.emailVerified,
-                    displayName: user.displayName,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
                     creatorProfile: {
                         id: user.creatorProfile?.id,
                         displayName: user.creatorProfile?.displayName,
@@ -142,11 +143,6 @@ let AuthService = AuthService_1 = class AuthService {
                     refreshToken: tokens.refreshToken,
                     expiresIn: tokens.expiresIn,
                 },
-                emailSent,
-                emailError,
-                message: emailSent
-                    ? 'Registration successful! Please check your email for a verification code.'
-                    : 'Registration successful, but verification email failed to send. Please use the resend option in settings.',
             };
         }
         catch (error) {
@@ -159,7 +155,7 @@ let AuthService = AuthService_1 = class AuthService {
         const loginKey = `login:${email}:${ipAddress || 'unknown'}`;
         const isLocked = await this.isAccountLocked(loginKey);
         if (isLocked) {
-            const ttl = this.redisService ? await this.redisService.ttl(loginKey) : 1800;
+            const ttl = await this.redisService.ttl(loginKey);
             const minutesRemaining = Math.ceil(ttl / 60);
             throw new common_1.ForbiddenException(`Account temporarily locked due to too many failed login attempts. Please try again in ${minutesRemaining} minutes.`);
         }
@@ -196,6 +192,7 @@ let AuthService = AuthService_1 = class AuthService {
                 purpose: '2fa-pending',
                 ipAddress,
                 userAgent,
+                rememberMe: dto.rememberMe || false,
             }, {
                 secret: this.config.get('JWT_SECRET'),
                 expiresIn: '5m',
@@ -210,12 +207,12 @@ let AuthService = AuthService_1 = class AuthService {
             userId: user.id,
             email: user.email,
             role: user.role,
-        });
+        }, dto.rememberMe);
         await this.prisma.refreshToken.create({
             data: {
                 userId: user.id,
                 token: tokens.refreshToken,
-                expiresAt: this.getRefreshTokenExpiration(),
+                expiresAt: this.getRefreshTokenExpiration(dto.rememberMe),
                 deviceName: this.extractDeviceName(userAgent),
                 ipAddress: ipAddress || null,
                 userAgent: userAgent || null,
@@ -330,6 +327,7 @@ let AuthService = AuthService_1 = class AuthService {
             displayName: user.displayName || user.creatorProfile?.displayName,
             firstName: user.firstName,
             lastName: user.lastName,
+            profilePicture: user.profilePicture,
             creatorProfile: user.creatorProfile
                 ? {
                     ...user.creatorProfile,
@@ -344,14 +342,15 @@ let AuthService = AuthService_1 = class AuthService {
         const saltRounds = 12;
         return await bcrypt.hash(password, saltRounds);
     }
-    generateTokenPair(payload) {
+    generateTokenPair(payload, rememberMe = false) {
         const accessToken = this.jwtService.sign(payload, {
             secret: this.config.get('JWT_SECRET'),
             expiresIn: this.config.get('JWT_EXPIRES_IN') || '15m',
         });
+        const refreshExpiry = rememberMe ? '30d' : '7d';
         const refreshToken = this.jwtService.sign(payload, {
             secret: this.config.get('JWT_REFRESH_SECRET'),
-            expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN') || '7d',
+            expiresIn: refreshExpiry,
         });
         return {
             accessToken,
@@ -359,51 +358,25 @@ let AuthService = AuthService_1 = class AuthService {
             expiresIn: 900,
         };
     }
-    getRefreshTokenExpiration() {
-        const expirationTime = 7 * 24 * 60 * 60 * 1000;
+    getRefreshTokenExpiration(rememberMe = false) {
+        const expirationTime = rememberMe
+            ? 30 * 24 * 60 * 60 * 1000
+            : 7 * 24 * 60 * 60 * 1000;
         return new Date(Date.now() + expirationTime);
-    }
-    async verifyEmailCode(userId, code) {
-        const verificationToken = await this.prisma.emailVerificationToken.findUnique({
-            where: { userId },
-            include: { user: true },
-        });
-        if (!verificationToken) {
-            throw new common_1.BadRequestException('No verification code found. Please request a new one.');
-        }
-        if (verificationToken.code !== code) {
-            throw new common_1.BadRequestException('Invalid verification code');
-        }
-        if (verificationToken.expiresAt < new Date()) {
-            await this.prisma.emailVerificationToken.delete({
-                where: { id: verificationToken.id },
-            });
-            throw new common_1.BadRequestException('Verification code has expired. Please request a new one.');
-        }
-        await this.prisma.user.update({
-            where: { id: verificationToken.userId },
-            data: { emailVerified: true },
-        });
-        await this.prisma.emailVerificationToken.delete({
-            where: { id: verificationToken.id },
-        });
-        return {
-            message: 'Email verified successfully',
-        };
     }
     async verifyEmail(dto) {
         const verificationToken = await this.prisma.emailVerificationToken.findUnique({
-            where: { userId: dto.token },
+            where: { token: dto.token },
             include: { user: true },
         });
         if (!verificationToken) {
-            throw new common_1.BadRequestException('Invalid verification token. Please use the new code-based verification.');
+            throw new common_1.BadRequestException('Invalid verification token');
         }
         if (verificationToken.expiresAt < new Date()) {
             await this.prisma.emailVerificationToken.delete({
                 where: { id: verificationToken.id },
             });
-            throw new common_1.BadRequestException('Verification code has expired. Please request a new one.');
+            throw new common_1.BadRequestException('Verification token has expired. Please request a new one.');
         }
         await this.prisma.user.update({
             where: { id: verificationToken.userId },
@@ -426,90 +399,35 @@ let AuthService = AuthService_1 = class AuthService {
         if (user.emailVerified) {
             throw new common_1.BadRequestException('Email is already verified');
         }
-        let emailSent = false;
-        let emailError = null;
-        const existingToken = await this.prisma.emailVerificationToken.findUnique({
+        await this.prisma.emailVerificationToken.deleteMany({
             where: { userId: user.id },
         });
-        if (existingToken) {
-            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-            const resendCount = existingToken.resendCount || 0;
-            const lastResendAt = existingToken.lastResendAt || existingToken.createdAt;
-            if (lastResendAt > oneHourAgo && resendCount >= 3) {
-                const minutesLeft = Math.ceil((lastResendAt.getTime() + 60 * 60 * 1000 - Date.now()) / (60 * 1000));
-                throw new common_1.BadRequestException(`You've reached the maximum resend limit. Please try again in ${minutesLeft} minutes.`);
-            }
-            const newResendCount = lastResendAt > oneHourAgo ? resendCount + 1 : 1;
-            await this.prisma.emailVerificationToken.delete({
-                where: { userId: user.id },
-            });
-            const code = this.generate6DigitCode();
-            const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-            await this.prisma.emailVerificationToken.create({
-                data: {
-                    userId: user.id,
-                    code,
-                    expiresAt,
-                    resendCount: newResendCount,
-                    lastResendAt: new Date(),
-                },
-            });
-            try {
-                await this.emailService.sendEmailVerificationCode(user.email, user.displayName || user.email.split('@')[0] || 'User', code, 15);
-                emailSent = true;
-            }
-            catch (error) {
-                console.error('Failed to send verification email:', error);
-                emailError = error?.message || 'Failed to send verification email';
-            }
-        }
-        else {
-            try {
-                await this.generateVerificationCode(user.id, user.email, user.displayName || undefined);
-                emailSent = true;
-            }
-            catch (error) {
-                console.error('Failed to generate verification code:', error);
-                emailError = error?.message || 'Failed to send verification email';
-            }
-        }
+        await this.generateVerificationToken(user.id, user.email);
         return {
-            emailSent,
-            emailError,
-            message: emailSent
-                ? 'Verification code sent successfully'
-                : 'Failed to send verification email. Please try again later or contact support.',
+            message: 'Verification email sent successfully',
         };
     }
-    generate6DigitCode() {
-        const min = 100000;
-        const max = 999999;
-        return Math.floor(min + Math.random() * (max - min + 1)).toString();
-    }
-    async generateVerificationCode(userId, email, displayName) {
-        const code = this.generate6DigitCode();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    async generateVerificationToken(userId, email) {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiryMinutes = 20;
+        const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
         await this.prisma.emailVerificationToken.deleteMany({
             where: { userId },
         });
         await this.prisma.emailVerificationToken.create({
             data: {
                 userId,
-                code,
+                token: code,
                 expiresAt,
-                resendCount: 0,
             },
         });
         try {
-            await this.emailService.sendEmailVerificationCode(email, displayName || email.split('@')[0] || 'User', code, 15);
+            await this.emailService.sendEmailVerification(email, email.split('@')[0] || 'User', code, expiryMinutes);
         }
         catch (error) {
             console.error('Failed to send verification email:', error);
         }
         return code;
-    }
-    async generateVerificationToken(userId, email) {
-        return this.generateVerificationCode(userId, email);
     }
     async forgotPassword(dto) {
         const user = await this.prisma.user.findUnique({
@@ -627,16 +545,17 @@ let AuthService = AuthService_1 = class AuthService {
         if (!user) {
             throw new common_1.UnauthorizedException('User not found');
         }
+        const rememberMe = payload.rememberMe || false;
         const tokens = this.generateTokenPair({
             userId: user.id,
             email: user.email,
             role: user.role,
-        });
+        }, rememberMe);
         await this.prisma.refreshToken.create({
             data: {
                 userId: user.id,
                 token: tokens.refreshToken,
-                expiresAt: this.getRefreshTokenExpiration(),
+                expiresAt: this.getRefreshTokenExpiration(rememberMe),
                 deviceName: this.extractDeviceName(payload.userAgent),
                 ipAddress: payload.ipAddress || null,
                 userAgent: payload.userAgent || null,
@@ -695,16 +614,17 @@ let AuthService = AuthService_1 = class AuthService {
         if (!user) {
             throw new common_1.UnauthorizedException('User not found');
         }
+        const rememberMe = payload.rememberMe || false;
         const tokens = this.generateTokenPair({
             userId: user.id,
             email: user.email,
             role: user.role,
-        });
+        }, rememberMe);
         await this.prisma.refreshToken.create({
             data: {
                 userId: user.id,
                 token: tokens.refreshToken,
-                expiresAt: this.getRefreshTokenExpiration(),
+                expiresAt: this.getRefreshTokenExpiration(rememberMe),
                 deviceName: this.extractDeviceName(payload.userAgent),
                 ipAddress: payload.ipAddress || null,
                 userAgent: payload.userAgent || null,
@@ -822,6 +742,7 @@ let AuthService = AuthService_1 = class AuthService {
                 displayName: dto.displayName,
                 firstName: dto.firstName,
                 lastName: dto.lastName,
+                profilePicture: dto.profilePicture,
             },
             select: {
                 id: true,
@@ -829,6 +750,7 @@ let AuthService = AuthService_1 = class AuthService {
                 displayName: true,
                 firstName: true,
                 lastName: true,
+                profilePicture: true,
                 emailVerified: true,
                 role: true,
                 createdAt: true,
@@ -914,14 +836,10 @@ let AuthService = AuthService_1 = class AuthService {
         return { message: 'Account deleted permanently' };
     }
     async isAccountLocked(loginKey) {
-        if (!this.redisService)
-            return false;
         const attempts = await this.redisService.get(loginKey);
         return attempts !== null && parseInt(attempts) >= this.MAX_LOGIN_ATTEMPTS;
     }
     async recordFailedLogin(loginKey) {
-        if (!this.redisService)
-            return;
         const attempts = await this.redisService.incr(loginKey);
         if (attempts === 1) {
             await this.redisService.expire(loginKey, this.LOCKOUT_DURATION);
@@ -931,15 +849,12 @@ let AuthService = AuthService_1 = class AuthService {
         }
     }
     async clearFailedLogins(loginKey) {
-        if (!this.redisService)
-            return;
         await this.redisService.del(loginKey);
     }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(5, (0, common_1.Optional)()),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         jwt_1.JwtService,
         config_1.ConfigService,

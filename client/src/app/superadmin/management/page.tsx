@@ -337,7 +337,7 @@ export default function SuperAdminManagementPage() {
                       <tr key={admin.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                            <div className="w-10 h-10 bg-linear-to-br from-blue-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                               {admin.name.split(' ').map(n => n[0]).join('')}
                             </div>
                             <div>
@@ -851,7 +851,7 @@ export default function SuperAdminManagementPage() {
                 <div className="space-y-4">
                   {/* Avatar and Email Row */}
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-16 h-16 bg-linear-to-br from-blue-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-xl">
                       {selectedAdmin.name.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div className="flex-1">

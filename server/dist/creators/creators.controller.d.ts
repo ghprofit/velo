@@ -59,8 +59,8 @@ export declare class CreatorsController {
                 amount: number;
                 id: string;
                 status: string;
-                paymentId: string | null;
                 processedAt: Date | null;
+                paymentId: string | null;
             } | null;
         }[];
     }>;
@@ -84,8 +84,8 @@ export declare class CreatorsController {
                 amount: number;
                 id: string;
                 status: string;
-                paymentId: string | null;
                 processedAt: Date | null;
+                paymentId: string | null;
                 notes: string | null;
             } | null;
         };

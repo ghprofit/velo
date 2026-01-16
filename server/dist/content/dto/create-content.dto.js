@@ -12,6 +12,26 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateContentDto = exports.ContentItemDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
+let IsValidPriceConstraint = class IsValidPriceConstraint {
+    validate(price, args) {
+        if (!Number.isFinite(price)) {
+            return false;
+        }
+        const priceString = price.toString();
+        const decimalIndex = priceString.indexOf('.');
+        if (decimalIndex === -1) {
+            return true;
+        }
+        const decimalPlaces = priceString.length - decimalIndex - 1;
+        return decimalPlaces <= 2;
+    }
+    defaultMessage(args) {
+        return 'Price must have at most 2 decimal places (e.g., 9.99, not 9.999)';
+    }
+};
+IsValidPriceConstraint = __decorate([
+    (0, class_validator_1.ValidatorConstraint)({ name: 'isValidPrice', async: false })
+], IsValidPriceConstraint);
 class ContentItemDto {
 }
 exports.ContentItemDto = ContentItemDto;
@@ -52,6 +72,7 @@ __decorate([
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0.01),
     (0, class_validator_1.Max)(10000),
+    (0, class_validator_1.Validate)(IsValidPriceConstraint),
     __metadata("design:type", Number)
 ], CreateContentDto.prototype, "price", void 0);
 __decorate([

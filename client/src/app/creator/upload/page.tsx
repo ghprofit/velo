@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { contentApi, veriffApi } from '@/lib/api-client';
 import UploadBlockedScreen from '@/components/UploadBlockedScreen';
 import NextImage from 'next/image';
@@ -12,16 +13,15 @@ interface UploadedFile {
   id: string;
 }
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 'success';
 
 const STEPS = [
   { number: 1, title: 'Upload', description: 'Add your content' },
   { number: 2, title: 'Details', description: 'Set info & price' },
-  { number: 3, title: 'Generate', description: 'Create your link' },
-  { number: 4, title: 'Share', description: 'Share & earn' },
 ];
 
 export default function UploadContentPage() {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step management
@@ -31,6 +31,7 @@ export default function UploadContentPage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -38,12 +39,10 @@ export default function UploadContentPage() {
   const [price, setPrice] = useState('');
   const [contentType, setContentType] = useState<'IMAGE' | 'VIDEO' | 'GALLERY'>('IMAGE');
 
-  // Generated link state
-  const [generatedLink, setGeneratedLink] = useState('');
+  // Success state
   const [shortId, setShortId] = useState('');
-  const [contentStatus, setContentStatus] = useState<string>('');
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
 
   // Verification state
   const [isCheckingVerification, setIsCheckingVerification] = useState(true);
@@ -161,8 +160,13 @@ export default function UploadContentPage() {
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          // Revoke object URL to free memory
-          URL.revokeObjectURL(video.src);
+          // Store the URL before clearing the source
+          const blobUrl = video.src;
+          // Clear source first to stop any pending requests
+          video.src = '';
+          video.load();
+          // Then revoke object URL to free memory
+          URL.revokeObjectURL(blobUrl);
           resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
 
@@ -205,6 +209,8 @@ export default function UploadContentPage() {
       return;
     }
 
+    const newFiles: UploadedFile[] = [];
+    
     for (const file of validFiles) {
       try {
         // Generate thumbnail only (no base64 conversion of full file)
@@ -216,34 +222,55 @@ export default function UploadContentPage() {
           id: Math.random().toString(36).substring(7),
         };
 
-        setUploadedFiles(prev => [...prev, newFile]);
-
-        if (validFiles.length > 1) {
-          setContentType('GALLERY');
-        } else if (file.type.startsWith('video/')) {
-          setContentType('VIDEO');
-        } else {
-          setContentType('IMAGE');
-        }
+        newFiles.push(newFile);
       } catch (err) {
         console.error('Error processing file:', file.name, err);
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         setError(`Failed to process "${file.name}": ${errorMsg}`);
       }
     }
+
+    // Add all new files at once
+    setUploadedFiles(prev => [...prev, ...newFiles]);
+
+    // Update content type based on TOTAL files count
+    const totalFiles = uploadedFiles.length + newFiles.length;
+    if (totalFiles > 1) {
+      setContentType('GALLERY');
+    } else if (newFiles.length === 1 && newFiles[0].file.type.startsWith('video/')) {
+      setContentType('VIDEO');
+    } else if (newFiles.length === 1) {
+      setContentType('IMAGE');
+    }
   };
 
   const handleRemoveFile = (id: string) => {
-    setUploadedFiles(prev => prev.filter(f => f.id !== id));
+    setUploadedFiles(prev => {
+      const newFiles = prev.filter(f => f.id !== id);
+      
+      // Update content type based on remaining files
+      if (newFiles.length > 1) {
+        setContentType('GALLERY');
+      } else if (newFiles.length === 1) {
+        if (newFiles[0].file.type.startsWith('video/')) {
+          setContentType('VIDEO');
+        } else {
+          setContentType('IMAGE');
+        }
+      }
+      
+      return newFiles;
+    });
   };
 
   const handleBrowseFiles = () => {
     fileInputRef.current?.click();
   };
 
-  const handleGenerateLink = async () => {
+  const handleSubmitContent = async () => {
     setError('');
     setUploading(true);
+    setUploadProgress(0);
 
     try {
       // Create FormData
@@ -275,13 +302,32 @@ export default function UploadContentPage() {
       const thumbnailBlob = await fetch(uploadedFiles[0].thumbnail).then(r => r.blob());
       formData.append('thumbnail', thumbnailBlob, 'thumbnail.jpg');
 
-      // Send multipart request
-      const response = await contentApi.createContentMultipart(formData);
+      // Send multipart request with progress tracking
+      const response = await contentApi.createContentMultipart(formData, (progressEvent) => {
+        if (progressEvent.total) {
+          // Cap at 95% during upload, reserve 95-100% for server processing
+          const percentCompleted = Math.min(95, Math.round((progressEvent.loaded * 100) / progressEvent.total));
+          setUploadProgress(percentCompleted);
+        }
+      });
 
-      setGeneratedLink(response.data.data.link);
+      // Upload complete, now processing on server
+      setUploadProgress(100);
+      
       setShortId(response.data.data.shortId);
-      setContentStatus(response.data.data.status || 'PENDING_REVIEW');
-      setCurrentStep(4);
+      setCurrentStep('success');
+
+      // Start countdown and redirect to dashboard
+      let countdown = 5;
+      setRedirectCountdown(countdown);
+      const interval = setInterval(() => {
+        countdown -= 1;
+        setRedirectCountdown(countdown);
+        if (countdown <= 0) {
+          clearInterval(interval);
+          router.push('/creator');
+        }
+      }, 1000);
     } catch (err: unknown) {
       console.error('Error creating content:', err);
 
@@ -300,8 +346,6 @@ export default function UploadContentPage() {
         errorMessage = 'Network error. Please check your internet connection and try again.';
       } else if (axiosError.response?.status === 413) {
         errorMessage = 'File too large for server. Maximum total upload size is 500MB per file.';
-      } else if (axiosError.response?.status === 400) {
-        errorMessage = axiosError.response?.data?.message || 'Invalid upload data. Please check file format and try again.';
       } else if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
         errorMessage = 'Authentication error. Please log in again.';
       } else if (axiosError.response?.status === 500) {
@@ -313,37 +357,8 @@ export default function UploadContentPage() {
       setError(errorMessage);
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
-  };
-
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
-
-  const handleShareTwitter = () => {
-    const text = encodeURIComponent(`Check out my exclusive content! ${generatedLink}`);
-    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-  };
-
-  const handleShareFacebook = () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(generatedLink)}`, '_blank');
-  };
-
-  const handleShareWhatsApp = () => {
-    const text = encodeURIComponent(`Check out my exclusive content! ${generatedLink}`);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
-  };
-
-  const handleShareEmail = () => {
-    const subject = encodeURIComponent(`Check out my exclusive content`);
-    const body = encodeURIComponent(`I just uploaded some exclusive content. Check it out here: ${generatedLink}`);
-    window.open(`mailto:?subject=${subject}&body=${body}`);
   };
 
   const getFileSize = (bytes: number): string => {
@@ -353,19 +368,17 @@ export default function UploadContentPage() {
   };
 
   const canProceedToStep2 = uploadedFiles.length > 0;
-  const canProceedToStep3 = title.trim() !== '' && parseFloat(price) > 0;
+  const canSubmit = title.trim() !== '' && parseFloat(price) > 0;
 
   const handleNextStep = () => {
     if (currentStep === 1 && canProceedToStep2) {
       setCurrentStep(2);
-    } else if (currentStep === 2 && canProceedToStep3) {
-      setCurrentStep(3);
     }
   };
 
   const handlePrevStep = () => {
-    if (currentStep > 1 && currentStep < 4) {
-      setCurrentStep((currentStep - 1) as Step);
+    if (currentStep === 2) {
+      setCurrentStep(1);
     }
   };
 
@@ -375,9 +388,9 @@ export default function UploadContentPage() {
     setTitle('');
     setDescription('');
     setPrice('');
-    setGeneratedLink('');
     setShortId('');
     setError('');
+    setRedirectCountdown(5);
   };
 
   return (
@@ -420,21 +433,26 @@ export default function UploadContentPage() {
         <p className="hidden text-sm sm:text-base text-gray-600">Follow the steps to upload, price, and share your exclusive content.</p>
       </div>
 
-      {/* Progress Steps */}
+      {/* Progress Steps - Hide when in success state */}
+      {currentStep !== 'success' && (
       <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between">
-            {STEPS.map((step, index) => (
+            {STEPS.map((step, index) => {
+              const stepNum = typeof currentStep === 'number' ? currentStep : 3;
+              const isCompleted = stepNum > step.number;
+              const isCurrent = stepNum >= step.number;
+              return (
               <div key={step.number} className="flex items-center">
                 <div className="flex flex-col items-center">
                   <div
                     className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm transition-colors ${
-                      currentStep >= step.number
+                      isCurrent
                         ? 'bg-indigo-600 text-white'
                         : 'bg-gray-200 text-gray-500'
                     }`}
                   >
-                    {currentStep > step.number ? (
+                    {isCompleted ? (
                       <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
@@ -443,20 +461,22 @@ export default function UploadContentPage() {
                     )}
                   </div>
                   <div className="mt-1.5 sm:mt-2 text-center">
-                    <p className={`text-xs sm:text-sm font-medium ${currentStep >= step.number ? 'text-indigo-600' : 'text-gray-500'}`}>
+                    <p className={`text-xs sm:text-sm font-medium ${isCurrent ? 'text-indigo-600' : 'text-gray-500'}`}>
                       {step.title}
                     </p>
                     <p className="text-xs text-gray-400 hidden sm:block">{step.description}</p>
                   </div>
                 </div>
                 {index < STEPS.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 sm:mx-4 ${currentStep > step.number ? 'bg-indigo-600' : 'bg-gray-200'}`} />
+                  <div className={`flex-1 h-0.5 mx-2 sm:mx-4 ${isCompleted ? 'bg-indigo-600' : 'bg-gray-200'}`} />
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
+      )}
 
       <div className="p-4 sm:p-6 lg:p-8 relative">
         {/* Floating Brand Logos */}
@@ -561,6 +581,8 @@ export default function UploadContentPage() {
                           <NextImage
                             src={uf.thumbnail}
                             alt={uf.file.name}
+                            width={300}
+                            height={300}
                             className="w-full h-full object-cover"
                           />
                           {uf.file.type.startsWith('video/') && (
@@ -616,10 +638,12 @@ export default function UploadContentPage() {
               <div className="space-y-4 sm:space-y-6">
                 {/* Preview Thumbnail */}
                 <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200 shrink-0">
                     <NextImage
                       src={uploadedFiles[0]?.thumbnail}
                       alt="Preview"
+                      width={80}
+                      height={80}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -691,122 +715,18 @@ export default function UploadContentPage() {
               <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-gray-200">
                 <button
                   onClick={handlePrevStep}
-                  className="w-full sm:w-auto px-5 sm:px-6 py-2 sm:py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back
-                </button>
-                <button
-                  onClick={handleNextStep}
-                  disabled={!canProceedToStep3}
-                  className="w-full sm:w-auto px-5 sm:px-6 py-2 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <span className="hidden sm:inline">Continue to Generate Link</span>
-                  <span className="sm:hidden">Generate Link</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Generate Link */}
-          {currentStep === 3 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-              <div className="mb-4 sm:mb-6">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Step 3: Generate Your Unique Link</h2>
-                <p className="hidden text-sm text-gray-600 mt-1">Review your content and generate a unique, trackable link</p>
-              </div>
-
-              {/* Content Summary */}
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
-                <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0 relative">
-                    <NextImage
-                      src={uploadedFiles[0]?.thumbnail}
-                      alt="Preview"
-                      className="w-full h-full object-cover blur-sm"
-                    />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 text-base sm:text-lg">{title}</h3>
-                    {description && (
-                      <p className="text-gray-600 text-xs sm:text-sm mt-1 line-clamp-2">{description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-3">
-                      <span className="text-xl sm:text-2xl font-bold text-indigo-600">${parseFloat(price).toFixed(2)}</span>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        contentType === 'IMAGE' ? 'bg-blue-100 text-blue-700' :
-                        contentType === 'VIDEO' ? 'bg-purple-100 text-purple-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
-                        {uploadedFiles.length} {contentType.toLowerCase()}{uploadedFiles.length > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Link Info */}
-              <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="text-xs sm:text-sm text-gray-700">
-                      <strong>Your unique link will be:</strong>
-                    </p>
-                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                      A short, unique URL like <code className="bg-white px-1.5 sm:px-2 py-0.5 rounded text-indigo-600 text-xs break-all">velolink.club/c/abc123xyz</code> that:
-                    </p>
-                    <ul className="text-xs sm:text-sm text-gray-600 mt-2 space-y-1">
-                      <li className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Is unique to this content only
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Tracks all views and purchases
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Links back to your creator profile
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation Buttons */}
-              <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-3 sm:pt-4 border-t border-gray-200">
-                <button
-                  onClick={handlePrevStep}
-                  className="w-full sm:w-auto px-5 sm:px-6 py-2 sm:py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back
-                </button>
-                <button
-                  onClick={handleGenerateLink}
                   disabled={uploading}
-                  className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 text-sm sm:text-base"
+                  className="w-full sm:w-auto px-5 sm:px-6 py-2 sm:py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm sm:text-base disabled:opacity-50"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back
+                </button>
+                <button
+                  onClick={handleSubmitContent}
+                  disabled={!canSubmit || uploading}
+                  className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 text-sm sm:text-base"
                 >
                   {uploading ? (
                     <>
@@ -814,247 +734,116 @@ export default function UploadContentPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      <span className="hidden sm:inline">Uploading & Generating...</span>
+                      <span className="hidden sm:inline">Uploading & Submitting...</span>
                       <span className="sm:hidden">Uploading...</span>
                     </>
                   ) : (
                     <>
                       <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Generate My Link
+                      Submit for Review
                     </>
                   )}
                 </button>
               </div>
+
+              {/* Upload Progress Bar */}
+              {uploading && (
+                <div className="mt-4 sm:mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-indigo-900">
+                      {uploadProgress < 95 ? 'Uploading content...' : 
+                       uploadProgress < 100 ? 'Upload complete, processing...' : 
+                       'Finalizing...'}
+                    </p>
+                    <span className="text-sm font-semibold text-indigo-700">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-indigo-200 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-indigo-700 mt-2">
+                    {uploadProgress < 95 
+                      ? 'Please wait while your files are being uploaded to our servers...' 
+                      : uploadProgress < 100
+                      ? 'Files uploaded successfully! Processing content and generating thumbnails...'
+                      : 'Almost done! Finalizing your content...'}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Step 4: Share */}
-          {currentStep === 4 && (
+          {/* Success State */}
+          {currentStep === 'success' && (
             <div className="space-y-4 sm:space-y-6">
-
-              {/* PENDING REVIEW NOTIFICATION */}
-              {contentStatus === 'PENDING_REVIEW' && (
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 sm:p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">Content is Pending Approval</h3>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Your content has been submitted for review. We&apos;ll notify you via email when it&apos;s approved or if we need more information.
-                      </p>
-                      <p className="text-xs text-amber-700 flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Typical review time: 1-2 hours</span>
-                      </p>
-                    </div>
-                  </div>
+              {/* Success Message */}
+              <div className="bg-linear-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 sm:p-8 text-center">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
                 </div>
-              )}
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Content Submitted for Review</h2>
+                <p className="text-sm sm:text-base text-gray-600 mb-4">
+                  Your content has been uploaded successfully and is now being reviewed.
+                </p>
+                <p className="text-sm text-gray-500">
+                  We&apos;ll send you an email once your content is approved with your shareable link.
+                </p>
+              </div>
 
-              {/* FLAGGED CONTENT WARNING */}
-              {contentStatus === 'FLAGGED' && (
-                <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-xl p-4 sm:p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">Content Flagged for Review</h3>
-                      <p className="text-sm text-gray-600">
-                        Our automated safety system has flagged your content for manual review. Our team will review it within 24 hours and notify you via email.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* AUTO-APPROVED SUCCESS */}
-              {contentStatus === 'APPROVED' && (
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 sm:p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">Content Approved!</h3>
-                      <p className="text-sm text-gray-600">
-                        Your content passed our safety checks and is now live! Start sharing your link to earn.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Success Message - Only show when content is approved */}
-              {contentStatus === 'APPROVED' && (
-              <>
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 sm:p-6 text-center">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                    <svg className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              {/* Content ID Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
                   </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Your Link is Ready!</h2>
-                  <p className="text-sm sm:text-base text-gray-600">Share it anywhere to start earning</p>
+                  <div>
+                    <p className="text-sm text-gray-500">Content ID</p>
+                    <code className="text-lg font-mono font-semibold text-gray-900">{shortId}</code>
+                  </div>
                 </div>
 
-                {/* Generated Link Card */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Your Unique Content Link</h3>
-
-                <div className="bg-indigo-50 rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <input
-                      type="text"
-                      value={generatedLink}
-                      readOnly
-                      className="flex-1 bg-transparent border-none outline-none text-gray-900 font-mono text-xs sm:text-sm truncate"
-                    />
-                  </div>
-                  <button
-                    onClick={handleCopyLink}
-                    className={`w-full sm:w-auto px-3 sm:px-4 py-2 rounded-lg font-medium transition-all flex-shrink-0 flex items-center justify-center gap-2 text-sm ${
-                      copied
-                        ? 'bg-green-500 text-white'
-                        : 'bg-white hover:bg-gray-50 border border-gray-300 text-gray-700'
-                    }`}
-                  >
-                    {copied ? (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                        Copy
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                  Content ID: <code className="bg-gray-100 px-1.5 sm:px-2 py-0.5 rounded text-gray-700 text-xs">{shortId}</code>
-                </div>
-              </div>
-
-              {/* Share Options */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Share Your Link</h3>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                  <button
-                    onClick={handleShareTwitter}
-                    className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors group"
-                  >
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1DA1F2] rounded-full flex items-center justify-center text-white">
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                      </svg>
-                    </div>
-                    <span className="text-xs sm:text-sm font-medium text-gray-700 group-hover:text-blue-600">Twitter</span>
-                  </button>
-
-                  <button
-                    onClick={handleShareFacebook}
-                    className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors group"
-                  >
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1877F2] rounded-full flex items-center justify-center text-white">
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                      </svg>
-                    </div>
-                    <span className="text-xs sm:text-sm font-medium text-gray-700 group-hover:text-blue-600">Facebook</span>
-                  </button>
-
-                  <button
-                    onClick={handleShareWhatsApp}
-                    className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 bg-gray-50 hover:bg-green-50 rounded-lg transition-colors group"
-                  >
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#25D366] rounded-full flex items-center justify-center text-white">
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                      </svg>
-                    </div>
-                    <span className="text-xs sm:text-sm font-medium text-gray-700 group-hover:text-green-600">WhatsApp</span>
-                  </button>
-
-                  <button
-                    onClick={handleShareEmail}
-                    className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
-                  >
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-600 rounded-full flex items-center justify-center text-white">
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <span className="text-xs sm:text-sm font-medium text-gray-700 group-hover:text-gray-900">Email</span>
-                  </button>
-                </div>
-              </div>
-              </>
-              )}
-
-              {/* Content Summary */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Content Summary</h3>
-
-                <div className="flex items-start gap-3 sm:gap-4">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                    <NextImage
-                      src={uploadedFiles[0]?.thumbnail}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm sm:text-base font-medium text-gray-900 truncate">{title}</h4>
-                    {description && (
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-2">{description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
-                      <span className="text-base sm:text-lg font-bold text-indigo-600">${parseFloat(price).toFixed(2)}</span>
-                      <span className="text-xs sm:text-sm text-gray-500">
-                        {uploadedFiles.length} file{uploadedFiles.length > 1 ? 's' : ''}
-                      </span>
+                    <div>
+                      <p className="text-sm font-medium text-amber-800">Review in Progress</p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Typical review time is 1-2 minutes for images and up to 5 minutes for videos. You&apos;ll receive an email notification when approved.
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Upload Another Button */}
-              <div className="text-center">
-                <button
-                  onClick={handleRestart}
-                  className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Upload Another Content
-                </button>
+              {/* Redirect Notice */}
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-sm text-gray-600">
+                  Redirecting to dashboard in <span className="font-semibold text-indigo-600">{redirectCountdown}</span> seconds...
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+                  <button
+                    onClick={() => router.push('/creator')}
+                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors text-sm"
+                  >
+                    Go to Dashboard Now
+                  </button>
+                  <button
+                    onClick={handleRestart}
+                    className="px-5 py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors text-sm"
+                  >
+                    Upload Another
+                  </button>
+                </div>
               </div>
             </div>
           )}

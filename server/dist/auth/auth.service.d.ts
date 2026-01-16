@@ -21,20 +21,17 @@ export declare class AuthService {
     private config;
     private emailService;
     private twofactorService;
-    private redisService?;
+    private redisService;
     private readonly logger;
     private readonly MAX_LOGIN_ATTEMPTS;
     private readonly LOCKOUT_DURATION;
-    constructor(prisma: PrismaService, jwtService: JwtService, config: ConfigService, emailService: EmailService, twofactorService: TwofactorService, redisService?: RedisService | undefined);
+    constructor(prisma: PrismaService, jwtService: JwtService, config: ConfigService, emailService: EmailService, twofactorService: TwofactorService, redisService: RedisService);
     register(dto: RegisterDto): Promise<{
         user: {
             id: string;
             email: string;
             role: import(".prisma/client").$Enums.UserRole;
             emailVerified: boolean;
-            displayName: string | null;
-            firstName: string | null;
-            lastName: string | null;
             creatorProfile: {
                 id: string | undefined;
                 displayName: string | undefined;
@@ -46,9 +43,6 @@ export declare class AuthService {
             refreshToken: string;
             expiresIn: number;
         };
-        emailSent: boolean;
-        emailError: any;
-        message: string;
     }>;
     login(dto: LoginDto, ipAddress?: string, userAgent?: string): Promise<{
         requiresTwoFactor: boolean;
@@ -94,6 +88,7 @@ export declare class AuthService {
         displayName: string | undefined;
         firstName: string | null;
         lastName: string | null;
+        profilePicture: string | null;
         creatorProfile: {
             totalEarnings: number;
             totalViews: number;
@@ -105,6 +100,7 @@ export declare class AuthService {
             firstName: string | null;
             lastName: string | null;
             country: string | null;
+            bio: string | null;
             profileImage: string | null;
             coverImage: string | null;
             allowBuyerProfileView: boolean;
@@ -127,25 +123,20 @@ export declare class AuthService {
             stripeAccountId: string | null;
             payoutStatus: import(".prisma/client").$Enums.PayoutStatus;
             policyStrikes: number;
+            waitlistBonus: number;
+            bonusWithdrawn: boolean;
             userId: string;
         } | null;
     }>;
     private hashPassword;
     private generateTokenPair;
     private getRefreshTokenExpiration;
-    verifyEmailCode(userId: string, code: string): Promise<{
-        message: string;
-    }>;
     verifyEmail(dto: VerifyEmailDto): Promise<{
         message: string;
     }>;
     resendVerification(dto: ResendVerificationDto): Promise<{
-        emailSent: boolean;
-        emailError: any;
         message: string;
     }>;
-    private generate6DigitCode;
-    private generateVerificationCode;
     private generateVerificationToken;
     forgotPassword(dto: ForgotPasswordDto): Promise<{
         message: string;
@@ -221,6 +212,7 @@ export declare class AuthService {
             displayName: string | null;
             firstName: string | null;
             lastName: string | null;
+            profilePicture: string | null;
         };
     }>;
     getNotificationPreferences(userId: string): Promise<{

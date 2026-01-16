@@ -4,6 +4,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { VerifyEmailCodeDto } from './dto/verify-email-code.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -12,12 +13,13 @@ import { Enable2FADto } from './dto/enable-2fa.dto';
 import { Verify2FADto } from './dto/verify-2fa.dto';
 import { Disable2FADto } from './dto/disable-2fa.dto';
 import { VerifyBackupCodeDto } from './dto/verify-backup-code.dto';
-import { VerifyEmailCodeDto } from './dto/verify-email-code.dto';
 import { TwofactorService } from '../twofactor/twofactor.service';
 export declare class AuthController {
     private readonly authService;
     private readonly twofactorService;
     constructor(authService: AuthService, twofactorService: TwofactorService);
+    private setAuthCookies;
+    private clearAuthCookies;
     register(dto: RegisterDto): Promise<{
         success: boolean;
         message: string;
@@ -27,9 +29,6 @@ export declare class AuthController {
                 email: string;
                 role: import(".prisma/client").$Enums.UserRole;
                 emailVerified: boolean;
-                displayName: string | null;
-                firstName: string | null;
-                lastName: string | null;
                 creatorProfile: {
                     id: string | undefined;
                     displayName: string | undefined;
@@ -41,12 +40,9 @@ export declare class AuthController {
                 refreshToken: string;
                 expiresIn: number;
             };
-            emailSent: boolean;
-            emailError: any;
-            message: string;
         };
     }>;
-    login(dto: LoginDto, req: any): Promise<{
+    login(dto: LoginDto, req: any, res: any): Promise<{
         success: boolean;
         message: string;
         data: {
@@ -78,7 +74,7 @@ export declare class AuthController {
             message?: undefined;
         };
     }>;
-    refresh(dto: RefreshTokenDto): Promise<{
+    refresh(dto: RefreshTokenDto, res: any): Promise<{
         success: boolean;
         message: string;
         data: {
@@ -87,7 +83,7 @@ export declare class AuthController {
             expiresIn: number;
         };
     }>;
-    logout(dto: LogoutDto): Promise<{
+    logout(dto: LogoutDto, res: any): Promise<{
         success: boolean;
         message: string;
     }>;
@@ -101,6 +97,7 @@ export declare class AuthController {
             displayName: string | undefined;
             firstName: string | null;
             lastName: string | null;
+            profilePicture: string | null;
             creatorProfile: {
                 totalEarnings: number;
                 totalViews: number;
@@ -112,6 +109,7 @@ export declare class AuthController {
                 firstName: string | null;
                 lastName: string | null;
                 country: string | null;
+                bio: string | null;
                 profileImage: string | null;
                 coverImage: string | null;
                 allowBuyerProfileView: boolean;
@@ -134,6 +132,8 @@ export declare class AuthController {
                 stripeAccountId: string | null;
                 payoutStatus: import(".prisma/client").$Enums.PayoutStatus;
                 policyStrikes: number;
+                waitlistBonus: number;
+                bonusWithdrawn: boolean;
                 userId: string;
             } | null;
         };
@@ -142,7 +142,7 @@ export declare class AuthController {
         success: boolean;
         message: string;
     }>;
-    verifyEmailCode(req: any, dto: VerifyEmailCodeDto): Promise<{
+    verifyEmailCode(dto: VerifyEmailCodeDto): Promise<{
         success: boolean;
         message: string;
     }>;
@@ -179,7 +179,7 @@ export declare class AuthController {
             backupCodes: string[];
         };
     }>;
-    verify2FA(dto: Verify2FADto): Promise<{
+    verify2FA(dto: Verify2FADto, res: any): Promise<{
         success: boolean;
         message: string;
         data: {
@@ -223,7 +223,7 @@ export declare class AuthController {
             backupCodes: string[];
         };
     }>;
-    verifyBackupCode(dto: VerifyBackupCodeDto): Promise<{
+    verifyBackupCode(dto: VerifyBackupCodeDto, res: any): Promise<{
         success: boolean;
         message: string;
         data: {
@@ -282,6 +282,7 @@ export declare class AuthController {
                 displayName: string | null;
                 firstName: string | null;
                 lastName: string | null;
+                profilePicture: string | null;
             };
         };
     }>;

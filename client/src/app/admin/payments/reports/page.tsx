@@ -86,7 +86,7 @@ export default function PayoutReportsPage() {
                 </span>
               </div>
               <p className="text-3xl font-bold text-gray-900 mb-2">$92,450</p>
-              <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
+              <div className="h-1 bg-linear-to-r from-indigo-500 to-blue-500 rounded-full"></div>
             </div>
 
             {/* Pending Payouts */}
@@ -101,7 +101,7 @@ export default function PayoutReportsPage() {
                 </span>
               </div>
               <p className="text-3xl font-bold text-gray-900 mb-2">$4,320</p>
-              <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
+              <div className="h-1 bg-linear-to-r from-indigo-500 to-blue-500 rounded-full"></div>
             </div>
 
             {/* Completed Payouts */}
@@ -116,7 +116,7 @@ export default function PayoutReportsPage() {
                 </span>
               </div>
               <p className="text-3xl font-bold text-gray-900 mb-2">1,203</p>
-              <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
+              <div className="h-1 bg-linear-to-r from-indigo-500 to-blue-500 rounded-full"></div>
             </div>
 
             {/* Platform Fee Revenue */}
@@ -131,7 +131,7 @@ export default function PayoutReportsPage() {
                 </span>
               </div>
               <p className="text-3xl font-bold text-gray-900 mb-2">$8,730</p>
-              <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
+              <div className="h-1 bg-linear-to-r from-indigo-500 to-blue-500 rounded-full"></div>
             </div>
           </div>
 

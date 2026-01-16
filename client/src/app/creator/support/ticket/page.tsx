@@ -166,7 +166,7 @@ export default function SupportTicketPage() {
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 flex items-start gap-2 sm:gap-3">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div className="flex-1 min-w-0">
@@ -176,7 +176,7 @@ export default function SupportTicketPage() {
               <button
                 type="button"
                 onClick={() => setError(null)}
-                className="text-red-600 hover:text-red-700 flex-shrink-0"
+                className="text-red-600 hover:text-red-700 shrink-0"
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -306,16 +306,16 @@ export default function SupportTicketPage() {
                     {uploadedFiles.map((file, index) => (
                       <div key={index} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 rounded-lg gap-2">
                         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                           </svg>
                           <span className="text-xs sm:text-sm text-gray-900 truncate">{file.name}</span>
-                          <span className="text-xs text-gray-500 flex-shrink-0">({Math.round(file.size / 1024)} KB)</span>
+                          <span className="text-xs text-gray-500 shrink-0">({Math.round(file.size / 1024)} KB)</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => setUploadedFiles(uploadedFiles.filter((_, i) => i !== index))}
-                          className="text-red-600 hover:text-red-700 flex-shrink-0"
+                          className="text-red-600 hover:text-red-700 shrink-0"
                         >
                           <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

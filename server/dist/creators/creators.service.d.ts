@@ -1,11 +1,15 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { VeriffService } from '../veriff/veriff.service';
+import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SetupBankAccountDto, BankAccountResponseDto } from './dto/bank-account.dto';
 export declare class CreatorsService {
     private readonly prisma;
     private readonly veriffService;
+    private readonly emailService;
+    private readonly notificationsService;
     private readonly logger;
-    constructor(prisma: PrismaService, veriffService: VeriffService);
+    constructor(prisma: PrismaService, veriffService: VeriffService, emailService: EmailService, notificationsService: NotificationsService);
     initiateVerification(userId: string): Promise<{
         sessionId: string;
         verificationUrl: string;
@@ -42,8 +46,8 @@ export declare class CreatorsService {
             amount: number;
             id: string;
             status: string;
-            paymentId: string | null;
             processedAt: Date | null;
+            paymentId: string | null;
         } | null;
     }[]>;
     getPayoutRequestById(userId: string, requestId: string): Promise<{
@@ -64,8 +68,8 @@ export declare class CreatorsService {
             amount: number;
             id: string;
             status: string;
-            paymentId: string | null;
             processedAt: Date | null;
+            paymentId: string | null;
             notes: string | null;
         } | null;
     }>;

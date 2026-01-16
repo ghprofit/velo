@@ -41,13 +41,16 @@ const common_1 = require("@nestjs/common");
 const app_module_1 = require("./app.module");
 const helmet_1 = __importDefault(require("helmet"));
 const bodyParser = __importStar(require("body-parser"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         rawBody: true,
     });
+    app.use((0, cookie_parser_1.default)());
     app.use('/api/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
-    app.use(bodyParser.json({ limit: '30mb' }));
-    app.use(bodyParser.urlencoded({ limit: '30mb', extended: true }));
+    app.use('/api/webhooks/veriff', bodyParser.raw({ type: 'application/json' }));
+    app.use(bodyParser.json({ limit: '750mb' }));
+    app.use(bodyParser.urlencoded({ limit: '750mb', extended: true }));
     app.use((0, helmet_1.default)());
     app.use(helmet_1.default.crossOriginResourcePolicy({ policy: 'cross-origin' }));
     const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -71,6 +74,19 @@ async function bootstrap() {
         transform: true,
         transformOptions: {
             enableImplicitConversion: true,
+        },
+        exceptionFactory: (errors) => {
+            console.error('[VALIDATION ERROR] Validation failed:', JSON.stringify(errors, null, 2));
+            const formattedErrors = errors.map(err => ({
+                property: err.property,
+                constraints: err.constraints,
+                value: err.value,
+            }));
+            console.error('[VALIDATION ERROR] Formatted:', JSON.stringify(formattedErrors, null, 2));
+            return new common_1.BadRequestException({
+                message: 'Validation failed',
+                errors: formattedErrors,
+            });
         },
     }));
     app.setGlobalPrefix('api');

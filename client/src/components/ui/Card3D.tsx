@@ -86,7 +86,7 @@ export function StatCard3D({
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-medium text-gray-600">{title}</p>
           {icon && (
-            <div className="p-2 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg">
+            <div className="p-2 bg-linear-to-br from-indigo-50 to-purple-50 rounded-lg">
               {icon}
             </div>
           )}
@@ -136,7 +136,7 @@ export function FeatureCard3D({
   return (
     <Card3D glowColor={glowColor} className={className}>
       <div className="p-6 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl">
+        <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-linear-to-br from-indigo-50 to-purple-50 rounded-xl">
           {icon}
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
@@ -239,7 +239,7 @@ export function TestimonialCard3D({
           {avatar ? (
             <img src={avatar} alt={author} className="w-12 h-12 rounded-full" />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-semibold">
+            <div className="w-12 h-12 rounded-full bg-linear-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-semibold">
               {author.charAt(0)}
             </div>
           )}

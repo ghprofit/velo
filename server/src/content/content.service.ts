@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException,
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { RecognitionService } from '../recognition/recognition.service';
+import { EmailService } from '../email/email.service';
 import { CreateContentDto } from './dto/create-content.dto';
 import { CreateContentMultipartDto } from './dto/create-content-multipart.dto';
 import { ContentStatus, ComplianceCheckStatus } from '@prisma/client';
@@ -15,6 +16,7 @@ export class ContentService {
     private prisma: PrismaService,
     private s3Service: S3Service,
     private recognitionService: RecognitionService,
+    private emailService: EmailService,
   ) {}
 
   async createContent(userId: string, createContentDto: CreateContentDto) {
@@ -259,9 +261,8 @@ export class ContentService {
       throw new BadRequestException('Maximum 20 content items allowed per upload');
     }
 
-    // Generate unique content ID and link
+    // Generate unique content ID
     const contentId = nanoid(10);
-    const contentLink = `velolink.club/c/${contentId}`;
 
     // Upload thumbnail to S3 using streaming
     const thumbnailUpload = await this.s3Service.uploadFileStream(
@@ -271,54 +272,7 @@ export class ContentService {
       'thumbnails',
     );
 
-    // AWS Rekognition Safety Check
-    let contentStatus: ContentStatus = 'PENDING_REVIEW';
-    let complianceStatus: ComplianceCheckStatus = 'PENDING';
-    const complianceLogs: any[] = [];
-
-    try {
-      this.logger.log(`Checking content safety for ${contentId} using AWS Rekognition`);
-
-      const safetyResult = await this.recognitionService.checkImageSafety(
-        {
-          type: 's3',
-          data: thumbnailUpload.key,
-          bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
-        },
-        50,
-      );
-
-      if (safetyResult.isSafe) {
-        contentStatus = 'APPROVED';
-        complianceStatus = 'PASSED';
-        this.logger.log(`Content ${contentId} auto-approved (Rekognition: safe)`);
-      } else {
-        contentStatus = 'PENDING_REVIEW';
-        complianceStatus = 'MANUAL_REVIEW';
-
-        this.logger.warn(
-          `Content ${contentId} flagged by Rekognition: ${safetyResult.flaggedCategories.join(', ')}`,
-        );
-
-        complianceLogs.push({
-          checkType: 'AWS_REKOGNITION',
-          status: 'FAILED',
-          details: {
-            flaggedCategories: safetyResult.flaggedCategories,
-            moderationLabels: safetyResult.moderationLabels,
-            confidence: safetyResult.confidence,
-            reason: 'Content flagged by automated safety system',
-          },
-        });
-      }
-    } catch (error) {
-      const err = error as Error;
-      this.logger.error(`Rekognition check failed for ${contentId}: ${err.message}`);
-      contentStatus = 'PENDING_REVIEW';
-      complianceStatus = 'PENDING';
-    }
-
-    // Upload all content items to S3 using streaming
+    // Upload all content items to S3 using streaming FIRST
     const contentItemsData = await Promise.all(
       files.map(async (file, index) => {
         // Validate file size
@@ -341,9 +295,93 @@ export class ContentService {
           s3Bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
           fileSize: file.size,
           order: index,
+          mimeType: file.mimetype,
         };
       }),
     );
+
+    // Determine if content contains video
+    const hasVideo = files.some(file => file.mimetype.startsWith('video/'));
+    const videoItem = contentItemsData.find(item => item.mimeType.startsWith('video/'));
+
+    // Initialize status variables
+    let contentStatus: ContentStatus = 'PENDING_REVIEW';
+    let complianceStatus: ComplianceCheckStatus = 'PENDING';
+    let rekognitionJobId: string | null = null;
+    let moderationCheckType: string = 'THUMBNAIL_ONLY';
+    const complianceLogs: any[] = [];
+
+    // Step 1: Always check thumbnail synchronously first
+    try {
+      this.logger.log(`Checking thumbnail safety for ${contentId} using AWS Rekognition`);
+
+      const thumbnailSafetyResult = await this.recognitionService.checkImageSafety(
+        {
+          type: 's3',
+          data: thumbnailUpload.key,
+          bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
+        },
+        50,
+      );
+
+      if (!thumbnailSafetyResult.isSafe) {
+        // Thumbnail flagged - require manual review immediately
+        contentStatus = 'PENDING_REVIEW';
+        complianceStatus = 'MANUAL_REVIEW';
+        moderationCheckType = 'SYNC_IMAGE';
+
+        this.logger.warn(
+          `Content ${contentId} thumbnail flagged by Rekognition: ${thumbnailSafetyResult.flaggedCategories.join(', ')}`,
+        );
+
+        complianceLogs.push({
+          checkType: 'AWS_REKOGNITION_THUMBNAIL',
+          status: 'FAILED',
+          details: {
+            flaggedCategories: thumbnailSafetyResult.flaggedCategories,
+            moderationLabels: thumbnailSafetyResult.moderationLabels,
+            confidence: thumbnailSafetyResult.confidence,
+            reason: 'Thumbnail flagged by automated safety system',
+          },
+        });
+      } else if (hasVideo && videoItem) {
+        // Step 2: For video content with clean thumbnail, start async video moderation
+        moderationCheckType = 'ASYNC_VIDEO';
+
+        try {
+          this.logger.log(`Starting async video moderation for ${contentId}`);
+
+          const jobResult = await this.recognitionService.startVideoSafetyCheck({
+            type: 's3',
+            data: videoItem.s3Key,
+            bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
+          });
+
+          rekognitionJobId = jobResult.jobId;
+          contentStatus = 'PENDING_REVIEW';
+          complianceStatus = 'PENDING';
+
+          this.logger.log(`Video moderation job ${rekognitionJobId} started for content ${contentId}`);
+        } catch (videoError) {
+          const err = videoError as Error;
+          this.logger.error(`Failed to start video moderation for ${contentId}: ${err.message}`);
+          // Fall back to pending manual review
+          contentStatus = 'PENDING_REVIEW';
+          complianceStatus = 'PENDING';
+        }
+      } else {
+        // Image-only content with clean thumbnail - auto-approve
+        contentStatus = 'APPROVED';
+        complianceStatus = 'PASSED';
+        moderationCheckType = 'SYNC_IMAGE';
+        this.logger.log(`Content ${contentId} auto-approved (image-only, thumbnail safe)`);
+      }
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Rekognition thumbnail check failed for ${contentId}: ${err.message}`);
+      contentStatus = 'PENDING_REVIEW';
+      complianceStatus = 'PENDING';
+    }
 
     const totalFileSize = files.reduce((sum, file) => sum + file.size, 0);
 
@@ -363,10 +401,16 @@ export class ContentService {
         status: contentStatus,
         complianceStatus: complianceStatus,
         complianceCheckedAt: new Date(),
-        isPublished: true,
-        publishedAt: new Date(),
+        // Only publish immediately if auto-approved (images only)
+        isPublished: contentStatus === 'APPROVED',
+        publishedAt: contentStatus === 'APPROVED' ? new Date() : null,
+        // Async video moderation tracking
+        rekognitionJobId: rekognitionJobId,
+        rekognitionJobStatus: rekognitionJobId ? 'IN_PROGRESS' : null,
+        rekognitionJobStartedAt: rekognitionJobId ? new Date() : null,
+        moderationCheckType: moderationCheckType,
         contentItems: {
-          create: contentItemsData,
+          create: contentItemsData.map(({ mimeType, ...item }) => item),
         },
       },
       include: {
@@ -375,6 +419,8 @@ export class ContentService {
           include: {
             user: {
               select: {
+                id: true,
+                email: true,
                 displayName: true,
                 profilePicture: true,
               },
@@ -402,12 +448,164 @@ export class ContentService {
       }
     }
 
+    // If auto-approved (images only), send email immediately
+    if (contentStatus === 'APPROVED') {
+      await this.sendApprovalEmail(content, content.creator.user.id);
+    }
+
+    // Return response WITHOUT link (link only revealed after approval)
     return {
       content,
-      link: `https://${contentLink}`,
       shortId: contentId,
       status: contentStatus,
+      message: contentStatus === 'APPROVED'
+        ? 'Content approved! Check your email for your shareable link.'
+        : 'Content submitted for review. You will receive an email when approved.',
     };
+  }
+
+  /**
+   * Process pending video moderation jobs (called by cron)
+   */
+  async processVideoModerationJobs(): Promise<void> {
+    const pendingContent = await this.prisma.content.findMany({
+      where: {
+        rekognitionJobStatus: 'IN_PROGRESS',
+        rekognitionJobId: { not: null },
+      },
+      include: {
+        creator: {
+          include: {
+            user: { select: { id: true, email: true, displayName: true } },
+          },
+        },
+      },
+    });
+
+    if (pendingContent.length === 0) {
+      return;
+    }
+
+    this.logger.log(`Processing ${pendingContent.length} pending video moderation job(s)`);
+
+    for (const content of pendingContent) {
+      try {
+        const jobResult = await this.recognitionService.getVideoSafetyResults(
+          content.rekognitionJobId!,
+        );
+
+        if (jobResult.status === 'SUCCEEDED') {
+          await this.handleModerationJobComplete(content, jobResult);
+        } else if (jobResult.status === 'FAILED') {
+          await this.handleModerationJobFailed(content, jobResult);
+        }
+        // If still IN_PROGRESS, do nothing - will check again next poll
+      } catch (error) {
+        const err = error as Error;
+        this.logger.error(`Failed to check job ${content.rekognitionJobId}: ${err.message}`);
+      }
+    }
+  }
+
+  /**
+   * Handle completed moderation job
+   */
+  private async handleModerationJobComplete(
+    content: any,
+    jobResult: { isSafe?: boolean; unsafeSegments?: any[]; statusMessage?: string },
+  ): Promise<void> {
+    let newStatus: ContentStatus;
+    let complianceStatus: ComplianceCheckStatus;
+
+    if (jobResult.isSafe) {
+      newStatus = 'APPROVED';
+      complianceStatus = 'PASSED';
+      this.logger.log(`Content ${content.id} approved by video moderation`);
+    } else {
+      // Flagged content - send to manual review
+      newStatus = 'PENDING_REVIEW';
+      complianceStatus = 'MANUAL_REVIEW';
+
+      this.logger.warn(`Content ${content.id} flagged by video moderation`);
+
+      // Log compliance issue
+      await this.prisma.complianceLog.create({
+        data: {
+          contentId: content.id,
+          checkType: 'AWS_REKOGNITION_VIDEO',
+          status: 'FAILED',
+          flaggedReasons: ['Video moderation flagged unsafe content'],
+          moderationLabels: jobResult.unsafeSegments || [],
+          notes: 'Flagged by async video moderation',
+        },
+      });
+    }
+
+    // Update content record
+    await this.prisma.content.update({
+      where: { id: content.id },
+      data: {
+        status: newStatus,
+        complianceStatus: complianceStatus,
+        complianceCheckedAt: new Date(),
+        rekognitionJobStatus: 'SUCCEEDED',
+        rekognitionJobCompletedAt: new Date(),
+        isPublished: newStatus === 'APPROVED',
+        publishedAt: newStatus === 'APPROVED' ? new Date() : null,
+      },
+    });
+
+    // Send email notification if approved
+    if (newStatus === 'APPROVED') {
+      await this.sendApprovalEmail(content, content.creator.user.id);
+    }
+  }
+
+  /**
+   * Handle failed moderation job
+   */
+  private async handleModerationJobFailed(
+    content: any,
+    jobResult: { statusMessage?: string },
+  ): Promise<void> {
+    // Job failed - require manual review
+    await this.prisma.content.update({
+      where: { id: content.id },
+      data: {
+        status: 'PENDING_REVIEW',
+        complianceStatus: 'PENDING',
+        rekognitionJobStatus: 'FAILED',
+        rekognitionJobCompletedAt: new Date(),
+        complianceNotes: `Rekognition job failed: ${jobResult.statusMessage || 'Unknown error'}`,
+      },
+    });
+
+    this.logger.error(`Video moderation job failed for content ${content.id}: ${jobResult.statusMessage}`);
+  }
+
+  /**
+   * Send approval email with content link
+   */
+  private async sendApprovalEmail(content: any, userId: string): Promise<void> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, displayName: true },
+      });
+
+      if (user?.email) {
+        await this.emailService.sendContentApproved(user.email, {
+          creator_name: user.displayName || 'Creator',
+          content_title: content.title,
+          content_link: `https://velolink.club/c/${content.id}`,
+        });
+        this.logger.log(`Approval email sent for content ${content.id} to ${user.email}`);
+      }
+    } catch (error) {
+      // Don't fail the approval process if email fails
+      const err = error as Error;
+      this.logger.error(`Failed to send approval email for ${content.id}: ${err.message}`);
+    }
   }
 
   async getCreatorContent(userId: string) {
@@ -463,6 +661,32 @@ export class ContentService {
 
     if (!content) {
       throw new NotFoundException('Content not found');
+    }
+
+    this.logger.log(`[CREATOR PREVIEW] Fetching content ${contentId}, has ${content.contentItems?.length || 0} items`);
+
+    // Generate signed URLs for content items (for creator preview)
+    if (content.contentItems && content.contentItems.length > 0) {
+      const contentItemsWithUrls = await Promise.all(
+        content.contentItems.map(async (item) => {
+          try {
+            const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400); // 24 hours
+            this.logger.log(`[CREATOR PREVIEW] Generated signed URL for item ${item.id}: ${signedUrl.substring(0, 100)}...`);
+            return {
+              ...item,
+              signedUrl,
+            };
+          } catch (error) {
+            this.logger.error(`[CREATOR PREVIEW] Failed to generate signed URL for ${item.s3Key}:`, error);
+            return item;
+          }
+        })
+      );
+
+      return {
+        ...content,
+        contentItems: contentItemsWithUrls,
+      };
     }
 
     return content;

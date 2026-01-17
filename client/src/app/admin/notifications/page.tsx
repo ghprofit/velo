@@ -1,147 +1,218 @@
 'use client';
 
-import { JSX, useState } from 'react';
-import Link from 'next/link';
+import { useState, useMemo } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
+import {
+  useGetNotificationStatsQuery,
+  useGetNotificationsQuery,
+  useMarkNotificationAsReadMutation,
+  useMarkAllNotificationsAsReadMutation,
+  useDeleteNotificationMutation,
+  NotificationData,
+} from '@/state/api';
 
 export default function NotificationsPage() {
   const [activeTab] = useState('notifications');
+  const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [sortOrder, setSortOrder] = useState('Newest → Oldest');
+  const [sortOrder, setSortOrder] = useState('newest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageLimit] = useState(20);
 
-  const categoryTabs = ['All', 'Payments', 'Reports', 'Content', 'System', 'Support'];
+  const categoryTabs = ['All', 'PAYMENT', 'REPORT', 'CONTENT', 'SYSTEM', 'SUPPORT'];
   const statusTabs = ['All', 'Unread', 'Read'];
 
-  const notifications = [
-    {
-      id: 1,
-      icon: 'wallet',
-      title: 'New payout completed for Creator @linaart – $120 sent via Stripe.',
-      description: 'Funds were successfully transferred. View payout details in Transactions.',
-      time: '10:32 AM',
-      date: 'Today — October 23, 2025',
-      category: 'Payments',
-      unread: true,
-    },
-    {
-      id: 2,
-      icon: 'flag',
-      title: 'Reported Content #RPT-1023 awaiting review.',
-      description: 'Buyer flagged "Behind The Scenes – Studio Tour" for potential copyright issue.',
-      time: '9:50 AM',
-      date: 'Today — October 23, 2025',
-      category: 'Reports',
-      unread: true,
-    },
-    {
-      id: 3,
-      icon: 'chart',
-      title: 'System Update: "Analytics dashboard improved for faster load times."',
-      description: 'Performance optimizations deployed to analytics queries and caching.',
-      time: '7:12 PM',
-      date: 'Yesterday — October 22, 2025',
-      category: 'System',
-      unread: false,
-    },
-    {
-      id: 4,
-      icon: 'chat',
-      title: 'New support ticket from @userhelp.',
-      description: 'Subject: Issue accessing purchased video link. Requires follow-up.',
-      time: '6:03 PM',
-      date: 'Yesterday — October 22, 2025',
-      category: 'Support',
-      unread: false,
-    },
-    {
-      id: 5,
-      icon: 'userPlus',
-      title: 'New creator @linaart joined the platform.',
-      description: 'Creator profile created and pending first content upload.',
-      time: '2:20 PM',
-      date: 'Yesterday — October 22, 2025',
-      category: 'Content',
-      unread: false,
-    },
-    {
-      id: 6,
-      icon: 'settings',
-      title: 'System maintenance window completed.',
-      description: 'All services operational after scheduled maintenance.',
-      time: '11:05 AM',
-      date: 'Earlier — October 20, 2025',
-      category: 'System',
-      unread: false,
-    },
-  ];
+  // Build query parameters
+  const notificationQueryParams = useMemo(() => ({
+    search: searchQuery || undefined,
+    type: categoryFilter !== 'All' ? categoryFilter : undefined,
+    isRead: statusFilter === 'Unread' ? false : statusFilter === 'Read' ? true : undefined,
+    page: currentPage,
+    limit: pageLimit,
+  }), [searchQuery, categoryFilter, statusFilter, currentPage, pageLimit]);
 
+  // Fetch data
+  const { data: statsData, isLoading: statsLoading } = useGetNotificationStatsQuery();
+  const { data: notificationsData, isLoading: notificationsLoading } = useGetNotificationsQuery(notificationQueryParams);
 
-  const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
-    const icons: Record<string, JSX.Element> = {
-      wallet: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
-        </svg>
-      ),
-      flag: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-        </svg>
-      ),
-      chart: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-        </svg>
-      ),
-      chat: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-      ),
-      userPlus: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-        </svg>
-      ),
-      settings: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-      bell: (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-      ),
-    };
-    return icons[iconName] || null;
-  };
+  const [markAsRead] = useMarkNotificationAsReadMutation();
+  const [markAllAsRead] = useMarkAllNotificationsAsReadMutation();
+  const [deleteNotification] = useDeleteNotificationMutation();
 
-  const getNotificationIcon = (iconName: string) => {
-    const iconMap: Record<string, string> = {
-      wallet: 'wallet',
-      flag: 'flag',
-      chart: 'chart',
-      chat: 'chat',
-      userPlus: 'userPlus',
-      settings: 'settings',
-    };
-    return iconMap[iconName] || 'bell';
-  };
+  const stats = statsData?.data;
+  const notifications = notificationsData?.data || [];
+  const pagination = notificationsData?.pagination;
+
+  // Sort notifications
+  const sortedNotifications = useMemo(() => {
+    const sorted = [...notifications];
+    if (sortOrder === 'oldest') {
+      return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+    return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [notifications, sortOrder]);
 
   // Group notifications by date
-  const groupedNotifications = notifications.reduce((acc, notification) => {
-    const date = notification.date;
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(notification);
-    return acc;
-  }, {} as Record<string, typeof notifications>);
+  const groupNotificationsByDate = (notifications: NotificationData[]) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
 
-  const dateOrder = ['Today — October 23, 2025', 'Yesterday — October 22, 2025', 'Earlier — October 20, 2025'];
+    const groups: Record<string, NotificationData[]> = {
+      'Today': [],
+      'Yesterday': [],
+      'Earlier': [],
+    };
+
+    notifications.forEach(notification => {
+      const notifDate = new Date(notification.createdAt);
+      const notifDay = new Date(notifDate.getFullYear(), notifDate.getMonth(), notifDate.getDate());
+
+      if (notifDay.getTime() === today.getTime()) {
+        groups['Today'].push(notification);
+      } else if (notifDay.getTime() === yesterday.getTime()) {
+        groups['Yesterday'].push(notification);
+      } else {
+        groups['Earlier'].push(notification);
+      }
+    });
+
+    return groups;
+  };
+
+  const groupedNotifications = useMemo(
+    () => groupNotificationsByDate(sortedNotifications),
+    [sortedNotifications]
+  );
+
+  // Handle mark as read
+  const handleNotificationClick = async (notificationId: string, isRead: boolean) => {
+    if (!isRead) {
+      try {
+        await markAsRead(notificationId).unwrap();
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+      }
+    }
+  };
+
+  // Handle mark all as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead({}).unwrap();
+    } catch (error) {
+      alert('Failed to mark all notifications as read');
+    }
+  };
+
+  // Handle delete notification
+  const handleDeleteNotification = async (notificationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Delete this notification?')) {
+      try {
+        await deleteNotification(notificationId).unwrap();
+      } catch (error) {
+        alert('Failed to delete notification');
+      }
+    }
+  };
+
+  // Export to CSV function
+  const exportToCSV = () => {
+    if (notifications.length === 0) {
+      alert('No notifications to export');
+      return;
+    }
+
+    const headers = ['ID', 'Type', 'Title', 'Message', 'Status', 'User Email', 'Created At'];
+    const csvData = notifications.map((notif) => [
+      notif.id,
+      notif.type,
+      notif.title,
+      notif.message,
+      notif.isRead ? 'Read' : 'Unread',
+      notif.user?.email || 'N/A',
+      new Date(notif.createdAt).toLocaleString(),
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.map(cell => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `admin-notifications-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+
+  // Helper function to get icon for notification type
+  const getIconForType = (type: string) => {
+    switch (type) {
+      case 'PAYMENT':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+        );
+      case 'REPORT':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        );
+      case 'CONTENT':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+          </svg>
+        );
+      case 'SYSTEM':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        );
+      case 'SUPPORT':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+        );
+    }
+  };
+
+  const getIconColor = (type: string) => {
+    switch (type) {
+      case 'PAYMENT':
+        return 'bg-green-100 text-green-600';
+      case 'REPORT':
+        return 'bg-purple-100 text-purple-600';
+      case 'CONTENT':
+        return 'bg-orange-100 text-orange-600';
+      case 'SYSTEM':
+        return 'bg-blue-100 text-blue-600';
+      case 'SUPPORT':
+        return 'bg-pink-100 text-pink-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -159,17 +230,24 @@ export default function NotificationsPage() {
                 <p className="text-gray-600 mt-1">Home / Notifications</p>
               </div>
               <div className="hidden lg:flex items-center gap-4">
-                <button className="px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2">
+                <button
+                  onClick={exportToCSV}
+                  disabled={notifications.length === 0}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export CSV
+                </button>
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2"
+                >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Mark All as Read
-                </button>
-                <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                  Filter Notifications
                 </button>
               </div>
             </div>
@@ -223,6 +301,8 @@ export default function NotificationsPage() {
                       <input
                         type="text"
                         placeholder="Search notifications..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none w-64"
                       />
                     </div>
@@ -232,8 +312,8 @@ export default function NotificationsPage() {
                       onChange={(e) => setSortOrder(e.target.value)}
                       className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-700"
                     >
-                      <option>Newest → Oldest</option>
-                      <option>Oldest → Newest</option>
+                      <option value="newest">Newest → Oldest</option>
+                      <option value="oldest">Oldest → Newest</option>
                     </select>
                   </div>
                 </div>
@@ -241,65 +321,113 @@ export default function NotificationsPage() {
 
               {/* Notifications List */}
               <div className="space-y-4 lg:space-y-6">
-                {dateOrder.map((date) => {
-                  const dateNotifications = groupedNotifications[date];
-                  if (!dateNotifications) return null;
+                {notificationsLoading ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                    <p className="text-gray-600">Loading notifications...</p>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                    <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <p className="text-gray-600">No notifications found</p>
+                  </div>
+                ) : (
+                  Object.entries(groupedNotifications).map(([dateGroup, notifs]) => (
+                    notifs.length > 0 && (
+                      <div key={dateGroup}>
+                        {/* Date Header */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <h2 className="text-lg font-bold text-gray-900">{dateGroup}</h2>
+                        </div>
 
-                  return (
-                    <div key={date}>
-                      {/* Date Header */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <h2 className="text-lg font-bold text-gray-900">{date}</h2>
+                        {/* Notifications */}
+                        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+                          {notifs.map((notification) => (
+                            <div
+                              key={notification.id}
+                              onClick={() => handleNotificationClick(notification.id, notification.isRead)}
+                              className={`p-6 hover:bg-gray-50 transition-colors cursor-pointer flex items-start gap-4 ${
+                                !notification.isRead ? 'bg-indigo-50/30' : ''
+                              }`}
+                            >
+                              {/* Icon */}
+                              <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${getIconColor(notification.type)}`}>
+                                {getIconForType(notification.type)}
+                              </div>
+
+                              {/* Content */}
+                              <div className="flex-1">
+                                <h3 className="text-base font-semibold text-gray-900 mb-1">
+                                  {notification.title}
+                                </h3>
+                                <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
+                                <div className="flex items-center gap-3 text-xs text-gray-500">
+                                  <span>{new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                                    {notification.type}
+                                  </span>
+                                  {notification.user && (
+                                    <span>• {notification.user.email}</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Unread Indicator and Actions */}
+                              <div className="flex items-center gap-3 shrink-0">
+                                {!notification.isRead && (
+                                  <div className="w-2.5 h-2.5 bg-indigo-600 rounded-full"></div>
+                                )}
+                                <button
+                                  onClick={(e) => handleDeleteNotification(notification.id, e)}
+                                  className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
+                    )
+                  ))
+                )}
+              </div>
 
-                      {/* Notifications */}
-                      <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-                        {dateNotifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className="p-6 hover:bg-gray-50 transition-colors cursor-pointer flex items-start gap-4"
-                          >
-                            {/* Icon */}
-                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                              {renderIcon(getNotificationIcon(notification.icon), 'w-6 h-6 text-gray-700')}
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1">
-                              <h3 className="text-base font-semibold text-gray-900 mb-1">
-                                {notification.title}
-                              </h3>
-                              <p className="text-sm text-gray-600">{notification.description}</p>
-                            </div>
-
-                            {/* Time and Unread Indicator */}
-                            <div className="flex items-center gap-3 shrink-0">
-                              <span className="text-sm text-gray-500">{notification.time}</span>
-                              {notification.unread && (
-                                <div className="w-2.5 h-2.5 bg-indigo-600 rounded-full"></div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+              {/* Pagination */}
+              {pagination && pagination.totalPages > 1 && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4 mt-6">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p className="text-sm text-gray-600">
+                      Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} notifications
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <span className="px-4 py-2 text-sm text-gray-700">
+                        Page {pagination.page} of {pagination.totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+                        disabled={currentPage === pagination.totalPages}
+                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                      >
+                        Next
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between mt-8">
-                <p className="text-sm text-gray-600">Last synced: 2 mins ago</p>
-                <Link href="/admin/notifications/logs" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
-                  View All Logs
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right Sidebar - Summary Cards */}
@@ -313,49 +441,56 @@ export default function NotificationsPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                       </svg>
                     </div>
-                    <span className="px-2 py-1 bg-indigo-600 text-white text-xs font-semibold rounded-full">+3</span>
                   </div>
                   <p className="text-sm text-gray-600 mb-1">Unread Notifications</p>
-                  <p className="text-3xl font-bold text-gray-900">12</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {statsLoading ? 'Loading...' : stats?.unread || 0}
+                  </p>
                 </div>
 
-                {/* Reports Awaiting Action */}
+                {/* Total Notifications */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <div className="flex items-start justify-between mb-2">
-                    <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                       </svg>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">Reports Awaiting Action</p>
-                  <p className="text-3xl font-bold text-gray-900">3</p>
+                  <p className="text-sm text-gray-600 mb-1">Total Notifications</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {statsLoading ? 'Loading...' : stats?.total || 0}
+                  </p>
                 </div>
 
-                {/* Payment Alerts */}
+                {/* Payment Notifications */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <div className="flex items-start justify-between mb-2">
                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                       <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">Payment Alerts</p>
-                  <p className="text-3xl font-bold text-gray-900">5</p>
+                  <p className="text-sm text-gray-600 mb-1">Payment Notifications</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {statsLoading ? 'Loading...' : stats?.byType?.['PAYMENT'] || 0}
+                  </p>
                 </div>
 
-                {/* System Updates */}
+                {/* Report Notifications */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <div className="flex items-start justify-between mb-2">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">System Updates</p>
-                  <p className="text-3xl font-bold text-gray-900">4</p>
+                  <p className="text-sm text-gray-600 mb-1">Report Notifications</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {statsLoading ? 'Loading...' : stats?.byType?.['REPORT'] || 0}
+                  </p>
                 </div>
               </div>
             </div>

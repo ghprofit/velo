@@ -328,11 +328,11 @@ export default function EarningsPage() {
               </button>
             </div>
 
-            {/* Pending Balance */}
+            {/* Pending Payout */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
               <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div>
-                  <p className="text-gray-600 text-xs sm:text-sm mb-1 sm:mb-2">Pending Balance</p>
+                  <p className="text-gray-600 text-xs sm:text-sm mb-1 sm:mb-2">Pending Payout</p>
                   <p className="text-2xl sm:text-3xl font-bold text-gray-900">
                     {balance ? formatCurrency(balance.pendingBalance) : '$0.00'}
                   </p>

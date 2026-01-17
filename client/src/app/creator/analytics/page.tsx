@@ -766,7 +766,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Demographics Distribution */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 sm:p-6 border-b border-gray-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900">Audience Demographics</h2>

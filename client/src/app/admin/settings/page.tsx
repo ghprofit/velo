@@ -1,22 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
+
+interface Toast {
+  message: string;
+  type: 'success' | 'error';
+}
 
 export default function AdminSettingsPage() {
   const [activeTab] = useState('settings');
   const [settingsTab, setSettingsTab] = useState('profile');
+  const [toast, setToast] = useState<Toast | null>(null);
 
   // Profile Settings State
   const [adminName, setAdminName] = useState('Admin User');
+  const [adminBio, setAdminBio] = useState('');
   const [adminEmail, setAdminEmail] = useState('admin@velolink.com');
   const [adminRole, setAdminRole] = useState('Super Admin');
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [originalAdminName, setOriginalAdminName] = useState('Admin User');
+  const [originalAdminEmail, setOriginalAdminEmail] = useState('admin@velolink.com');
+  const [originalAdminRole, setOriginalAdminRole] = useState('Super Admin');
+  const [originalAdminBio, setOriginalAdminBio] = useState('');
 
   // Security Settings State
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [qrCode, setQrCode] = useState('');
+  const [twoFactorSecret, setTwoFactorSecret] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [activeSessions, setActiveSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
 
   // Notification Settings State
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -24,12 +45,312 @@ export default function AdminSettingsPage() {
   const [newCreatorAlert, setNewCreatorAlert] = useState(true);
   const [paymentAlert, setPaymentAlert] = useState(true);
   const [reportAlert, setReportAlert] = useState(true);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
 
   // Platform Settings State
   const [platformName, setPlatformName] = useState('VeloLink');
   const [platformEmail, setPlatformEmail] = useState('support@velolink.com');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
+
+  // Load data on mount
+  useEffect(() => {
+    loadProfileData();
+    loadNotificationSettings();
+    loadActiveSessions();
+  }, []);
+
+  // Toast notification handler
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // API Functions
+  const loadProfileData = async () => {
+    try {
+      const response = await fetch('/api/admin/profile', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAdminName(data.name);
+        setAdminEmail(data.email);
+        setAdminRole(data.role);
+        setAdminBio(data.bio || '');
+        setOriginalAdminName(data.name);
+        setOriginalAdminEmail(data.email);
+        setOriginalAdminRole(data.role);
+        setOriginalAdminBio(data.bio || '');
+      }
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+    }
+  };
+
+  const loadNotificationSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/notifications', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEmailNotifications(data.emailNotifications ?? true);
+        setPushNotifications(data.pushNotifications ?? true);
+        setNewCreatorAlert(data.newCreatorAlert ?? true);
+        setPaymentAlert(data.paymentAlert ?? true);
+        setReportAlert(data.reportAlert ?? true);
+      }
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
+  };
+
+  const loadActiveSessions = async () => {
+    try {
+      setSessionsLoading(true);
+      const response = await fetch('/api/admin/sessions', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setActiveSessions(data.sessions);
+      }
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  // Profile Settings Functions
+  const handleSaveProfile = async () => {
+    setProfileError('');
+    if (!adminName.trim()) {
+      setProfileError('Full name is required');
+      return;
+    }
+    if (!adminEmail.trim()) {
+      setProfileError('Email is required');
+      return;
+    }
+    if (!adminEmail.includes('@')) {
+      setProfileError('Please enter a valid email');
+      return;
+    }
+
+    try {
+      setProfileLoading(true);
+      const response = await fetch('/api/admin/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          name: adminName,
+          email: adminEmail,
+          role: adminRole,
+          bio: adminBio
+        })
+      });
+
+      if (response.ok) {
+        setOriginalAdminName(adminName);
+        setOriginalAdminEmail(adminEmail);
+        setOriginalAdminRole(adminRole);
+        setOriginalAdminBio(adminBio);
+        showToast('Profile updated successfully', 'success');
+      } else {
+        const error = await response.json();
+        showToast(error.message || 'Failed to update profile', 'error');
+      }
+    } catch (error) {
+      showToast('An error occurred while updating profile', 'error');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleCancelProfile = () => {
+    setAdminName(originalAdminName);
+    setAdminEmail(originalAdminEmail);
+    setAdminRole(originalAdminRole);
+    setAdminBio(originalAdminBio);
+    setProfileError('');
+  };
+
+  // Password Change Functions
+  const validatePassword = (password: string): string => {
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (!/[A-Z]/.test(password)) {
+      return 'Password must contain at least one uppercase letter';
+    }
+    if (!/[a-z]/.test(password)) {
+      return 'Password must contain at least one lowercase letter';
+    }
+    if (!/[0-9]/.test(password)) {
+      return 'Password must contain at least one number';
+    }
+    return '';
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+
+    if (!currentPassword) {
+      setPasswordError('Current password is required');
+      return;
+    }
+    if (!newPassword) {
+      setPasswordError('New password is required');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    const passwordValidation = validatePassword(newPassword);
+    if (passwordValidation) {
+      setPasswordError(passwordValidation);
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      const response = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+
+      if (response.ok) {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        showToast('Password changed successfully', 'success');
+      } else {
+        const error = await response.json();
+        showToast(error.message || 'Failed to change password', 'error');
+      }
+    } catch (error) {
+      showToast('An error occurred while changing password', 'error');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Two-Factor Authentication Functions
+  const handleToggle2FA = async (enabled: boolean) => {
+    try {
+      setTwoFactorLoading(true);
+
+      if (enabled) {
+        // Generate QR code
+        const response = await fetch('/api/admin/2fa/setup', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setQrCode(data.qrCode);
+          setTwoFactorSecret(data.secret);
+          setBackupCodes(data.backupCodes);
+          setTwoFactorEnabled(true);
+          showToast('2FA setup initiated. Scan the QR code and confirm.', 'success');
+        } else {
+          showToast('Failed to setup 2FA', 'error');
+        }
+      } else {
+        // Disable 2FA
+        const response = await fetch('/api/admin/2fa/disable', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.ok) {
+          setTwoFactorEnabled(false);
+          setQrCode('');
+          setTwoFactorSecret('');
+          setBackupCodes([]);
+          showToast('2FA disabled', 'success');
+        } else {
+          showToast('Failed to disable 2FA', 'error');
+        }
+      }
+    } catch (error) {
+      showToast('An error occurred with 2FA', 'error');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  // Session Management Functions
+  const handleRevokeSession = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/admin/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        loadActiveSessions();
+        showToast('Session revoked successfully', 'success');
+      } else {
+        showToast('Failed to revoke session', 'error');
+      }
+    } catch (error) {
+      showToast('An error occurred while revoking session', 'error');
+    }
+  };
+
+  // Notification Settings Functions
+  const handleSaveNotifications = async () => {
+    try {
+      setNotificationsLoading(true);
+      const response = await fetch('/api/admin/notifications', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          emailNotifications,
+          pushNotifications,
+          newCreatorAlert,
+          paymentAlert,
+          reportAlert
+        })
+      });
+
+      if (response.ok) {
+        showToast('Notification preferences saved', 'success');
+      } else {
+        showToast('Failed to save notification preferences', 'error');
+      }
+    } catch (error) {
+      showToast('An error occurred while saving preferences', 'error');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
 
   const settingsTabs = [
     { id: 'profile', label: 'Profile', icon: 'user' },
@@ -119,28 +440,23 @@ export default function AdminSettingsPage() {
 
             {/* Settings Content */}
             <div className="lg:col-span-3">
+              {/* Toast Notifications */}
+              {toast && (
+                <div className={`mb-4 p-4 rounded-lg ${toast.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {toast.message}
+                </div>
+              )}
+
               {/* Profile Settings */}
               {settingsTab === 'profile' && (
                 <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
                   <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">Profile Settings</h2>
 
-                  {/* Profile Photo */}
-                  <div className="mb-8">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Profile Photo</label>
-                    <div className="flex items-center gap-6">
-                      <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center">
-                        <span className="text-white text-2xl font-semibold">A</span>
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                          Change Photo
-                        </button>
-                        <button className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                          Remove
-                        </button>
-                      </div>
+                  {profileError && (
+                    <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                      {profileError}
                     </div>
-                  </div>
+                  )}
 
                   {/* Profile Form */}
                   <div className="space-y-6">
@@ -150,7 +466,8 @@ export default function AdminSettingsPage() {
                         type="text"
                         value={adminName}
                         onChange={(e) => setAdminName(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                        disabled={profileLoading}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none disabled:bg-gray-50"
                       />
                     </div>
 
@@ -160,7 +477,8 @@ export default function AdminSettingsPage() {
                         type="email"
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                        disabled={profileLoading}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none disabled:bg-gray-50"
                       />
                     </div>
 
@@ -169,7 +487,8 @@ export default function AdminSettingsPage() {
                       <select
                         value={adminRole}
                         onChange={(e) => setAdminRole(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                        disabled={profileLoading}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white disabled:bg-gray-50"
                       >
                         <option>Super Admin</option>
                         <option>Admin</option>
@@ -182,15 +501,26 @@ export default function AdminSettingsPage() {
                       <textarea
                         rows={4}
                         placeholder="Write a brief description about yourself..."
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+                        value={adminBio}
+                        onChange={(e) => setAdminBio(e.target.value)}
+                        disabled={profileLoading}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none disabled:bg-gray-50"
                       />
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                      <button className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold">
-                        Save Changes
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={profileLoading}
+                        className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors font-semibold"
+                      >
+                        {profileLoading ? 'Saving...' : 'Save Changes'}
                       </button>
-                      <button className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                      <button
+                        onClick={handleCancelProfile}
+                        disabled={profileLoading}
+                        className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:bg-gray-50 transition-colors"
+                      >
                         Cancel
                       </button>
                     </div>
@@ -205,6 +535,12 @@ export default function AdminSettingsPage() {
                   <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
                     <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">Change Password</h2>
 
+                    {passwordError && (
+                      <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                        {passwordError}
+                      </div>
+                    )}
+
                     <div className="space-y-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
@@ -212,7 +548,8 @@ export default function AdminSettingsPage() {
                           type="password"
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                          disabled={passwordLoading}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none disabled:bg-gray-50"
                         />
                       </div>
 
@@ -222,8 +559,12 @@ export default function AdminSettingsPage() {
                           type="password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                          disabled={passwordLoading}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none disabled:bg-gray-50"
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                          At least 8 characters, 1 uppercase, 1 lowercase, 1 number
+                        </p>
                       </div>
 
                       <div>
@@ -232,12 +573,17 @@ export default function AdminSettingsPage() {
                           type="password"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                          disabled={passwordLoading}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none disabled:bg-gray-50"
                         />
                       </div>
 
-                      <button className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold">
-                        Update Password
+                      <button
+                        onClick={handleChangePassword}
+                        disabled={passwordLoading}
+                        className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors font-semibold"
+                      >
+                        {passwordLoading ? 'Updating...' : 'Update Password'}
                       </button>
                     </div>
                   </div>
@@ -255,20 +601,38 @@ export default function AdminSettingsPage() {
                         <input
                           type="checkbox"
                           checked={twoFactorEnabled}
-                          onChange={(e) => setTwoFactorEnabled(e.target.checked)}
+                          onChange={(e) => handleToggle2FA(e.target.checked)}
+                          disabled={twoFactorLoading}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 disabled:opacity-50"></div>
                       </label>
                     </div>
 
-                    {twoFactorEnabled && (
+                    {twoFactorEnabled && qrCode && (
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <p className="text-sm text-gray-700 mb-4">Scan this QR code with your authenticator app:</p>
-                        <div className="w-48 h-48 bg-white border-2 border-gray-300 rounded-lg flex items-center justify-center mb-4">
-                          <span className="text-gray-400">QR Code Placeholder</span>
+                        <p className="text-sm text-gray-700 mb-4">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc):</p>
+                        <div className="w-48 h-48 bg-white border-2 border-gray-300 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+                          <img src={qrCode} alt="2FA QR Code" className="w-full h-full" />
                         </div>
-                        <p className="text-xs text-gray-600">Or enter this code manually: <span className="font-mono font-semibold">ABCD-EFGH-IJKL-MNOP</span></p>
+                        <p className="text-sm text-gray-700 mb-2 font-semibold">Or enter this code manually:</p>
+                        <p className="text-xs font-mono font-semibold bg-gray-100 p-2 rounded mb-4 break-all">{twoFactorSecret}</p>
+                        
+                        {backupCodes.length > 0 && (
+                          <div className="bg-yellow-50 p-4 rounded border border-yellow-200 mb-4">
+                            <p className="text-sm font-semibold text-gray-900 mb-2">Save your backup codes:</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {backupCodes.map((code, idx) => (
+                                <code key={idx} className="text-xs bg-white p-2 rounded border border-gray-200 font-mono">
+                                  {code}
+                                </code>
+                              ))}
+                            </div>
+                            <p className="text-xs text-gray-600 mt-2">
+                              Store these codes in a safe place. Each can be used once if you lose access to your authenticator.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -277,39 +641,46 @@ export default function AdminSettingsPage() {
                   <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
                     <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">Active Sessions</h2>
 
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">Windows 11 - Chrome</p>
-                            <p className="text-xs text-gray-600">127.0.0.1 • Last active: Now</p>
-                          </div>
-                        </div>
-                        <span className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-full font-medium">Current</span>
+                    {sessionsLoading ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-600">Loading sessions...</p>
                       </div>
-
-                      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
+                    ) : activeSessions.length > 0 ? (
+                      <div className="space-y-4">
+                        {activeSessions.map((session) => (
+                          <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 ${session.isCurrent ? 'bg-green-100' : 'bg-gray-100'} rounded-full flex items-center justify-center`}>
+                                <svg className={`w-5 h-5 ${session.isCurrent ? 'text-green-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{session.deviceName}</p>
+                                <p className="text-xs text-gray-600">{session.ipAddress} • Last active: {session.lastActive}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {session.isCurrent && (
+                                <span className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-full font-medium">Current</span>
+                              )}
+                              {!session.isCurrent && (
+                                <button
+                                  onClick={() => handleRevokeSession(session.id)}
+                                  className="text-xs px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  Revoke
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">iPhone 15 - Safari</p>
-                            <p className="text-xs text-gray-600">192.168.1.5 • Last active: 2 hours ago</p>
-                          </div>
-                        </div>
-                        <button className="text-xs px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                          Revoke
-                        </button>
+                        ))}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-gray-600">No active sessions found</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -318,6 +689,12 @@ export default function AdminSettingsPage() {
               {settingsTab === 'notifications' && (
                 <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
                   <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">Notification Preferences</h2>
+
+                  {notificationsError && (
+                    <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                      {notificationsError}
+                    </div>
+                  )}
 
                   <div className="space-y-6">
                     {/* General Notifications */}
@@ -334,9 +711,10 @@ export default function AdminSettingsPage() {
                               type="checkbox"
                               checked={emailNotifications}
                               onChange={(e) => setEmailNotifications(e.target.checked)}
+                              disabled={notificationsLoading}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 disabled:opacity-50"></div>
                           </label>
                         </div>
 
@@ -350,9 +728,10 @@ export default function AdminSettingsPage() {
                               type="checkbox"
                               checked={pushNotifications}
                               onChange={(e) => setPushNotifications(e.target.checked)}
+                              disabled={notificationsLoading}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 disabled:opacity-50"></div>
                           </label>
                         </div>
                       </div>
@@ -374,9 +753,10 @@ export default function AdminSettingsPage() {
                               type="checkbox"
                               checked={newCreatorAlert}
                               onChange={(e) => setNewCreatorAlert(e.target.checked)}
+                              disabled={notificationsLoading}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 disabled:opacity-50"></div>
                           </label>
                         </div>
 
@@ -390,9 +770,10 @@ export default function AdminSettingsPage() {
                               type="checkbox"
                               checked={paymentAlert}
                               onChange={(e) => setPaymentAlert(e.target.checked)}
+                              disabled={notificationsLoading}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 disabled:opacity-50"></div>
                           </label>
                         </div>
 
@@ -406,17 +787,22 @@ export default function AdminSettingsPage() {
                               type="checkbox"
                               checked={reportAlert}
                               onChange={(e) => setReportAlert(e.target.checked)}
+                              disabled={notificationsLoading}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 disabled:opacity-50"></div>
                           </label>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex gap-4 pt-4">
-                      <button className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold">
-                        Save Preferences
+                      <button
+                        onClick={handleSaveNotifications}
+                        disabled={notificationsLoading}
+                        className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors font-semibold"
+                      >
+                        {notificationsLoading ? 'Saving...' : 'Save Preferences'}
                       </button>
                     </div>
                   </div>

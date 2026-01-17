@@ -713,6 +713,161 @@ interface AnalyticsOverviewResponse {
     data: AnalyticsOverviewData;
 }
 
+interface RevenueTrendData {
+    period: string;
+    revenue: number;
+}
+
+interface RevenueTrendsResponse {
+    success: boolean;
+    data: RevenueTrendData[];
+}
+
+interface UserGrowthData {
+    period: string;
+    count: number;
+}
+
+interface UserGrowthResponse {
+    success: boolean;
+    data: UserGrowthData[];
+}
+
+interface ContentPerformanceData {
+    contentType: string;
+    count: number;
+    percentage: number;
+}
+
+interface ContentPerformanceResponse {
+    success: boolean;
+    data: ContentPerformanceData[];
+}
+
+interface GeographicDistributionData {
+    country: string;
+    percentage: number;
+    count: number;
+}
+
+interface GeographicDistributionResponse {
+    success: boolean;
+    data: GeographicDistributionData[];
+}
+
+// Support Types
+interface SupportStatsData {
+    totalTickets: number;
+    openTickets: number;
+    inProgressTickets: number;
+    resolvedTickets: number;
+    urgentTickets: number;
+    averageResponseTime: number;
+}
+
+interface SupportStatsResponse {
+    success: boolean;
+    data: SupportStatsData;
+}
+
+interface SupportTicketData {
+    id: string;
+    userId: string;
+    email: string;
+    subject: string;
+    message: string;
+    status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+    assignedTo?: string;
+    createdAt: string;
+    updatedAt: string;
+    resolvedAt?: string;
+    user?: {
+        id: string;
+        email: string;
+    };
+}
+
+interface SupportTicketsResponse {
+    success: boolean;
+    data: SupportTicketData[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+interface SupportTicketResponse {
+    success: boolean;
+    data: SupportTicketData;
+}
+
+interface QuerySupportTicketsParams {
+    search?: string;
+    status?: string;
+    priority?: string;
+    assignedTo?: string;
+    page?: number;
+    limit?: number;
+}
+
+// Notification Types
+export interface NotificationStatsData {
+    total: number;
+    unread: number;
+    byType: Record<string, number>;
+    recent: number;
+}
+
+interface NotificationStatsResponse {
+    success: boolean;
+    data: NotificationStatsData;
+}
+
+export interface NotificationData {
+    id: string;
+    userId: string;
+    type: string;
+    title: string;
+    message: string;
+    isRead: boolean;
+    metadata?: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+    user?: {
+        id: string;
+        email: string;
+        role: string;
+    };
+}
+
+interface NotificationsResponse {
+    success: boolean;
+    data: NotificationData[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+interface SingleNotificationResponse {
+    success: boolean;
+    data: NotificationData;
+}
+
+interface QueryNotificationsParams {
+    search?: string;
+    type?: string;
+    isRead?: boolean;
+    userId?: string;
+    page?: number;
+    limit?: number;
+}
+
 export const api = createApi({
     baseQuery: fetchBaseQuery({
         baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
@@ -726,7 +881,7 @@ export const api = createApi({
         },
     }),
     reducerPath: "api",
-    tagTypes: ["Auth", "User", "Admin", "Creator", "Content", "Settings", "Dashboard"],
+    tagTypes: ["Auth", "User", "Admin", "Creator", "Content", "Settings", "Dashboard", "Support", "Notification"],
     endpoints: (build) => ({
         registerUser: build.mutation<AuthResponse, RegisterRequest>({
             query: (data) => ({
@@ -1139,6 +1294,167 @@ export const api = createApi({
             query: () => '/api/admin/reports/analytics-overview',
             providesTags: ['Dashboard'],
         }),
+        getRevenueTrends: build.query<RevenueTrendsResponse, { period?: 'WEEKLY' | 'MONTHLY' | 'YEARLY' }>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.period) searchParams.append('period', params.period);
+                return `/api/admin/reports/revenue-trends?${searchParams.toString()}`;
+            },
+            providesTags: ['Dashboard'],
+        }),
+        getUserGrowth: build.query<UserGrowthResponse, { userType?: 'CREATORS' | 'BUYERS' }>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.userType) searchParams.append('userType', params.userType);
+                return `/api/admin/reports/user-growth?${searchParams.toString()}`;
+            },
+            providesTags: ['Dashboard'],
+        }),
+        getContentPerformance: build.query<ContentPerformanceResponse, void>({
+            query: () => '/api/admin/reports/content-performance',
+            providesTags: ['Dashboard'],
+        }),
+        getGeographicDistribution: build.query<GeographicDistributionResponse, { limit?: number }>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.limit) searchParams.append('limit', params.limit.toString());
+                return `/api/admin/reports/geographic-distribution?${searchParams.toString()}`;
+            },
+            providesTags: ['Dashboard'],
+        }),
+        // Admin support endpoints
+        getSupportStats: build.query<SupportStatsResponse, void>({
+            query: () => '/api/admin/support/stats',
+            providesTags: ['Support'],
+        }),
+        getSupportTickets: build.query<SupportTicketsResponse, QuerySupportTicketsParams>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.search) searchParams.append('search', params.search);
+                if (params.status) searchParams.append('status', params.status);
+                if (params.priority) searchParams.append('priority', params.priority);
+                if (params.assignedTo) searchParams.append('assignedTo', params.assignedTo);
+                if (params.page) searchParams.append('page', params.page.toString());
+                if (params.limit) searchParams.append('limit', params.limit.toString());
+                return `/api/admin/support/tickets?${searchParams.toString()}`;
+            },
+            providesTags: ['Support'],
+        }),
+        getTicketById: build.query<SupportTicketResponse, string>({
+            query: (id) => `/api/admin/support/tickets/${id}`,
+            providesTags: ['Support'],
+        }),
+        updateTicketStatus: build.mutation<{ success: boolean }, { id: string; status: string }>({
+            query: ({ id, status }) => ({
+                url: `/api/admin/support/tickets/${id}/status`,
+                method: 'PUT',
+                body: { status },
+            }),
+            invalidatesTags: ['Support'],
+        }),
+        updateTicketPriority: build.mutation<{ success: boolean }, { id: string; priority: string }>({
+            query: ({ id, priority }) => ({
+                url: `/api/admin/support/tickets/${id}/priority`,
+                method: 'PUT',
+                body: { priority },
+            }),
+            invalidatesTags: ['Support'],
+        }),
+        assignTicket: build.mutation<{ success: boolean }, { id: string; assignedTo: string }>({
+            query: ({ id, assignedTo }) => ({
+                url: `/api/admin/support/tickets/${id}/assign`,
+                method: 'PUT',
+                body: { assignedTo },
+            }),
+            invalidatesTags: ['Support'],
+        }),
+        deleteTicket: build.mutation<{ success: boolean }, string>({
+            query: (id) => ({
+                url: `/api/admin/support/tickets/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Support'],
+        }),
+        // Admin notification endpoints
+        getNotificationStats: build.query<NotificationStatsResponse, void>({
+            query: () => '/api/admin/notifications/stats',
+            providesTags: ['Notification'],
+        }),
+        getNotifications: build.query<NotificationsResponse, QueryNotificationsParams>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.search) searchParams.append('search', params.search);
+                if (params.type) searchParams.append('type', params.type);
+                if (params.isRead !== undefined) searchParams.append('isRead', params.isRead.toString());
+                if (params.userId) searchParams.append('userId', params.userId);
+                if (params.page) searchParams.append('page', params.page.toString());
+                if (params.limit) searchParams.append('limit', params.limit.toString());
+                return `/api/admin/notifications?${searchParams.toString()}`;
+            },
+            providesTags: ['Notification'],
+        }),
+        getNotificationById: build.query<SingleNotificationResponse, string>({
+            query: (id) => `/api/admin/notifications/${id}`,
+            providesTags: ['Notification'],
+        }),
+        createNotification: build.mutation<SingleNotificationResponse, {
+            userId: string;
+            type: string;
+            title: string;
+            message: string;
+            metadata?: Record<string, unknown>;
+        }>({
+            query: (data) => ({
+                url: '/api/admin/notifications',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+        broadcastNotification: build.mutation<{ success: boolean; data: { count: number } }, {
+            type: string;
+            title: string;
+            message: string;
+            userRole?: string;
+            metadata?: Record<string, unknown>;
+        }>({
+            query: (data) => ({
+                url: '/api/admin/notifications/broadcast',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+        markNotificationAsRead: build.mutation<SingleNotificationResponse, string>({
+            query: (id) => ({
+                url: `/api/admin/notifications/${id}/read`,
+                method: 'PUT',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+        markAllNotificationsAsRead: build.mutation<{ success: boolean; data: { count: number } }, { userId?: string }>({
+            query: (data) => ({
+                url: '/api/admin/notifications/read-all',
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+        deleteNotification: build.mutation<{ success: boolean; message: string }, string>({
+            query: (id) => ({
+                url: `/api/admin/notifications/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+        deleteAllNotifications: build.mutation<{ success: boolean; data: { count: number } }, { userId?: string }>({
+            query: (data) => ({
+                url: '/api/admin/notifications',
+                method: 'DELETE',
+                body: data,
+            }),
+            invalidatesTags: ['Notification'],
+        }),
     }),
 });
 
@@ -1213,6 +1529,28 @@ export const {
     // Admin reports hooks
     useGetCreatorPerformanceQuery,
     useGetAnalyticsOverviewQuery,
+    useGetRevenueTrendsQuery,
+    useGetUserGrowthQuery,
+    useGetContentPerformanceQuery,
+    useGetGeographicDistributionQuery,
+    // Admin support hooks
+    useGetSupportStatsQuery,
+    useGetSupportTicketsQuery,
+    useGetTicketByIdQuery,
+    useUpdateTicketStatusMutation,
+    useUpdateTicketPriorityMutation,
+    useAssignTicketMutation,
+    useDeleteTicketMutation,
+    // Admin notification hooks
+    useGetNotificationStatsQuery,
+    useGetNotificationsQuery,
+    useGetNotificationByIdQuery,
+    useCreateNotificationMutation,
+    useBroadcastNotificationMutation,
+    useMarkNotificationAsReadMutation,
+    useMarkAllNotificationsAsReadMutation,
+    useDeleteNotificationMutation,
+    useDeleteAllNotificationsMutation,
 } = api;
 
 export default api;

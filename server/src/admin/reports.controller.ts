@@ -33,6 +33,48 @@ export interface AnalyticsOverviewResponse {
   data: AnalyticsOverviewDto;
 }
 
+export interface RevenueTrendDto {
+  period: string;
+  revenue: number;
+}
+
+export interface RevenueTrendsResponse {
+  success: boolean;
+  data: RevenueTrendDto[];
+}
+
+export interface UserGrowthDto {
+  period: string;
+  count: number;
+}
+
+export interface UserGrowthResponse {
+  success: boolean;
+  data: UserGrowthDto[];
+}
+
+export interface ContentPerformanceDto {
+  contentType: string;
+  count: number;
+  percentage: number;
+}
+
+export interface ContentPerformanceResponse {
+  success: boolean;
+  data: ContentPerformanceDto[];
+}
+
+export interface GeographicDistributionDto {
+  country: string;
+  percentage: number;
+  count: number;
+}
+
+export interface GeographicDistributionResponse {
+  success: boolean;
+  data: GeographicDistributionDto[];
+}
+
 @Controller('admin/reports')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class ReportsController {
@@ -55,5 +97,43 @@ export class ReportsController {
   @Get('analytics-overview')
   async getAnalyticsOverview(): Promise<AnalyticsOverviewResponse> {
     return this.reportsService.getAnalyticsOverview();
+  }
+
+  /**
+   * Get revenue trends over time
+   */
+  @Get('revenue-trends')
+  async getRevenueTrends(
+    @Query('period') period?: 'WEEKLY' | 'MONTHLY' | 'YEARLY',
+  ): Promise<RevenueTrendsResponse> {
+    return this.reportsService.getRevenueTrends(period || 'MONTHLY');
+  }
+
+  /**
+   * Get user growth metrics
+   */
+  @Get('user-growth')
+  async getUserGrowth(
+    @Query('userType') userType?: 'CREATORS' | 'BUYERS',
+  ): Promise<UserGrowthResponse> {
+    return this.reportsService.getUserGrowth(userType || 'CREATORS');
+  }
+
+  /**
+   * Get content performance breakdown
+   */
+  @Get('content-performance')
+  async getContentPerformance(): Promise<ContentPerformanceResponse> {
+    return this.reportsService.getContentPerformance();
+  }
+
+  /**
+   * Get geographic distribution
+   */
+  @Get('geographic-distribution')
+  async getGeographicDistribution(
+    @Query('limit') limit?: number,
+  ): Promise<GeographicDistributionResponse> {
+    return this.reportsService.getGeographicDistribution(limit || 10);
   }
 }

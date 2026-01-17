@@ -1,16 +1,42 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
-import { useGetAnalyticsOverviewQuery, useGetCreatorPerformanceQuery } from '@/state/api';
+import {
+  useGetAnalyticsOverviewQuery,
+  useGetCreatorPerformanceQuery,
+  useGetRevenueTrendsQuery,
+  useGetUserGrowthQuery,
+  useGetContentPerformanceQuery,
+  useGetGeographicDistributionQuery
+} from '@/state/api';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from 'recharts';
+import { exportToCSV, exportToPDF } from '@/utils/export-utils';
 
 export default function ReportsAnalyticsPage() {
+  const router = useRouter();
   const [activeTab] = useState('reports');
   const [timeRange, setTimeRange] = useState('This Month');
   const [metricsFilter, setMetricsFilter] = useState('All Metrics');
-  const [revenueTrend, setRevenueTrend] = useState('Monthly');
-  const [userGrowthView, setUserGrowthView] = useState('Creators');
+  const [revenueTrend, setRevenueTrend] = useState<'WEEKLY' | 'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [userGrowthView, setUserGrowthView] = useState<'CREATORS' | 'BUYERS'>('CREATORS');
   const [reportFilter, setReportFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch analytics data
   const { data: analyticsData, isLoading: analyticsLoading } = useGetAnalyticsOverviewQuery();
@@ -18,9 +44,30 @@ export default function ReportsAnalyticsPage() {
     limit: 10,
     sortBy: 'revenue',
   });
+  const { data: revenueTrendsData, isLoading: revenueTrendsLoading } = useGetRevenueTrendsQuery({
+    period: revenueTrend,
+  });
+  const { data: userGrowthData, isLoading: userGrowthLoading } = useGetUserGrowthQuery({
+    userType: userGrowthView,
+  });
+  const { data: contentPerformanceData, isLoading: contentPerformanceLoading } = useGetContentPerformanceQuery();
+  const { data: geographicData, isLoading: geographicLoading } = useGetGeographicDistributionQuery({
+    limit: 10,
+  });
 
   const analytics = analyticsData?.data;
   const reportData = performanceData?.data || [];
+  const revenueChartData = revenueTrendsData?.data || [];
+  const userGrowthChartData = userGrowthData?.data || [];
+  const contentPerfData = contentPerformanceData?.data || [];
+  const geoData = geographicData?.data || [];
+
+  // Filter report data based on search and category filter
+  const filteredReportData = reportData.filter((item) => {
+    const matchesSearch = searchQuery === '' || item.creatorName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = reportFilter === 'All' || reportFilter === 'Filter: All' || item.category === reportFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -38,6 +85,31 @@ export default function ReportsAnalyticsPage() {
       return `${(num / 1000).toFixed(0)}k`;
     }
     return num.toString();
+  };
+
+  // Export handlers
+  const handleExportCSV = () => {
+    const exportData = filteredReportData.map((item, index) => ({
+      Rank: index + 1,
+      'Creator Name': item.creatorName,
+      'Total Views': item.totalViews,
+      'Revenue (USD)': item.totalRevenue,
+      'Engagement Rate': `${item.engagement.toFixed(1)}%`,
+      Category: item.category,
+    }));
+    exportToCSV(exportData, 'creator-performance-report');
+  };
+
+  const handleExportPDF = async () => {
+    const exportData = filteredReportData.map((item, index) => ({
+      Rank: index + 1,
+      Creator: item.creatorName,
+      Views: formatNumber(item.totalViews),
+      Revenue: formatCurrency(item.totalRevenue),
+      Engagement: `${item.engagement.toFixed(1)}%`,
+      Category: item.category,
+    }));
+    await exportToPDF(exportData, 'creator-performance-report', 'Creator Performance Report');
   };
 
 
@@ -78,7 +150,10 @@ export default function ReportsAnalyticsPage() {
               </select>
 
               {/* Download Report Button */}
-              <button className="px-6 py-2 border-2 border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2">
+              <button
+                onClick={handleExportPDF}
+                className="px-6 py-2 border-2 border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
@@ -197,6 +272,24 @@ export default function ReportsAnalyticsPage() {
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search creators by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              />
+              <svg className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Conditionally render charts based on metrics filter */}
+          {(metricsFilter === 'All Metrics' || metricsFilter === 'Revenue Only') && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-6 lg:mb-8">
             {/* Revenue Trends */}
             <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
@@ -204,9 +297,9 @@ export default function ReportsAnalyticsPage() {
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Revenue Trends</h2>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setRevenueTrend('Weekly')}
+                    onClick={() => setRevenueTrend('WEEKLY')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      revenueTrend === 'Weekly'
+                      revenueTrend === 'WEEKLY'
                         ? 'bg-indigo-600 text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
@@ -214,9 +307,9 @@ export default function ReportsAnalyticsPage() {
                     Weekly
                   </button>
                   <button
-                    onClick={() => setRevenueTrend('Monthly')}
+                    onClick={() => setRevenueTrend('MONTHLY')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      revenueTrend === 'Monthly'
+                      revenueTrend === 'MONTHLY'
                         ? 'bg-indigo-600 text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
@@ -224,9 +317,9 @@ export default function ReportsAnalyticsPage() {
                     Monthly
                   </button>
                   <button
-                    onClick={() => setRevenueTrend('Yearly')}
+                    onClick={() => setRevenueTrend('YEARLY')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      revenueTrend === 'Yearly'
+                      revenueTrend === 'YEARLY'
                         ? 'bg-indigo-600 text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
@@ -237,31 +330,44 @@ export default function ReportsAnalyticsPage() {
               </div>
 
               {/* Chart Area */}
-              <div className="h-64 relative">
-                <svg className="w-full h-full" viewBox="0 0 700 250">
-                  {/* Grid lines */}
-                  <line x1="0" y1="200" x2="700" y2="200" stroke="#e5e7eb" strokeWidth="1" />
-
-                  {/* Purple line */}
-                  <polyline
-                    points="60,180 120,170 180,160 240,155 300,145 360,140 420,135 480,125 540,120 600,115 660,110"
-                    fill="none"
-                    stroke="#6366f1"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-
-                  {/* Data points */}
-                  {[60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660].map((x, i) => {
-                    const y = 180 - i * 7;
-                    return <circle key={i} cx={x} cy={y} r="5" fill="#6366f1" />;
-                  })}
-                </svg>
-
-                <div className="absolute bottom-2 left-4 text-xs text-gray-500">
-                  X: Time • Y: USD
-                </div>
+              <div className="h-64">
+                {revenueTrendsLoading ? (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    Loading chart data...
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={revenueChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey="period"
+                        tick={{ fontSize: 12 }}
+                        stroke="#9ca3af"
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12 }}
+                        stroke="#9ca3af"
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <Tooltip
+                        formatter={(value) => [formatCurrency(Number(value)), 'Revenue']}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#6366f1"
+                        strokeWidth={3}
+                        dot={{ fill: '#6366f1', r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
@@ -286,115 +392,141 @@ export default function ReportsAnalyticsPage() {
 
               {/* Country List */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
-                    <span className="text-sm text-gray-900">USA</span>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900">48%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
-                    <span className="text-sm text-gray-900">UK</span>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900">22%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full"></div>
-                    <span className="text-sm text-gray-900">Canada</span>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900">14%</span>
-                </div>
+                {geographicLoading ? (
+                  <div className="text-center text-gray-500 py-4">Loading...</div>
+                ) : geoData.length === 0 ? (
+                  <div className="text-center text-gray-500 py-4">No geographic data available</div>
+                ) : (
+                  geoData.slice(0, 3).map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${index === 0 ? 'bg-indigo-600' : index === 1 ? 'bg-indigo-500' : 'bg-indigo-400'}`}></div>
+                        <span className="text-sm text-gray-900">{item.country || 'Unknown'}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900">{item.percentage}%</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
+          )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-6 lg:mb-8">
+          {(metricsFilter === 'All Metrics' || metricsFilter === 'User Growth') && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8 mb-6 lg:mb-8">
             {/* User Growth */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">User Growth</h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setUserGrowthView('Creators')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      userGrowthView === 'Creators'
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Creators
-                  </button>
-                  <button
-                    onClick={() => setUserGrowthView('Buyers')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      userGrowthView === 'Buyers'
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Buyers
-                  </button>
-                </div>
-              </div>
-
-              {/* Bar Chart */}
-              <div className="h-64">
-                <svg className="w-full h-full" viewBox="0 0 600 250">
-                  {/* Bars */}
-                  {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map((month, i) => {
-                    const height = 80 + i * 10;
-                    const x = 40 + i * 45;
-                    return (
-                      <g key={i}>
-                        <rect x={x} y={200 - height} width="30" height={height} fill="#a78bfa" rx="4"/>
-                        <text x={x + 15} y="230" textAnchor="middle" fontSize="12" fill="#6b7280">{month}</text>
-                      </g>
-                    );
-                  })}
-                </svg>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">User Growth</h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setUserGrowthView('CREATORS')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    userGrowthView === 'CREATORS'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Creators
+                </button>
+                <button
+                  onClick={() => setUserGrowthView('BUYERS')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    userGrowthView === 'BUYERS'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Buyers
+                </button>
               </div>
             </div>
 
-            {/* Content Performance */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
+            {/* Bar Chart */}
+            <div className="h-64">
+              {userGrowthLoading ? (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  Loading chart data...
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={userGrowthChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis
+                      dataKey="period"
+                      tick={{ fontSize: 12 }}
+                      stroke="#9ca3af"
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      stroke="#9ca3af"
+                    />
+                    <Tooltip
+                      formatter={(value) => [value, userGrowthView]}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      fill="#a78bfa"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+          )}
+
+          {/* Content Performance */}
+          {(metricsFilter === 'All Metrics' || metricsFilter === 'Content Performance') && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8 mb-6 lg:mb-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Content Performance</h2>
                 <span className="text-sm text-gray-500">Music • Video • Podcast • Courses • Images</span>
               </div>
 
-              {/* Legend */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Music</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Video</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-indigo-700 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Podcast</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-indigo-300 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Courses</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Images</span>
-                </div>
+              {/* Pie Chart */}
+              <div className="h-64">
+                {contentPerformanceLoading ? (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    Loading chart data...
+                  </div>
+                ) : contentPerfData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    No content data available
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={contentPerfData.map((item) => ({
+                          name: item.contentType,
+                          value: item.count,
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {contentPerfData.map((entry, index) => {
+                          const colors = ['#a78bfa', '#6366f1', '#4338ca', '#818cf8', '#9ca3af'];
+                          return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                        })}
+                      </Pie>
+                      <Tooltip formatter={(value) => [value, 'Count']} />
+                      <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </div>
-
-              {/* Placeholder chart area */}
-              <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center">
-                <p className="text-sm text-gray-500">Chart visualization placeholder</p>
-              </div>
-            </div>
           </div>
+          )}
 
           {/* Key Report Data Table */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8">
@@ -405,11 +537,12 @@ export default function ReportsAnalyticsPage() {
                 onChange={(e) => setReportFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
               >
-                <option>Filter: All</option>
-                <option>Video</option>
-                <option>Music</option>
-                <option>Podcast</option>
-                <option>Images</option>
+                <option value="All">Filter: All</option>
+                <option value="Video">Video</option>
+                <option value="Music">Music</option>
+                <option value="Podcast">Podcast</option>
+                <option value="Images">Images</option>
+                <option value="Digital Content">Digital Content</option>
               </select>
             </div>
 
@@ -433,14 +566,14 @@ export default function ReportsAnalyticsPage() {
                         Loading creator performance data...
                       </td>
                     </tr>
-                  ) : reportData.length === 0 ? (
+                  ) : filteredReportData.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-gray-600">
-                        No creator performance data available
+                        {searchQuery || reportFilter !== 'All' ? 'No results found' : 'No creator performance data available'}
                       </td>
                     </tr>
                   ) : (
-                    reportData.map((item, index) => (
+                    filteredReportData.map((item, index) => (
                       <tr key={item.creatorId} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-4 px-4 text-sm text-gray-900">{index + 1}</td>
                         <td className="py-4 px-4 text-sm text-gray-900">{item.creatorName}</td>
@@ -449,7 +582,10 @@ export default function ReportsAnalyticsPage() {
                         <td className="py-4 px-4 text-sm text-gray-900">{item.engagement.toFixed(1)}%</td>
                         <td className="py-4 px-4 text-sm text-gray-900">{item.category}</td>
                         <td className="py-4 px-4">
-                          <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline">
+                          <button
+                            onClick={() => router.push(`/admin/creators/${item.creatorId}`)}
+                            className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline"
+                          >
                             View Report
                           </button>
                         </td>
@@ -462,15 +598,21 @@ export default function ReportsAnalyticsPage() {
 
             {/* Footer */}
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-              <p className="text-sm text-gray-500">Last updated: October 23, 2025</p>
+              <p className="text-sm text-gray-500">Last updated: {new Date().toLocaleDateString()}</p>
               <div className="flex items-center gap-3">
-                <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                <button
+                  onClick={handleExportPDF}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   Export as PDF
                 </button>
-                <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                <button
+                  onClick={handleExportCSV}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>

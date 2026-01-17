@@ -337,19 +337,19 @@ export default function EarningsPage() {
                     {balance ? formatCurrency(balance.pendingBalance) : '$0.00'}
                   </p>
                 </div>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 sm:p-3 flex items-start gap-2">
-                <svg className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2 sm:p-3 flex items-start gap-2">
+                <svg className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
-                  <p className="text-xs font-medium text-yellow-900">24-Working Hour Buffer Rule</p>
-                  <p className="text-xs text-yellow-700 mt-0.5 sm:mt-1">Funds from new purchases clear within 24 working hours</p>
+                  <p className="text-xs font-medium text-indigo-900">24-Working Hour Buffer Rule</p>
+                  <p className="text-xs text-indigo-700 mt-0.5 sm:mt-1">Funds from new purchases clear within 24 working hours</p>
                 </div>
               </div>
             </div>

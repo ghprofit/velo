@@ -82,16 +82,16 @@ export default function EarningsPage() {
   const [loading, setLoading] = useState(true);
 
   // Fetch balance data
-  useEffect(() => {
-    const fetchBalance = async () => {
-      try {
-        const response = await earningsApi.getBalance();
-        setBalance(response.data.data);
-      } catch (err: unknown) {
-        console.error('Error fetching balance:', err);
-      }
-    };
+  const fetchBalance = async () => {
+    try {
+      const response = await earningsApi.getBalance();
+      setBalance(response.data.data);
+    } catch (err: unknown) {
+      console.error('Error fetching balance:', err);
+    }
+  };
 
+  useEffect(() => {
     fetchBalance();
   }, []);
 
@@ -686,7 +686,10 @@ export default function EarningsPage() {
         isOpen={isPayoutModalOpen}
         onClose={() => setIsPayoutModalOpen(false)}
         availableBalance={balance?.availableBalance || 0}
-        onSuccess={fetchPayoutRequests}
+        onSuccess={() => {
+          fetchPayoutRequests();
+          fetchBalance();
+        }}
       />
     </>
   );

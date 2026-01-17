@@ -468,42 +468,52 @@ export class ContentService {
    * Process pending video moderation jobs (called by cron)
    */
   async processVideoModerationJobs(): Promise<void> {
-    const pendingContent = await this.prisma.content.findMany({
-      where: {
-        rekognitionJobStatus: 'IN_PROGRESS',
-        rekognitionJobId: { not: null },
-      },
-      include: {
-        creator: {
-          include: {
-            user: { select: { id: true, email: true, displayName: true } },
+    try {
+      const pendingContent = await this.prisma.content.findMany({
+        where: {
+          rekognitionJobStatus: 'IN_PROGRESS',
+          rekognitionJobId: { not: null },
+        },
+        include: {
+          creator: {
+            include: {
+              user: { select: { id: true, email: true, displayName: true } },
+            },
           },
         },
-      },
-    });
+      });
 
-    if (pendingContent.length === 0) {
-      return;
-    }
-
-    this.logger.log(`Processing ${pendingContent.length} pending video moderation job(s)`);
-
-    for (const content of pendingContent) {
-      try {
-        const jobResult = await this.recognitionService.getVideoSafetyResults(
-          content.rekognitionJobId!,
-        );
-
-        if (jobResult.status === 'SUCCEEDED') {
-          await this.handleModerationJobComplete(content, jobResult);
-        } else if (jobResult.status === 'FAILED') {
-          await this.handleModerationJobFailed(content, jobResult);
-        }
-        // If still IN_PROGRESS, do nothing - will check again next poll
-      } catch (error) {
-        const err = error as Error;
-        this.logger.error(`Failed to check job ${content.rekognitionJobId}: ${err.message}`);
+      if (pendingContent.length === 0) {
+        return;
       }
+
+      this.logger.log(`Processing ${pendingContent.length} pending video moderation job(s)`);
+
+      for (const content of pendingContent) {
+        try {
+          const jobResult = await this.recognitionService.getVideoSafetyResults(
+            content.rekognitionJobId!,
+          );
+
+          if (jobResult.status === 'SUCCEEDED') {
+            await this.handleModerationJobComplete(content, jobResult);
+          } else if (jobResult.status === 'FAILED') {
+            await this.handleModerationJobFailed(content, jobResult);
+          }
+          // If still IN_PROGRESS, do nothing - will check again next poll
+        } catch (error) {
+          const err = error as Error;
+          this.logger.error(`Failed to check job ${content.rekognitionJobId}: ${err.message}`);
+        }
+      }
+    } catch (error) {
+      const err = error as Error;
+      // Wrap database errors to handle connection timeouts gracefully
+      if (err.message.includes('Connection terminated') || err.message.includes('timeout')) {
+        this.logger.warn('Database connection timeout in video moderation - will retry later');
+        return; // Silently fail and retry on next cron run
+      }
+      throw error; // Re-throw other errors
     }
   }
 

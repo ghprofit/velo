@@ -290,8 +290,9 @@ export class RecognitionService implements OnModuleInit {
     this.logger.log(`Getting video safety results for job: ${jobId}`);
 
     try {
-      if (!this.isConfigured || !this.rekognitionClient) {
-        this.logger.warn('[SIMULATED] Video safety results');
+      // Handle simulated jobs (when Rekognition is not configured)
+      if (jobId.startsWith('simulated-') || !this.isConfigured || !this.rekognitionClient) {
+        this.logger.warn('[SIMULATED] Video safety results - auto-approving');
         return {
           jobId,
           status: 'SUCCEEDED',

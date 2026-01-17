@@ -385,7 +385,7 @@ export class CreatorsService {
           const existingPendingRequest = await tx.payoutRequest.findFirst({
             where: {
               creatorId: user.creatorProfile.id,
-              status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
+              status: 'PENDING',
             },
           });
 

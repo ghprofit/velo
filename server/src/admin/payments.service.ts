@@ -367,7 +367,7 @@ export class PaymentsService {
         // Stripe payouts are typically 'in_transit' initially, then 'paid' later
         const status = stripePayout.status === 'paid' ? 'COMPLETED' : 'PROCESSING';
 
-        return tx.payout.update({
+        const updatedPayout = await tx.payout.update({
           where: { id: payoutId },
           data: {
             status,
@@ -376,6 +376,22 @@ export class PaymentsService {
             notes: `Stripe payout: ${stripePayout.id}. Status: ${stripePayout.status}`,
           },
         });
+
+        // Update the linked PayoutRequest status
+        if (updatedPayout.id) {
+          const payoutRequest = await tx.payoutRequest.findFirst({
+            where: { payoutId: updatedPayout.id },
+          });
+          
+          if (payoutRequest) {
+            await tx.payoutRequest.update({
+              where: { id: payoutRequest.id },
+              data: { status },
+            });
+          }
+        }
+
+        return updatedPayout;
       });
 
       // Send notification to creator
@@ -632,7 +648,7 @@ export class PaymentsService {
       const updatedRequest = await tx.payoutRequest.update({
         where: { id: requestId },
         data: {
-          status: 'APPROVED',
+          status: 'PROCESSING',
           reviewedBy: adminUserId,
           reviewedAt: new Date(),
           reviewNotes: reviewNotes || 'Approved for processing',
@@ -645,7 +661,7 @@ export class PaymentsService {
           creatorId: request.creatorId,
           amount: request.requestedAmount,
           currency: request.currency,
-          status: 'PENDING', // Will be processed by Stripe
+          status: 'PROCESSING', // Approved and ready for Stripe processing
           paymentMethod: 'STRIPE',
           notes: `Approved by admin - Request ID: ${requestId}`,
         },

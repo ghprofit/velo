@@ -77,6 +77,9 @@ function getEncodedDatabaseUrl(): string {
 const databaseUrl = getEncodedDatabaseUrl();
 const pool = new Pool({
   connectionString: databaseUrl,
+  ssl: {
+    rejectUnauthorized: false, // Accept self-signed certificates from AWS RDS
+  },
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });

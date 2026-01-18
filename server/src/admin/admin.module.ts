@@ -17,9 +17,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { EmailModule } from '../email/email.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { StripeModule } from '../stripe/stripe.module';
+import { S3Module } from '../s3/s3.module';
 
 @Module({
-  imports: [PrismaModule, EmailModule, NotificationsModule, StripeModule],
+  imports: [PrismaModule, EmailModule, NotificationsModule, StripeModule, S3Module],
   controllers: [AdminController, CreatorsController, ContentController, PaymentsController, SupportController, NotificationsController, ReportsController],
   providers: [AdminService, CreatorsService, ContentService, PaymentsService, SupportService, AdminNotificationsService, ReportsService],
   exports: [AdminService, CreatorsService, ContentService, PaymentsService, SupportService, AdminNotificationsService, ReportsService],

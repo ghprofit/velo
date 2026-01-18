@@ -4,6 +4,10 @@ import {
   CreatorPerformanceResponse,
   CreatorPerformanceDto,
   AnalyticsOverviewResponse,
+  RevenueTrendsResponse,
+  UserGrowthResponse,
+  ContentPerformanceResponse,
+  GeographicDistributionResponse,
 } from './reports.controller';
 
 @Injectable()
@@ -212,7 +216,7 @@ export class ReportsService {
   /**
    * Get revenue trends over time
    */
-  async getRevenueTrends(period: 'WEEKLY' | 'MONTHLY' | 'YEARLY') {
+  async getRevenueTrends(period: 'WEEKLY' | 'MONTHLY' | 'YEARLY'): Promise<RevenueTrendsResponse> {
     try {
       const now = new Date();
       let startDate: Date;
@@ -264,7 +268,7 @@ export class ReportsService {
           );
           periodKey = `Week ${weeksDiff + 1}`;
         } else if (period === 'MONTHLY') {
-          periodKey = periods[purchaseDate.getMonth()];
+          periodKey = periods[purchaseDate.getMonth()]!;
         } else {
           const quarter = Math.floor(purchaseDate.getMonth() / 3);
           periodKey = `Q${quarter + 1}`;
@@ -293,7 +297,7 @@ export class ReportsService {
   /**
    * Get user growth metrics (creators or buyers)
    */
-  async getUserGrowth(userType: 'CREATORS' | 'BUYERS') {
+  async getUserGrowth(userType: 'CREATORS' | 'BUYERS'): Promise<UserGrowthResponse> {
     try {
       const now = new Date();
       const startDate = new Date(now.getFullYear(), 0, 1); // Start of current year
@@ -316,7 +320,7 @@ export class ReportsService {
         });
 
         const data = Array.from({ length: 12 }, (_, i) => ({
-          period: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+          period: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i]!,
           count: monthlyData.get(i) || 0,
         }));
 
@@ -339,7 +343,7 @@ export class ReportsService {
         });
 
         const data = Array.from({ length: 12 }, (_, i) => ({
-          period: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+          period: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i]!,
           count: monthlyData.get(i) || 0,
         }));
 
@@ -354,7 +358,7 @@ export class ReportsService {
   /**
    * Get content performance breakdown by type
    */
-  async getContentPerformance() {
+  async getContentPerformance(): Promise<ContentPerformanceResponse> {
     try {
       // Get all content grouped by type
       const contentByType = await this.prisma.content.groupBy({
@@ -389,7 +393,7 @@ export class ReportsService {
   /**
    * Get geographic distribution of buyers
    */
-  async getGeographicDistribution(limit: number = 10) {
+  async getGeographicDistribution(limit: number = 10): Promise<GeographicDistributionResponse> {
     try {
       // Get content views grouped by country
       const viewsByCountry = await this.prisma.contentView.groupBy({
@@ -413,7 +417,7 @@ export class ReportsService {
       const totalViews = viewsByCountry.reduce((sum, item) => sum + item._count.id, 0);
 
       const data = viewsByCountry.map((item) => ({
-        country: item.country,
+        country: item.country as string,
         percentage: totalViews > 0 ? Math.round((item._count.id / totalViews) * 100 * 10) / 10 : 0,
         count: item._count.id,
       }));

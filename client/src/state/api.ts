@@ -596,6 +596,15 @@ interface AdminContentDetailsResponse {
         s3Key?: string;
         s3Bucket?: string;
         thumbnailUrl?: string;
+        signedUrl?: string;
+        contentItems?: {
+            id: string;
+            s3Key: string;
+            s3Bucket: string;
+            fileSize: number;
+            order: number;
+            signedUrl?: string;
+        }[];
         recentPurchases: RecentPurchaseItem[];
     };
 }

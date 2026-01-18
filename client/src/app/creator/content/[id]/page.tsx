@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { contentApi } from '@/lib/api-client';
 import Image from 'next/image';
 import FloatingLogo from '@/components/FloatingLogo';
+import { VideoPlayer } from '@/components/ui/VideoPlayer';
 
 interface ContentItem {
   id: string;
@@ -97,6 +98,13 @@ export default function ContentDetailPage() {
           console.log('[CREATOR] Total preview URLs stored:', Object.keys(urls).length);
           if (Object.keys(urls).length > 0) {
             setPreviewUrls(urls);
+          } else if (contentData.contentType === 'VIDEO') {
+            // If VIDEO content but no signed URLs, fetch them automatically
+            console.log('[CREATOR] VIDEO content detected without signed URLs, fetching now...');
+            // Delay to ensure state is set
+            setTimeout(() => {
+              fetchPreviewUrls();
+            }, 100);
           }
         }
         
@@ -375,35 +383,82 @@ export default function ContentDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column - Content Preview & Details */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            {/* Thumbnail Preview */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="aspect-video bg-gray-100 relative">
-                <Image
-                  src={content.thumbnailUrl}
-                  alt={content.title}
-                  width={800}
-                  height={450}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x450?text=No+Thumbnail';
-                  }}
-                />
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(content.status)}`}>
-                    {content.status.replace('_', ' ')}
-                  </span>
-                  {content.isPublished && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Published
-                    </span>
+            {/* Video Preview (for VIDEO type content) */}
+            {content.contentType === 'VIDEO' && content.contentItems && content.contentItems.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="aspect-video bg-black relative">
+                  {previewUrls[content.contentItems[0].id] ? (
+                    <>
+                      <VideoPlayer
+                        src={previewUrls[content.contentItems[0].id]}
+                        poster={content.thumbnailUrl}
+                        title={content.title}
+                        protectContent={false}
+                        className="w-full h-full"
+                        onError={(err) => console.error('[CREATOR VIDEO] Error:', err)}
+                        onPlay={() => console.log('[CREATOR VIDEO] Started playing')}
+                      />
+                      <div className="absolute top-4 left-4 flex items-center gap-2 pointer-events-none">
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(content.status)}`}>
+                          {content.status.replace('_', ' ')}
+                        </span>
+                        {content.isPublished && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Published
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-white text-sm mb-3">Loading video preview...</p>
+                        <button
+                          onClick={fetchPreviewUrls}
+                          disabled={loadingPreview}
+                          className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loadingPreview ? 'Loading...' : 'Load Preview'}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-black/70 text-white px-3 py-1 rounded-lg text-sm">
-                  {getContentTypeIcon(content.contentType)}
-                  <span>{content.contentType}</span>
+              </div>
+            )}
+
+            {/* Thumbnail Preview (for non-VIDEO types) */}
+            {content.contentType !== 'VIDEO' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="aspect-video bg-gray-100 relative">
+                  <Image
+                    src={content.thumbnailUrl}
+                    alt={content.title}
+                    width={800}
+                    height={450}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x450?text=No+Thumbnail';
+                    }}
+                  />
+                  <div className="absolute top-4 left-4 flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(content.status)}`}>
+                      {content.status.replace('_', ' ')}
+                    </span>
+                    {content.isPublished && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Published
+                      </span>
+                    )}
+                  </div>
+                  <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-black/70 text-white px-3 py-1 rounded-lg text-sm">
+                    {getContentTypeIcon(content.contentType)}
+                    <span>{content.contentType}</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Content Items (for GALLERY) */}
             {content.contentType === 'GALLERY' && content.contentItems && content.contentItems.length > 1 && (
@@ -822,15 +877,14 @@ export default function ContentDetailPage() {
                   {!loadingPreview && itemFileType === 'VIDEO' && (
                     <div className="aspect-video bg-black">
                       {previewUrls[currentItem.id] ? (
-                        <video
-                          controls
+                        <VideoPlayer
+                          src={previewUrls[currentItem.id]}
+                          title={fileName || 'Video'}
+                          protectContent={false}
+                          autoPlay={true}
                           className="w-full h-full"
-                          preload="metadata"
-                          autoPlay
-                        >
-                          <source src={previewUrls[currentItem.id]} type="video/mp4" />
-                          Your browser does not support the video tag.
-                        </video>
+                          onError={(err) => console.error('[CREATOR LIGHTBOX VIDEO] Error:', err)}
+                        />
                       ) : (
                         <div className="h-full flex items-center justify-center">
                           <div className="text-center text-white p-8">

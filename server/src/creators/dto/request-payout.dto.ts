@@ -3,7 +3,7 @@ import { IsNotEmpty, IsNumber, Min, IsOptional, IsString } from 'class-validator
 export class RequestPayoutDto {
   @IsNotEmpty()
   @IsNumber()
-  @Min(100, { message: 'Minimum payout amount is $100' })
+  @Min(50, { message: 'Minimum payout amount is $50' })
   amount: number;
 
   @IsOptional()

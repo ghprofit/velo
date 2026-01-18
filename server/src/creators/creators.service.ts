@@ -338,8 +338,8 @@ export class CreatorsService {
           }
 
           // Validate minimum payout amount
-          if (requestedAmount < 100) {
-            throw new BadRequestException('Minimum payout amount is $100');
+          if (requestedAmount < 50) {
+            throw new BadRequestException('Minimum payout amount is $50');
           }
 
           // Calculate total completed payouts

@@ -35,8 +35,8 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
       setError('Please enter a valid amount');
       return false;
     }
-    if (numAmount < 100) {
-      setError('Minimum payout amount is $100');
+    if (numAmount < 50) {
+      setError('Minimum payout amount is $50');
       return false;
     }
     if (numAmount > availableBalance) {
@@ -133,7 +133,7 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
               </button>
             </div>
             <p className="mt-2 text-sm text-gray-500">
-              Enter the amount you wish to withdraw (minimum $100.00)
+              Enter the amount you wish to withdraw (minimum $50.00)
             </p>
             {error && (
               <p className="mt-2 text-sm text-red-600">{error}</p>
@@ -242,7 +242,7 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!confirmChecked || parseFloat(amount || '0') < 100 || isLoading}
+            disabled={!confirmChecked || parseFloat(amount || '0') < 50 || isLoading}
             className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isLoading ? (

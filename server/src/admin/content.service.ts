@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { S3Service } from '../s3/s3.service';
 import { QueryContentDto, ReviewContentDto, ContentStatsDto } from './dto/content.dto';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class ContentService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
+    private s3Service: S3Service,
   ) {}
 
   async getContent(query: QueryContentDto) {
@@ -140,6 +142,9 @@ export class ContentService {
           take: 10,
           orderBy: { createdAt: 'desc' },
         },
+        contentItems: {
+          orderBy: { order: 'asc' },
+        },
       },
     });
 
@@ -148,6 +153,34 @@ export class ContentService {
         success: false,
         message: 'Content not found',
       };
+    }
+
+    // Generate signed URLs for all content items
+    let signedUrl: string | undefined;
+    const contentItemsWithUrls = await Promise.all(
+      content.contentItems.map(async (item) => {
+        let itemSignedUrl: string | undefined;
+        if (item.s3Key) {
+          try {
+            itemSignedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400); // 24 hours
+          } catch (error) {
+            this.logger.error(`Failed to generate signed URL for item ${item.id}:`, error);
+          }
+        }
+        return {
+          id: item.id,
+          s3Key: item.s3Key,
+          s3Bucket: item.s3Bucket,
+          fileSize: item.fileSize,
+          order: item.order,
+          signedUrl: itemSignedUrl,
+        };
+      })
+    );
+
+    // For backward compatibility, set signedUrl to first item's URL
+    if (contentItemsWithUrls.length > 0 && contentItemsWithUrls[0]) {
+      signedUrl = contentItemsWithUrls[0].signedUrl;
     }
 
     return {
@@ -162,6 +195,8 @@ export class ContentService {
         s3Key: content.s3Key,
         s3Bucket: content.s3Bucket,
         thumbnailUrl: content.thumbnailUrl,
+        signedUrl,
+        contentItems: contentItemsWithUrls,
         createdAt: content.createdAt.toISOString(),
         updatedAt: content.updatedAt.toISOString(),
         creator: {

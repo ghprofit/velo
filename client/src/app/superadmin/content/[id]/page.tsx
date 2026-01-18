@@ -27,6 +27,7 @@ export default function SuperAdminContentDetailsPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
 
   // Fetch content details
   const { data: contentResponse, isLoading, error, refetch } = useGetSuperAdminContentByIdQuery(contentId);
@@ -216,8 +217,136 @@ export default function SuperAdminContentDetailsPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Full Content Preview</h3>
 
               {/* Check if content items exist with signed URLs */}
-              {content.contentItems && content.contentItems.length > 0 && content.contentItems[0].signedUrl ? (
-                <div className="relative w-full rounded-xl overflow-hidden bg-gray-900 border border-gray-200">
+              {content.contentItems && content.contentItems.length > 0 ? (
+                content.contentItems.length > 1 ? (
+                  /* Gallery Grid for multiple items */
+                  <div>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      {content.contentItems.map((item: any, index: number) => (
+                        <button
+                          key={item.id}
+                          onClick={() => setSelectedItemIndex(index)}
+                          className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 hover:border-indigo-500 transition-all cursor-pointer group"
+                        >
+                          {item.signedUrl && getActualFileType(item.s3Key) === 'VIDEO' ? (
+                            <video
+                              src={item.signedUrl}
+                              className="w-full h-full object-cover"
+                              preload="metadata"
+                              muted
+                              playsInline
+                            />
+                          ) : item.signedUrl ? (
+                            <Image
+                              src={item.signedUrl}
+                              alt={`${content.title} - Item ${index + 1}`}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          ) : null}
+                          {/* Overlay */}
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                              </svg>
+                            </div>
+                          </div>
+                          {/* Item number badge */}
+                          <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                            {index + 1}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-600">Click on any item to view larger</p>
+
+                    {/* Lightbox Modal */}
+                    {selectedItemIndex !== null && content.contentItems[selectedItemIndex] && (
+                      <div 
+                        className="fixed inset-0 bg-black bg-opacity-90 z-[9999] flex items-center justify-center p-4"
+                        onClick={() => setSelectedItemIndex(null)}
+                      >
+                        <button
+                          onClick={() => setSelectedItemIndex(null)}
+                          className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
+                        >
+                          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                        
+                        {/* Navigation arrows */}
+                        {selectedItemIndex > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedItemIndex(selectedItemIndex - 1);
+                            }}
+                            className="absolute left-4 text-white hover:text-gray-300 transition-colors z-10"
+                          >
+                            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                          </button>
+                        )}
+                        
+                        {selectedItemIndex < content.contentItems.length - 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedItemIndex(selectedItemIndex + 1);
+                            }}
+                            className="absolute right-4 text-white hover:text-gray-300 transition-colors z-10"
+                          >
+                            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        )}
+
+                        <div className="max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
+                          <div className="text-white text-center mb-3">
+                            Item {selectedItemIndex + 1} of {content.contentItems.length}
+                          </div>
+                          {(() => {
+                            const selectedItem = content.contentItems[selectedItemIndex];
+                            const actualFileType = getActualFileType(selectedItem.s3Key);
+
+                            if (actualFileType === 'VIDEO' && selectedItem.signedUrl) {
+                              return (
+                                <div className="w-full aspect-video rounded-xl overflow-hidden bg-black">
+                                  <VideoPlayer
+                                    src={selectedItem.signedUrl}
+                                    poster={content.thumbnailUrl || selectedItem.signedUrl}
+                                    title={`${content.title} - Item ${selectedItemIndex + 1}`}
+                                    protectContent={false}
+                                    className="w-full h-full"
+                                  />
+                                </div>
+                              );
+                            } else if (selectedItem.signedUrl) {
+                              return (
+                                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
+                                  <Image
+                                    src={selectedItem.signedUrl}
+                                    alt={`${content.title} - Item ${selectedItemIndex + 1}`}
+                                    fill
+                                    className="object-contain"
+                                  />
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Single item view */
+                  <div className="relative w-full rounded-xl overflow-hidden bg-gray-900 border border-gray-200">
                   {(() => {
                     const firstItem = content.contentItems[0];
                     const actualFileType = getActualFileType(firstItem.s3Key);
@@ -228,7 +357,7 @@ export default function SuperAdminContentDetailsPage() {
                         <div className="aspect-video">
                           <VideoPlayer
                             src={firstItem.signedUrl}
-                            poster={content.thumbnailUrl}
+                            poster={content.thumbnailUrl || firstItem.signedUrl}
                             title={content.title}
                             protectContent={false}
                             className="w-full h-full"
@@ -299,28 +428,29 @@ export default function SuperAdminContentDetailsPage() {
                     </div>
                   )}
                 </div>
-              ) : (
-                // Fallback to thumbnail if no signed URLs available
-                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
-                  {content.thumbnailUrl ? (
-                    <Image
-                      src={content.thumbnailUrl}
-                      alt={content.title}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                    <p className="text-white text-sm">Content URL not available</p>
+              )
+            ) : (
+              // Fallback to thumbnail if no content items available
+              <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+                {content.thumbnailUrl ? (
+                  <Image
+                    src={content.thumbnailUrl}
+                    alt={content.title}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                   </div>
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                  <p className="text-white text-sm">Content URL not available</p>
                 </div>
-              )}
+              </div>
+            )}
             </div>
 
             {/* Right Column - Details */}

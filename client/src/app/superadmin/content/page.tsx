@@ -83,6 +83,55 @@ export default function ContentOversightPage() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  // Export content report to CSV
+  const handleExportContentReport = () => {
+    if (content.length === 0) {
+      alert('No content to export');
+      return;
+    }
+
+    // Define CSV headers matching the table columns
+    const headers = [
+      'Content ID / Title',
+      'Creator',
+      'Type',
+      'Status',
+      'Compliance',
+      'Views',
+      'Revenue',
+      'Created'
+    ];
+
+    // Map content to CSV rows
+    const rows = content.map(item => [
+      `"${item.id} / ${item.title}"`,
+      `"${item.creatorName || 'Unknown'}"`,
+      item.contentType,
+      item.status,
+      item.complianceStatus,
+      item.viewCount || 0,
+      `$${(item.totalRevenue || 0).toFixed(2)}`,
+      formatDate(item.createdAt)
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `content-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Generate pagination buttons
   const paginationButtons = useMemo(() => {
     const buttons: (number | string)[] = [];
@@ -108,7 +157,10 @@ export default function ContentOversightPage() {
           <h1 className="text-3xl font-bold text-gray-900">Global Content Oversight & Moderation</h1>
           <p className="text-gray-500 mt-1">Review and manage flagged content across the platform</p>
         </div>
-        <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-sm">
+        <button 
+          onClick={handleExportContentReport}
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-sm"
+        >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>

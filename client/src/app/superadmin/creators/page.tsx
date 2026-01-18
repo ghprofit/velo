@@ -72,6 +72,10 @@ export default function CreatorManagementPage() {
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Never';
     const date = new Date(dateString);
+    
+    // Check if date is invalid
+    if (isNaN(date.getTime())) return 'Never';
+    
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -81,6 +85,55 @@ export default function CreatorManagementPage() {
     if (diffHours < 24) return `${diffHours} hours ago`;
     if (diffDays < 7) return `${diffDays} days ago`;
     return date.toLocaleDateString();
+  };
+
+  // Export all creators to CSV
+  const handleExportDatabase = () => {
+    if (creators.length === 0) {
+      alert('No creators to export');
+      return;
+    }
+
+    // Define CSV headers matching the table columns
+    const headers = [
+      'Creator ID / Name',
+      'Email Address',
+      'KYC Status',
+      'Payout Status',
+      'Policy Strikes',
+      'Lifetime Earnings',
+      'Last Login',
+      'Action'
+    ];
+
+    // Map creators to CSV rows
+    const rows = creators.map(creator => [
+      `"${creator.id} / ${creator.name || 'N/A'}"`,
+      `"${creator.email || 'N/A'}"`,
+      creator.kycStatus || 'N/A',
+      creator.payoutStatus || 'N/A',
+      creator.policyStrikes || 0,
+      `$${(creator.lifetimeEarnings || 0).toFixed(2)}`,
+      creator.lastLogin ? formatDate(creator.lastLogin) : 'Never',
+      'Exported'
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `creators-database-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Generate pagination buttons
@@ -108,7 +161,10 @@ export default function CreatorManagementPage() {
           <h1 className="text-3xl font-bold text-gray-900">Master Creator Directory</h1>
           <p className="text-gray-500 mt-1">Comprehensive overview of all platform creators</p>
         </div>
-        <button className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-sm">
+        <button 
+          onClick={handleExportDatabase}
+          className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-sm"
+        >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
@@ -117,7 +173,7 @@ export default function CreatorManagementPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4 mb-6" style={{ zIndex: 1 }}>
         <div className="flex-1 relative">
           <svg
             className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2"

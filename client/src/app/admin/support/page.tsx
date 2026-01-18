@@ -387,9 +387,9 @@ export default function SupportReportsPage() {
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-semibold text-sm">
-                              {ticket.email.substring(0, 2).toUpperCase()}
+                              {ticket.email?.substring(0, 2).toUpperCase() || 'U'}
                             </div>
-                            <span className="text-sm text-gray-900">{ticket.email}</span>
+                            <span className="text-sm text-gray-900">{ticket.email || 'N/A'}</span>
                           </div>
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-900">{ticket.subject}</td>

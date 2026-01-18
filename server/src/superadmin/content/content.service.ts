@@ -384,7 +384,13 @@ export class ContentService {
     // Generate signed URLs for content items (24-hour expiry for superadmin viewing)
     const contentItemsWithUrls = await Promise.all(
       (content.contentItems || []).map(async (item: any) => {
-        const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400); // 24 hours
+        let signedUrl: string | undefined;
+        try {
+          signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400); // 24 hours
+        } catch (error) {
+          console.error(`Failed to generate signed URL for ${item.s3Key}:`, error);
+          signedUrl = undefined;
+        }
         return {
           id: item.id,
           s3Key: item.s3Key,

@@ -12,66 +12,91 @@ export class CreatorsService {
 
     const where: any = {
       role: 'CREATOR',
+      creatorProfile: {
+        isNot: null,
+      },
     };
 
-    // Build creatorProfile filter
-    const creatorProfileFilter: any = {
-      isNot: null,
-    };
+    // Build creatorProfile filter conditions (without isNot)
+    const profileConditions: any = {};
 
     // KYC Status filter
     if (kycStatus && kycStatus !== 'all') {
-      creatorProfileFilter.verificationStatus = kycStatus;
+      profileConditions.verificationStatus = kycStatus;
     }
 
     // Payout Status filter
     if (payoutStatus && payoutStatus !== 'all') {
-      creatorProfileFilter.payoutStatus = payoutStatus;
+      profileConditions.payoutStatus = payoutStatus;
     }
 
     // Policy strikes filter
     if (strikes && strikes !== 'all') {
       if (strikes === '3+') {
-        creatorProfileFilter.policyStrikes = { gte: 3 };
+        profileConditions.policyStrikes = { gte: 3 };
       } else {
-        creatorProfileFilter.policyStrikes = parseInt(strikes, 10);
+        profileConditions.policyStrikes = parseInt(strikes, 10);
       }
     }
 
-    where.creatorProfile = creatorProfileFilter;
+    // Apply profile conditions to the where clause
+    if (Object.keys(profileConditions).length > 0) {
+      where.creatorProfile = {
+        ...where.creatorProfile,
+        ...profileConditions,
+      };
+    }
 
     // Search filter
     if (search) {
-      where.OR = [
+      const searchConditions: any[] = [
         { email: { contains: search, mode: 'insensitive' } },
-        { 
-          creatorProfile: { 
-            is: {
-              ...creatorProfileFilter,
-              displayName: { contains: search, mode: 'insensitive' }
-            }
-          } 
-        },
-        { 
-          creatorProfile: { 
-            is: {
-              ...creatorProfileFilter,
-              firstName: { contains: search, mode: 'insensitive' }
-            }
-          } 
-        },
-        { 
-          creatorProfile: { 
-            is: {
-              ...creatorProfileFilter,
-              lastName: { contains: search, mode: 'insensitive' }
-            }
-          } 
-        },
         { id: { contains: search, mode: 'insensitive' } },
       ];
-      // When using OR, remove the outer creatorProfile filter
-      delete where.creatorProfile;
+
+      // Add profile-based search conditions
+      if (Object.keys(profileConditions).length > 0) {
+        searchConditions.push(
+          { 
+            creatorProfile: { 
+              displayName: { contains: search, mode: 'insensitive' },
+              ...profileConditions
+            }
+          } as any,
+          { 
+            creatorProfile: { 
+              firstName: { contains: search, mode: 'insensitive' },
+              ...profileConditions
+            }
+          } as any,
+          { 
+            creatorProfile: { 
+              lastName: { contains: search, mode: 'insensitive' },
+              ...profileConditions
+            }
+          } as any
+        );
+      } else {
+        searchConditions.push(
+          { 
+            creatorProfile: { 
+              displayName: { contains: search, mode: 'insensitive' }
+            }
+          } as any,
+          { 
+            creatorProfile: { 
+              firstName: { contains: search, mode: 'insensitive' }
+            }
+          } as any,
+          { 
+            creatorProfile: { 
+              lastName: { contains: search, mode: 'insensitive' }
+            }
+          } as any
+        );
+      }
+
+      where.OR = searchConditions;
     }
 
     const [creators, total] = await Promise.all([

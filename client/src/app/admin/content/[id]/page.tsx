@@ -229,6 +229,7 @@ export default function ContentDetailsPage() {
                           {content.mediaType === 'VIDEO' && item.signedUrl ? (
                             <video
                               src={item.signedUrl}
+                              poster={content.thumbnailUrl}
                               className="w-full h-full object-cover"
                               muted
                             />

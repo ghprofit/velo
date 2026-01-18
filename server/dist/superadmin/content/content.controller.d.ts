@@ -50,8 +50,12 @@ export declare class ContentController {
             fileSize: any;
             duration: any;
             s3Key: any;
+            s3Bucket: string;
+            mediaType: any;
+            updatedAt: any;
             complianceLogs: any;
-            contentItems: any;
+            contentItems: any[];
+            recentPurchases: any;
             id: any;
             title: any;
             description: any;

@@ -47,6 +47,15 @@ export declare class ContentController {
             s3Key: string;
             s3Bucket: string;
             thumbnailUrl: string;
+            signedUrl: string | undefined;
+            contentItems: {
+                id: string;
+                s3Key: string;
+                s3Bucket: string;
+                fileSize: number;
+                order: number;
+                signedUrl: string | undefined;
+            }[];
             createdAt: string;
             updatedAt: string;
             creator: {

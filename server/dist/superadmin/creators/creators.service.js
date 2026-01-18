@@ -20,55 +20,70 @@ let CreatorsService = class CreatorsService {
         const { search, kycStatus, payoutStatus, strikes, page = 1, limit = 20 } = query;
         const where = {
             role: 'CREATOR',
+            creatorProfile: {
+                isNot: null,
+            },
         };
-        const creatorProfileFilter = {
-            isNot: null,
-        };
+        const profileConditions = {};
         if (kycStatus && kycStatus !== 'all') {
-            creatorProfileFilter.verificationStatus = kycStatus;
+            profileConditions.verificationStatus = kycStatus;
         }
         if (payoutStatus && payoutStatus !== 'all') {
-            creatorProfileFilter.payoutStatus = payoutStatus;
+            profileConditions.payoutStatus = payoutStatus;
         }
         if (strikes && strikes !== 'all') {
             if (strikes === '3+') {
-                creatorProfileFilter.policyStrikes = { gte: 3 };
+                profileConditions.policyStrikes = { gte: 3 };
             }
             else {
-                creatorProfileFilter.policyStrikes = parseInt(strikes, 10);
+                profileConditions.policyStrikes = parseInt(strikes, 10);
             }
         }
-        where.creatorProfile = creatorProfileFilter;
+        if (Object.keys(profileConditions).length > 0) {
+            where.creatorProfile = {
+                ...where.creatorProfile,
+                ...profileConditions,
+            };
+        }
         if (search) {
-            where.OR = [
+            const searchConditions = [
                 { email: { contains: search, mode: 'insensitive' } },
-                {
-                    creatorProfile: {
-                        is: {
-                            ...creatorProfileFilter,
-                            displayName: { contains: search, mode: 'insensitive' }
-                        }
-                    }
-                },
-                {
-                    creatorProfile: {
-                        is: {
-                            ...creatorProfileFilter,
-                            firstName: { contains: search, mode: 'insensitive' }
-                        }
-                    }
-                },
-                {
-                    creatorProfile: {
-                        is: {
-                            ...creatorProfileFilter,
-                            lastName: { contains: search, mode: 'insensitive' }
-                        }
-                    }
-                },
                 { id: { contains: search, mode: 'insensitive' } },
             ];
-            delete where.creatorProfile;
+            if (Object.keys(profileConditions).length > 0) {
+                searchConditions.push({
+                    creatorProfile: {
+                        displayName: { contains: search, mode: 'insensitive' },
+                        ...profileConditions
+                    }
+                }, {
+                    creatorProfile: {
+                        firstName: { contains: search, mode: 'insensitive' },
+                        ...profileConditions
+                    }
+                }, {
+                    creatorProfile: {
+                        lastName: { contains: search, mode: 'insensitive' },
+                        ...profileConditions
+                    }
+                });
+            }
+            else {
+                searchConditions.push({
+                    creatorProfile: {
+                        displayName: { contains: search, mode: 'insensitive' }
+                    }
+                }, {
+                    creatorProfile: {
+                        firstName: { contains: search, mode: 'insensitive' }
+                    }
+                }, {
+                    creatorProfile: {
+                        lastName: { contains: search, mode: 'insensitive' }
+                    }
+                });
+            }
+            where.OR = searchConditions;
         }
         const [creators, total] = await Promise.all([
             this.prisma.user.findMany({

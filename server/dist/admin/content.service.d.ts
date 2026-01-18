@@ -1,11 +1,13 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { S3Service } from '../s3/s3.service';
 import { QueryContentDto, ReviewContentDto, ContentStatsDto } from './dto/content.dto';
 export declare class ContentService {
     private prisma;
     private emailService;
+    private s3Service;
     private readonly logger;
-    constructor(prisma: PrismaService, emailService: EmailService);
+    constructor(prisma: PrismaService, emailService: EmailService, s3Service: S3Service);
     getContent(query: QueryContentDto): Promise<{
         success: boolean;
         data: {
@@ -50,6 +52,15 @@ export declare class ContentService {
             s3Key: string;
             s3Bucket: string;
             thumbnailUrl: string;
+            signedUrl: string | undefined;
+            contentItems: {
+                id: string;
+                s3Key: string;
+                s3Bucket: string;
+                fileSize: number;
+                order: number;
+                signedUrl: string | undefined;
+            }[];
             createdAt: string;
             updatedAt: string;
             creator: {

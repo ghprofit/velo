@@ -342,37 +342,47 @@ let ContentService = ContentService_1 = class ContentService {
         };
     }
     async processVideoModerationJobs() {
-        const pendingContent = await this.prisma.content.findMany({
-            where: {
-                rekognitionJobStatus: 'IN_PROGRESS',
-                rekognitionJobId: { not: null },
-            },
-            include: {
-                creator: {
-                    include: {
-                        user: { select: { id: true, email: true, displayName: true } },
+        try {
+            const pendingContent = await this.prisma.content.findMany({
+                where: {
+                    rekognitionJobStatus: 'IN_PROGRESS',
+                    rekognitionJobId: { not: null },
+                },
+                include: {
+                    creator: {
+                        include: {
+                            user: { select: { id: true, email: true, displayName: true } },
+                        },
                     },
                 },
-            },
-        });
-        if (pendingContent.length === 0) {
-            return;
+            });
+            if (pendingContent.length === 0) {
+                return;
+            }
+            this.logger.log(`Processing ${pendingContent.length} pending video moderation job(s)`);
+            for (const content of pendingContent) {
+                try {
+                    const jobResult = await this.recognitionService.getVideoSafetyResults(content.rekognitionJobId);
+                    if (jobResult.status === 'SUCCEEDED') {
+                        await this.handleModerationJobComplete(content, jobResult);
+                    }
+                    else if (jobResult.status === 'FAILED') {
+                        await this.handleModerationJobFailed(content, jobResult);
+                    }
+                }
+                catch (error) {
+                    const err = error;
+                    this.logger.error(`Failed to check job ${content.rekognitionJobId}: ${err.message}`);
+                }
+            }
         }
-        this.logger.log(`Processing ${pendingContent.length} pending video moderation job(s)`);
-        for (const content of pendingContent) {
-            try {
-                const jobResult = await this.recognitionService.getVideoSafetyResults(content.rekognitionJobId);
-                if (jobResult.status === 'SUCCEEDED') {
-                    await this.handleModerationJobComplete(content, jobResult);
-                }
-                else if (jobResult.status === 'FAILED') {
-                    await this.handleModerationJobFailed(content, jobResult);
-                }
+        catch (error) {
+            const err = error;
+            if (err.message.includes('Connection terminated') || err.message.includes('timeout')) {
+                this.logger.warn('Database connection timeout in video moderation - will retry later');
+                return;
             }
-            catch (error) {
-                const err = error;
-                this.logger.error(`Failed to check job ${content.rekognitionJobId}: ${err.message}`);
-            }
+            throw error;
         }
     }
     async handleModerationJobComplete(content, jobResult) {

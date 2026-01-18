@@ -151,6 +151,103 @@ let StripeService = StripeService_1 = class StripeService {
     getStripeInstance() {
         return this.stripe;
     }
+    async createConnectAccount(email, metadata = {}) {
+        try {
+            const account = await this.stripe.accounts.create({
+                type: 'express',
+                email,
+                capabilities: {
+                    card_payments: { requested: false },
+                    transfers: { requested: true },
+                },
+                metadata,
+            });
+            this.logger.log(`Connect account created: ${account.id} for ${email}`);
+            return account;
+        }
+        catch (error) {
+            this.logger.error('Failed to create Connect account:', error);
+            throw new common_1.BadRequestException('Failed to create payout account');
+        }
+    }
+    async createAccountLink(accountId, refreshUrl, returnUrl) {
+        try {
+            return await this.stripe.accountLinks.create({
+                account: accountId,
+                refresh_url: refreshUrl,
+                return_url: returnUrl,
+                type: 'account_onboarding',
+            });
+        }
+        catch (error) {
+            this.logger.error('Failed to create account link:', error);
+            throw new common_1.BadRequestException('Failed to create account link');
+        }
+    }
+    async getConnectAccount(accountId) {
+        try {
+            return await this.stripe.accounts.retrieve(accountId);
+        }
+        catch (error) {
+            this.logger.error(`Failed to retrieve account ${accountId}:`, error);
+            throw new common_1.BadRequestException('Failed to retrieve account');
+        }
+    }
+    async createTransfer(amount, currency, destination, metadata = {}) {
+        try {
+            const transfer = await this.stripe.transfers.create({
+                amount: Math.round(amount * 100),
+                currency: currency.toLowerCase(),
+                destination,
+                metadata,
+            });
+            this.logger.log(`Transfer created: ${transfer.id} for ${amount} ${currency} to ${destination}`);
+            return transfer;
+        }
+        catch (error) {
+            this.logger.error('Failed to create transfer:', error);
+            throw new common_1.BadRequestException('Failed to create transfer');
+        }
+    }
+    async createPayout(amount, currency, stripeAccountId, metadata = {}) {
+        try {
+            const payout = await this.stripe.payouts.create({
+                amount: Math.round(amount * 100),
+                currency: currency.toLowerCase(),
+                metadata,
+            }, {
+                stripeAccount: stripeAccountId,
+            });
+            this.logger.log(`Payout created: ${payout.id} for ${amount} ${currency} on account ${stripeAccountId}`);
+            return payout;
+        }
+        catch (error) {
+            this.logger.error('Failed to create payout:', error);
+            throw new common_1.BadRequestException('Failed to create payout');
+        }
+    }
+    async retrieveTransfer(transferId) {
+        try {
+            return await this.stripe.transfers.retrieve(transferId);
+        }
+        catch (error) {
+            this.logger.error(`Failed to retrieve transfer ${transferId}:`, error);
+            throw new common_1.BadRequestException('Failed to retrieve transfer');
+        }
+    }
+    async addExternalBankAccount(accountId, bankAccountToken) {
+        try {
+            const bankAccount = await this.stripe.accounts.createExternalAccount(accountId, {
+                external_account: bankAccountToken,
+            });
+            this.logger.log(`Bank account added to Connect account: ${accountId}`);
+            return bankAccount;
+        }
+        catch (error) {
+            this.logger.error('Failed to add bank account:', error);
+            throw new common_1.BadRequestException('Failed to add bank account');
+        }
+    }
 };
 exports.StripeService = StripeService;
 exports.StripeService = StripeService = StripeService_1 = __decorate([

@@ -27,6 +27,18 @@ let ReportsController = class ReportsController {
     async getAnalyticsOverview() {
         return this.reportsService.getAnalyticsOverview();
     }
+    async getRevenueTrends(period) {
+        return this.reportsService.getRevenueTrends(period || 'MONTHLY');
+    }
+    async getUserGrowth(userType) {
+        return this.reportsService.getUserGrowth(userType || 'CREATORS');
+    }
+    async getContentPerformance() {
+        return this.reportsService.getContentPerformance();
+    }
+    async getGeographicDistribution(limit) {
+        return this.reportsService.getGeographicDistribution(limit || 10);
+    }
 };
 exports.ReportsController = ReportsController;
 __decorate([
@@ -43,6 +55,33 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], ReportsController.prototype, "getAnalyticsOverview", null);
+__decorate([
+    (0, common_1.Get)('revenue-trends'),
+    __param(0, (0, common_1.Query)('period')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], ReportsController.prototype, "getRevenueTrends", null);
+__decorate([
+    (0, common_1.Get)('user-growth'),
+    __param(0, (0, common_1.Query)('userType')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], ReportsController.prototype, "getUserGrowth", null);
+__decorate([
+    (0, common_1.Get)('content-performance'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ReportsController.prototype, "getContentPerformance", null);
+__decorate([
+    (0, common_1.Get)('geographic-distribution'),
+    __param(0, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], ReportsController.prototype, "getGeographicDistribution", null);
 exports.ReportsController = ReportsController = __decorate([
     (0, common_1.Controller)('admin/reports'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),

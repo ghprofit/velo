@@ -16,14 +16,16 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const veriff_service_1 = require("../veriff/veriff.service");
 const email_service_1 = require("../email/email.service");
 const notifications_service_1 = require("../notifications/notifications.service");
+const stripe_service_1 = require("../stripe/stripe.service");
 const create_notification_dto_1 = require("../notifications/dto/create-notification.dto");
 const client_1 = require("@prisma/client");
 let CreatorsService = CreatorsService_1 = class CreatorsService {
-    constructor(prisma, veriffService, emailService, notificationsService) {
+    constructor(prisma, veriffService, emailService, notificationsService, stripeService) {
         this.prisma = prisma;
         this.veriffService = veriffService;
         this.emailService = emailService;
         this.notificationsService = notificationsService;
+        this.stripeService = stripeService;
         this.logger = new common_1.Logger(CreatorsService_1.name);
     }
     async initiateVerification(userId) {
@@ -177,6 +179,17 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             if (user.creatorProfile.verificationStatus !== client_1.VerificationStatus.VERIFIED) {
                 throw new common_1.BadRequestException('Creator must be verified before setting up payout');
             }
+            let stripeAccountId = user.creatorProfile.stripeAccountId;
+            if (!stripeAccountId) {
+                this.logger.log(`Creating Stripe Connect account for user: ${userId}`);
+                const stripeAccount = await this.stripeService.createConnectAccount(user.email, {
+                    userId: user.id,
+                    creatorId: user.creatorProfile.id,
+                    displayName: user.creatorProfile.displayName,
+                });
+                stripeAccountId = stripeAccount.id;
+                this.logger.log(`Stripe Connect account created: ${stripeAccountId}`);
+            }
             const updatedProfile = await this.prisma.creatorProfile.update({
                 where: { id: user.creatorProfile.id },
                 data: {
@@ -188,6 +201,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                     bankIban: bankAccountDto.bankIban,
                     bankCountry: bankAccountDto.bankCountry,
                     bankCurrency: bankAccountDto.bankCurrency || 'USD',
+                    stripeAccountId,
                     payoutSetupCompleted: true,
                 },
             });
@@ -199,6 +213,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 bankCountry: updatedProfile.bankCountry,
                 bankCurrency: updatedProfile.bankCurrency,
                 payoutSetupCompleted: updatedProfile.payoutSetupCompleted,
+                stripeAccountId: updatedProfile.stripeAccountId,
             };
         }
         catch (error) {
@@ -226,6 +241,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 bankCountry: profile.bankCountry,
                 bankCurrency: profile.bankCurrency,
                 payoutSetupCompleted: profile.payoutSetupCompleted,
+                stripeAccountId: profile.stripeAccountId || undefined,
             };
         }
         catch (error) {
@@ -244,8 +260,8 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 if (!user || !user.creatorProfile) {
                     throw new common_1.NotFoundException('Creator profile not found');
                 }
-                if (requestedAmount < 100) {
-                    throw new common_1.BadRequestException('Minimum payout amount is $100');
+                if (requestedAmount < 50) {
+                    throw new common_1.BadRequestException('Minimum payout amount is $50');
                 }
                 const completedPayouts = await tx.payout.aggregate({
                     where: {
@@ -274,7 +290,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 const existingPendingRequest = await tx.payoutRequest.findFirst({
                     where: {
                         creatorId: user.creatorProfile.id,
-                        status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
+                        status: 'PENDING',
                     },
                 });
                 if (existingPendingRequest) {
@@ -462,6 +478,63 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             throw error;
         }
     }
+    async getStripeOnboardingLink(userId) {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                include: { creatorProfile: true },
+            });
+            if (!user || !user.creatorProfile) {
+                throw new common_1.NotFoundException('Creator profile not found');
+            }
+            if (!user.creatorProfile.stripeAccountId) {
+                throw new common_1.BadRequestException('Please set up your bank account details first before completing Stripe onboarding');
+            }
+            const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+            const accountLink = await this.stripeService.createAccountLink(user.creatorProfile.stripeAccountId, `${clientUrl}/creator/settings?tab=payout&refresh=true`, `${clientUrl}/creator/settings?tab=payout&success=true`);
+            this.logger.log(`Stripe onboarding link created for user: ${userId}`);
+            return {
+                url: accountLink.url,
+                expiresAt: new Date(accountLink.expires_at * 1000),
+            };
+        }
+        catch (error) {
+            this.logger.error(`Failed to create Stripe onboarding link for user ${userId}:`, error);
+            throw error;
+        }
+    }
+    async getStripeAccountStatus(userId) {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                include: { creatorProfile: true },
+            });
+            if (!user || !user.creatorProfile) {
+                throw new common_1.NotFoundException('Creator profile not found');
+            }
+            if (!user.creatorProfile.stripeAccountId) {
+                return {
+                    hasAccount: false,
+                    onboardingComplete: false,
+                    chargesEnabled: false,
+                    payoutsEnabled: false,
+                };
+            }
+            const account = await this.stripeService.getConnectAccount(user.creatorProfile.stripeAccountId);
+            return {
+                hasAccount: true,
+                onboardingComplete: account.details_submitted || false,
+                chargesEnabled: account.charges_enabled || false,
+                payoutsEnabled: account.payouts_enabled || false,
+                requiresAction: !account.details_submitted,
+                accountId: account.id,
+            };
+        }
+        catch (error) {
+            this.logger.error(`Failed to get Stripe account status for user ${userId}:`, error);
+            throw error;
+        }
+    }
 };
 exports.CreatorsService = CreatorsService;
 exports.CreatorsService = CreatorsService = CreatorsService_1 = __decorate([
@@ -469,6 +542,7 @@ exports.CreatorsService = CreatorsService = CreatorsService_1 = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         veriff_service_1.VeriffService,
         email_service_1.EmailService,
-        notifications_service_1.NotificationsService])
+        notifications_service_1.NotificationsService,
+        stripe_service_1.StripeService])
 ], CreatorsService);
 //# sourceMappingURL=creators.service.js.map

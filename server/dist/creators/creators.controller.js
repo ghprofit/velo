@@ -134,6 +134,34 @@ let CreatorsController = CreatorsController_1 = class CreatorsController {
             throw error;
         }
     }
+    async getStripeOnboardingLink(req) {
+        this.logger.log(`Getting Stripe onboarding link for user: ${req.user.id}`);
+        try {
+            const result = await this.creatorsService.getStripeOnboardingLink(req.user.id);
+            return {
+                success: true,
+                data: result,
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to get Stripe onboarding link:', error);
+            throw error;
+        }
+    }
+    async getStripeAccountStatus(req) {
+        this.logger.log(`Getting Stripe account status for user: ${req.user.id}`);
+        try {
+            const result = await this.creatorsService.getStripeAccountStatus(req.user.id);
+            return {
+                success: true,
+                data: result,
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to get Stripe account status:', error);
+            throw error;
+        }
+    }
 };
 exports.CreatorsController = CreatorsController;
 __decorate([
@@ -197,6 +225,22 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], CreatorsController.prototype, "getPayoutRequestById", null);
+__decorate([
+    (0, common_1.Get)('payout/stripe-onboarding'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CreatorsController.prototype, "getStripeOnboardingLink", null);
+__decorate([
+    (0, common_1.Get)('payout/stripe-status'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CreatorsController.prototype, "getStripeAccountStatus", null);
 exports.CreatorsController = CreatorsController = CreatorsController_1 = __decorate([
     (0, common_1.Controller)('creators'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

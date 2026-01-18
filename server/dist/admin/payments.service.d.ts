@@ -1,12 +1,15 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { StripeService } from '../stripe/stripe.service';
 import { QueryPaymentsDto, QueryPayoutsDto, PaymentStatsDto, RevenueChartDto } from './dto/payments.dto';
 export declare class PaymentsService {
     private readonly prisma;
     private readonly emailService;
     private readonly notificationsService;
-    constructor(prisma: PrismaService, emailService: EmailService, notificationsService: NotificationsService);
+    private readonly stripeService;
+    private readonly logger;
+    constructor(prisma: PrismaService, emailService: EmailService, notificationsService: NotificationsService, stripeService: StripeService);
     getPaymentStats(): Promise<PaymentStatsDto>;
     getTransactions(query: QueryPaymentsDto): Promise<{
         success: boolean;
@@ -94,22 +97,13 @@ export declare class PaymentsService {
     processPayout(payoutId: string): Promise<{
         success: boolean;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        message: string;
         data: {
-            amount: number;
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            currency: string;
+            amount: number;
             status: string;
-            creatorId: string;
-            processedAt: Date | null;
-            paymentMethod: string;
             paymentId: string | null;
-            notes: string | null;
+            stripeStatus: string;
+            estimatedArrival: string;
         };
     }>;
     getRevenueChart(period: 'weekly' | 'monthly' | 'yearly'): Promise<RevenueChartDto[]>;

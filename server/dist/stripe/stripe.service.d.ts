@@ -14,5 +14,12 @@ export declare class StripeService {
     getPublishableKey(): string;
     createCustomer(email: string, metadata?: Record<string, string>): Promise<Stripe.Customer>;
     getStripeInstance(): Stripe;
+    createConnectAccount(email: string, metadata?: Record<string, string>): Promise<Stripe.Account>;
+    createAccountLink(accountId: string, refreshUrl: string, returnUrl: string): Promise<Stripe.AccountLink>;
+    getConnectAccount(accountId: string): Promise<Stripe.Account>;
+    createTransfer(amount: number, currency: string, destination: string, metadata?: Record<string, string>): Promise<Stripe.Transfer>;
+    createPayout(amount: number, currency: string, stripeAccountId: string, metadata?: Record<string, string>): Promise<Stripe.Payout>;
+    retrieveTransfer(transferId: string): Promise<Stripe.Transfer>;
+    addExternalBankAccount(accountId: string, bankAccountToken: string): Promise<Stripe.BankAccount>;
 }
 //# sourceMappingURL=stripe.service.d.ts.map

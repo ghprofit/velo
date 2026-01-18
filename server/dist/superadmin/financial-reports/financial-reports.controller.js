@@ -16,6 +16,7 @@ exports.FinancialReportsController = void 0;
 const common_1 = require("@nestjs/common");
 const financial_reports_service_1 = require("./financial-reports.service");
 const query_financial_reports_dto_1 = require("./dto/query-financial-reports.dto");
+const jwt_auth_guard_1 = require("../../auth/guards/jwt-auth.guard");
 const superadmin_guard_1 = require("../guards/superadmin.guard");
 let FinancialReportsController = class FinancialReportsController {
     constructor(financialReportsService) {
@@ -84,7 +85,7 @@ __decorate([
 ], FinancialReportsController.prototype, "getCreatorEarnings", null);
 exports.FinancialReportsController = FinancialReportsController = __decorate([
     (0, common_1.Controller)('superadmin/financial-reports'),
-    (0, common_1.UseGuards)(superadmin_guard_1.SuperAdminGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, superadmin_guard_1.SuperAdminGuard),
     __metadata("design:paramtypes", [financial_reports_service_1.FinancialReportsService])
 ], FinancialReportsController);
 //# sourceMappingURL=financial-reports.controller.js.map

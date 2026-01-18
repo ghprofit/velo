@@ -20,19 +20,24 @@ let ContentModerationCron = ContentModerationCron_1 = class ContentModerationCro
         this.logger = new common_1.Logger(ContentModerationCron_1.name);
     }
     async checkVideoModerationJobs() {
-        this.logger.debug('Checking pending video moderation jobs...');
         try {
+            this.logger.debug('Checking pending video moderation jobs...');
             await this.contentService.processVideoModerationJobs();
         }
         catch (error) {
             const err = error;
-            this.logger.error(`Video moderation cron failed: ${err.message}`);
+            if (!err.message.includes('Connection terminated') && !err.message.includes('timeout')) {
+                this.logger.error(`Video moderation cron failed: ${err.message}`);
+            }
+            else {
+                this.logger.warn('Video moderation cron: Connection timeout (will retry)');
+            }
         }
     }
 };
 exports.ContentModerationCron = ContentModerationCron;
 __decorate([
-    (0, schedule_1.Cron)('*/30 * * * * *'),
+    (0, schedule_1.Cron)('0 */2 * * * *'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)

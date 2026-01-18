@@ -1,13 +1,15 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../../email/email.service';
 import { ConfigService } from '@nestjs/config';
+import { S3Service } from '../../s3/s3.service';
 import { QueryContentDto } from './dto/query-content.dto';
 import { UpdateContentDto, ReviewContentDto, RemoveContentDto } from './dto/update-content.dto';
 export declare class ContentService {
     private prisma;
     private emailService;
     private config;
-    constructor(prisma: PrismaService, emailService: EmailService, config: ConfigService);
+    private s3Service;
+    constructor(prisma: PrismaService, emailService: EmailService, config: ConfigService, s3Service: S3Service);
     getContent(query: QueryContentDto): Promise<{
         data: {
             id: any;
@@ -48,8 +50,12 @@ export declare class ContentService {
         fileSize: any;
         duration: any;
         s3Key: any;
+        s3Bucket: string;
+        mediaType: any;
+        updatedAt: any;
         complianceLogs: any;
-        contentItems: any;
+        contentItems: any[];
+        recentPurchases: any;
         id: any;
         title: any;
         description: any;

@@ -91,22 +91,13 @@ export declare class PaymentsController {
     processPayout(body: ProcessPayoutDto): Promise<{
         success: boolean;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        message: string;
         data: {
-            amount: number;
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            currency: string;
+            amount: number;
             status: string;
-            creatorId: string;
-            processedAt: Date | null;
-            paymentMethod: string;
             paymentId: string | null;
-            notes: string | null;
+            stripeStatus: string;
+            estimatedArrival: string;
         };
     }>;
     getRevenueChart(period: 'weekly' | 'monthly' | 'yearly'): Promise<import("./dto/payments.dto").RevenueChartDto[]>;

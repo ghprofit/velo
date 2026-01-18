@@ -165,6 +165,185 @@ let ReportsService = ReportsService_1 = class ReportsService {
             throw error;
         }
     }
+    async getRevenueTrends(period) {
+        try {
+            const now = new Date();
+            let startDate;
+            let groupByFormat;
+            let periods;
+            if (period === 'WEEKLY') {
+                startDate = new Date(now.getTime() - 8 * 7 * 24 * 60 * 60 * 1000);
+                groupByFormat = 'week';
+                periods = Array.from({ length: 8 }, (_, i) => `Week ${i + 1}`);
+            }
+            else if (period === 'MONTHLY') {
+                startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+                groupByFormat = 'month';
+                periods = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            }
+            else {
+                startDate = new Date(now.getFullYear(), 0, 1);
+                groupByFormat = 'quarter';
+                periods = ['Q1', 'Q2', 'Q3', 'Q4'];
+            }
+            const purchases = await this.prisma.purchase.findMany({
+                where: {
+                    status: 'COMPLETED',
+                    createdAt: { gte: startDate },
+                },
+                select: {
+                    amount: true,
+                    createdAt: true,
+                },
+                orderBy: {
+                    createdAt: 'asc',
+                },
+            });
+            const revenueData = new Map();
+            purchases.forEach((purchase) => {
+                let periodKey;
+                const purchaseDate = new Date(purchase.createdAt);
+                if (period === 'WEEKLY') {
+                    const weeksDiff = Math.floor((purchaseDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
+                    periodKey = `Week ${weeksDiff + 1}`;
+                }
+                else if (period === 'MONTHLY') {
+                    periodKey = periods[purchaseDate.getMonth()];
+                }
+                else {
+                    const quarter = Math.floor(purchaseDate.getMonth() / 3);
+                    periodKey = `Q${quarter + 1}`;
+                }
+                const currentRevenue = revenueData.get(periodKey) || 0;
+                revenueData.set(periodKey, currentRevenue + Number(purchase.amount));
+            });
+            const data = periods.map((period) => ({
+                period,
+                revenue: revenueData.get(period) || 0,
+            }));
+            return {
+                success: true,
+                data,
+            };
+        }
+        catch (error) {
+            this.logger.error('Error fetching revenue trends:', error);
+            throw error;
+        }
+    }
+    async getUserGrowth(userType) {
+        try {
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), 0, 1);
+            if (userType === 'CREATORS') {
+                const creators = await this.prisma.creatorProfile.findMany({
+                    where: {
+                        createdAt: { gte: startDate },
+                    },
+                    select: {
+                        createdAt: true,
+                    },
+                });
+                const monthlyData = new Map();
+                creators.forEach((creator) => {
+                    const month = new Date(creator.createdAt).getMonth();
+                    monthlyData.set(month, (monthlyData.get(month) || 0) + 1);
+                });
+                const data = Array.from({ length: 12 }, (_, i) => ({
+                    period: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+                    count: monthlyData.get(i) || 0,
+                }));
+                return { success: true, data };
+            }
+            else {
+                const buyers = await this.prisma.buyerSession.findMany({
+                    where: {
+                        createdAt: { gte: startDate },
+                    },
+                    select: {
+                        createdAt: true,
+                    },
+                });
+                const monthlyData = new Map();
+                buyers.forEach((buyer) => {
+                    const month = new Date(buyer.createdAt).getMonth();
+                    monthlyData.set(month, (monthlyData.get(month) || 0) + 1);
+                });
+                const data = Array.from({ length: 12 }, (_, i) => ({
+                    period: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+                    count: monthlyData.get(i) || 0,
+                }));
+                return { success: true, data };
+            }
+        }
+        catch (error) {
+            this.logger.error('Error fetching user growth:', error);
+            throw error;
+        }
+    }
+    async getContentPerformance() {
+        try {
+            const contentByType = await this.prisma.content.groupBy({
+                by: ['contentType'],
+                _count: {
+                    id: true,
+                },
+                where: {
+                    status: 'APPROVED',
+                    isPublished: true,
+                },
+            });
+            const total = contentByType.reduce((sum, item) => sum + item._count.id, 0);
+            const data = contentByType.map((item) => ({
+                contentType: item.contentType,
+                count: item._count.id,
+                percentage: total > 0 ? Math.round((item._count.id / total) * 100 * 10) / 10 : 0,
+            }));
+            return {
+                success: true,
+                data,
+            };
+        }
+        catch (error) {
+            this.logger.error('Error fetching content performance:', error);
+            throw error;
+        }
+    }
+    async getGeographicDistribution(limit = 10) {
+        try {
+            const viewsByCountry = await this.prisma.contentView.groupBy({
+                by: ['country'],
+                _count: {
+                    id: true,
+                },
+                where: {
+                    country: {
+                        not: null,
+                    },
+                },
+                orderBy: {
+                    _count: {
+                        id: 'desc',
+                    },
+                },
+                take: limit,
+            });
+            const totalViews = viewsByCountry.reduce((sum, item) => sum + item._count.id, 0);
+            const data = viewsByCountry.map((item) => ({
+                country: item.country,
+                percentage: totalViews > 0 ? Math.round((item._count.id / totalViews) * 100 * 10) / 10 : 0,
+                count: item._count.id,
+            }));
+            return {
+                success: true,
+                data,
+            };
+        }
+        catch (error) {
+            this.logger.error('Error fetching geographic distribution:', error);
+            throw error;
+        }
+    }
 };
 exports.ReportsService = ReportsService;
 exports.ReportsService = ReportsService = ReportsService_1 = __decorate([

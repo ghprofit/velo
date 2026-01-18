@@ -14,11 +14,13 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const email_service_1 = require("../../email/email.service");
 const config_1 = require("@nestjs/config");
+const s3_service_1 = require("../../s3/s3.service");
 let ContentService = class ContentService {
-    constructor(prisma, emailService, config) {
+    constructor(prisma, emailService, config, s3Service) {
         this.prisma = prisma;
         this.emailService = emailService;
         this.config = config;
+        this.s3Service = s3Service;
     }
     async getContent(query) {
         const { search, status, complianceStatus, contentType, severity, page = 1, limit = 20 } = query;
@@ -123,6 +125,15 @@ let ContentService = class ContentService {
                     orderBy: { createdAt: 'desc' },
                 },
                 contentItems: true,
+                purchases: {
+                    take: 10,
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        amount: true,
+                        createdAt: true,
+                    },
+                },
             },
         });
         if (!content) {
@@ -323,14 +334,35 @@ let ContentService = class ContentService {
             publishedAt: content.publishedAt,
         };
     }
-    formatContentDetailResponse(content) {
+    async formatContentDetailResponse(content) {
         const base = this.formatContentResponse(content);
+        const contentItemsWithUrls = await Promise.all((content.contentItems || []).map(async (item) => {
+            let signedUrl;
+            try {
+                signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400);
+            }
+            catch (error) {
+                console.error(`Failed to generate signed URL for ${item.s3Key}:`, error);
+                signedUrl = undefined;
+            }
+            return {
+                id: item.id,
+                s3Key: item.s3Key,
+                s3Bucket: this.config.get('AWS_S3_BUCKET_NAME') || 'velo-content',
+                fileSize: item.fileSize,
+                order: item.order,
+                signedUrl,
+            };
+        }));
         return {
             ...base,
             creatorEmail: content.creator?.user?.email,
             fileSize: content.fileSize,
             duration: content.duration,
             s3Key: content.s3Key,
+            s3Bucket: this.config.get('AWS_S3_BUCKET_NAME') || 'velo-content',
+            mediaType: content.contentType,
+            updatedAt: content.updatedAt,
             complianceLogs: content.complianceLogs?.map((log) => ({
                 id: log.id,
                 checkType: log.checkType,
@@ -341,11 +373,11 @@ let ContentService = class ContentService {
                 notes: log.notes,
                 createdAt: log.createdAt,
             })) || [],
-            contentItems: content.contentItems?.map((item) => ({
-                id: item.id,
-                s3Key: item.s3Key,
-                fileSize: item.fileSize,
-                order: item.order,
+            contentItems: contentItemsWithUrls,
+            recentPurchases: content.purchases?.map((purchase) => ({
+                id: purchase.id,
+                amount: purchase.amount,
+                createdAt: purchase.createdAt,
             })) || [],
         };
     }
@@ -355,6 +387,7 @@ exports.ContentService = ContentService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         email_service_1.EmailService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        s3_service_1.S3Service])
 ], ContentService);
 //# sourceMappingURL=content.service.js.map

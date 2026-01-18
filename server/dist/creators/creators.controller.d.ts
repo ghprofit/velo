@@ -90,5 +90,30 @@ export declare class CreatorsController {
             } | null;
         };
     }>;
+    getStripeOnboardingLink(req: any): Promise<{
+        success: boolean;
+        data: {
+            url: string;
+            expiresAt: Date;
+        };
+    }>;
+    getStripeAccountStatus(req: any): Promise<{
+        success: boolean;
+        data: {
+            hasAccount: boolean;
+            onboardingComplete: boolean;
+            chargesEnabled: boolean;
+            payoutsEnabled: boolean;
+            requiresAction?: undefined;
+            accountId?: undefined;
+        } | {
+            hasAccount: boolean;
+            onboardingComplete: boolean;
+            chargesEnabled: boolean;
+            payoutsEnabled: boolean;
+            requiresAction: boolean;
+            accountId: string;
+        };
+    }>;
 }
 //# sourceMappingURL=creators.controller.d.ts.map

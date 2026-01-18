@@ -14,12 +14,13 @@ const prisma_module_1 = require("../prisma/prisma.module");
 const veriff_module_1 = require("../veriff/veriff.module");
 const email_module_1 = require("../email/email.module");
 const notifications_module_1 = require("../notifications/notifications.module");
+const stripe_module_1 = require("../stripe/stripe.module");
 let CreatorsModule = class CreatorsModule {
 };
 exports.CreatorsModule = CreatorsModule;
 exports.CreatorsModule = CreatorsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, veriff_module_1.VeriffModule.forRoot(), email_module_1.EmailModule, notifications_module_1.NotificationsModule],
+        imports: [prisma_module_1.PrismaModule, veriff_module_1.VeriffModule.forRoot(), email_module_1.EmailModule, notifications_module_1.NotificationsModule, stripe_module_1.StripeModule],
         controllers: [creators_controller_1.CreatorsController],
         providers: [creators_service_1.CreatorsService],
         exports: [creators_service_1.CreatorsService],

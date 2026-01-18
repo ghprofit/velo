@@ -15,5 +15,6 @@ export declare class BankAccountResponseDto {
     bankCountry: string;
     bankCurrency: string;
     payoutSetupCompleted: boolean;
+    stripeAccountId?: string;
 }
 //# sourceMappingURL=bank-account.dto.d.ts.map

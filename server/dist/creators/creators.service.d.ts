@@ -2,14 +2,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { VeriffService } from '../veriff/veriff.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { StripeService } from '../stripe/stripe.service';
 import { SetupBankAccountDto, BankAccountResponseDto } from './dto/bank-account.dto';
 export declare class CreatorsService {
     private readonly prisma;
     private readonly veriffService;
     private readonly emailService;
     private readonly notificationsService;
+    private readonly stripeService;
     private readonly logger;
-    constructor(prisma: PrismaService, veriffService: VeriffService, emailService: EmailService, notificationsService: NotificationsService);
+    constructor(prisma: PrismaService, veriffService: VeriffService, emailService: EmailService, notificationsService: NotificationsService, stripeService: StripeService);
     initiateVerification(userId: string): Promise<{
         sessionId: string;
         verificationUrl: string;
@@ -72,6 +74,25 @@ export declare class CreatorsService {
             paymentId: string | null;
             notes: string | null;
         } | null;
+    }>;
+    getStripeOnboardingLink(userId: string): Promise<{
+        url: string;
+        expiresAt: Date;
+    }>;
+    getStripeAccountStatus(userId: string): Promise<{
+        hasAccount: boolean;
+        onboardingComplete: boolean;
+        chargesEnabled: boolean;
+        payoutsEnabled: boolean;
+        requiresAction?: undefined;
+        accountId?: undefined;
+    } | {
+        hasAccount: boolean;
+        onboardingComplete: boolean;
+        chargesEnabled: boolean;
+        payoutsEnabled: boolean;
+        requiresAction: boolean;
+        accountId: string;
     }>;
 }
 //# sourceMappingURL=creators.service.d.ts.map

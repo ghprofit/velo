@@ -5,10 +5,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var SuperAdminGuard_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuperAdminGuard = void 0;
 const common_1 = require("@nestjs/common");
-let SuperAdminGuard = class SuperAdminGuard {
+let SuperAdminGuard = SuperAdminGuard_1 = class SuperAdminGuard {
+    constructor() {
+        this.logger = new common_1.Logger(SuperAdminGuard_1.name);
+    }
     canActivate(context) {
         const request = context.switchToHttp().getRequest();
         const user = request.user;
@@ -16,13 +20,14 @@ let SuperAdminGuard = class SuperAdminGuard {
             throw new common_1.ForbiddenException('Authentication required');
         }
         if (user.role !== 'SUPER_ADMIN') {
-            throw new common_1.ForbiddenException('Super Admin access required');
+            this.logger.warn(`Access denied for user ${user.email} with role ${user.role}. SUPER_ADMIN role required.`);
+            throw new common_1.ForbiddenException(`Super Admin access required. Your current role: ${user.role}`);
         }
         return true;
     }
 };
 exports.SuperAdminGuard = SuperAdminGuard;
-exports.SuperAdminGuard = SuperAdminGuard = __decorate([
+exports.SuperAdminGuard = SuperAdminGuard = SuperAdminGuard_1 = __decorate([
     (0, common_1.Injectable)()
 ], SuperAdminGuard);
 //# sourceMappingURL=superadmin.guard.js.map

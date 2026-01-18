@@ -17,7 +17,7 @@ exports.RequestPayoutDto = RequestPayoutDto;
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(100, { message: 'Minimum payout amount is $100' }),
+    (0, class_validator_1.Min)(50, { message: 'Minimum payout amount is $50' }),
     __metadata("design:type", Number)
 ], RequestPayoutDto.prototype, "amount", void 0);
 __decorate([

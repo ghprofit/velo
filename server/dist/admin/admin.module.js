@@ -25,12 +25,14 @@ const reports_service_1 = require("./reports.service");
 const prisma_module_1 = require("../prisma/prisma.module");
 const email_module_1 = require("../email/email.module");
 const notifications_module_1 = require("../notifications/notifications.module");
+const stripe_module_1 = require("../stripe/stripe.module");
+const s3_module_1 = require("../s3/s3.module");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
 exports.AdminModule = AdminModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, email_module_1.EmailModule, notifications_module_1.NotificationsModule],
+        imports: [prisma_module_1.PrismaModule, email_module_1.EmailModule, notifications_module_1.NotificationsModule, stripe_module_1.StripeModule, s3_module_1.S3Module],
         controllers: [admin_controller_1.AdminController, creators_controller_1.CreatorsController, content_controller_1.ContentController, payments_controller_1.PaymentsController, support_controller_1.SupportController, notifications_controller_1.NotificationsController, reports_controller_1.ReportsController],
         providers: [admin_service_1.AdminService, creators_service_1.CreatorsService, content_service_1.ContentService, payments_service_1.PaymentsService, support_service_1.SupportService, notifications_service_1.AdminNotificationsService, reports_service_1.ReportsService],
         exports: [admin_service_1.AdminService, creators_service_1.CreatorsService, content_service_1.ContentService, payments_service_1.PaymentsService, support_service_1.SupportService, notifications_service_1.AdminNotificationsService, reports_service_1.ReportsService],

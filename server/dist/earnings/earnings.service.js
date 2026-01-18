@@ -28,7 +28,26 @@ let EarningsService = class EarningsService {
     async getBalance(userId) {
         const creatorProfile = await this.getCreatorProfile(userId);
         const lifetimeEarnings = creatorProfile.totalEarnings || 0;
-        const pendingBalance = 0;
+        const pendingPayoutsAggregation = await this.prisma.payoutRequest.aggregate({
+            where: {
+                creatorId: creatorProfile.id,
+                status: 'PENDING',
+            },
+            _sum: {
+                requestedAmount: true,
+            },
+        });
+        const pendingBalance = pendingPayoutsAggregation._sum.requestedAmount || 0;
+        const processingPayoutsAggregation = await this.prisma.payoutRequest.aggregate({
+            where: {
+                creatorId: creatorProfile.id,
+                status: 'PROCESSING',
+            },
+            _sum: {
+                requestedAmount: true,
+            },
+        });
+        const processingBalance = processingPayoutsAggregation._sum.requestedAmount || 0;
         const payoutsAggregation = await this.prisma.payout.aggregate({
             where: {
                 creatorId: creatorProfile.id,
@@ -39,7 +58,7 @@ let EarningsService = class EarningsService {
             },
         });
         const totalPayouts = payoutsAggregation._sum.amount || 0;
-        let availableBalance = Math.max(0, lifetimeEarnings - totalPayouts);
+        let availableBalance = Math.max(0, lifetimeEarnings - totalPayouts - pendingBalance - processingBalance);
         let lockedBonus = 0;
         let salesToUnlock = 0;
         if (creatorProfile.waitlistBonus > 0 && !creatorProfile.bonusWithdrawn) {

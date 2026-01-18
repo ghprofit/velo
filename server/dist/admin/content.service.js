@@ -14,10 +14,12 @@ exports.ContentService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const email_service_1 = require("../email/email.service");
+const s3_service_1 = require("../s3/s3.service");
 let ContentService = ContentService_1 = class ContentService {
-    constructor(prisma, emailService) {
+    constructor(prisma, emailService, s3Service) {
         this.prisma = prisma;
         this.emailService = emailService;
+        this.s3Service = s3Service;
         this.logger = new common_1.Logger(ContentService_1.name);
     }
     async getContent(query) {
@@ -135,6 +137,9 @@ let ContentService = ContentService_1 = class ContentService {
                     take: 10,
                     orderBy: { createdAt: 'desc' },
                 },
+                contentItems: {
+                    orderBy: { order: 'asc' },
+                },
             },
         });
         if (!content) {
@@ -142,6 +147,29 @@ let ContentService = ContentService_1 = class ContentService {
                 success: false,
                 message: 'Content not found',
             };
+        }
+        let signedUrl;
+        const contentItemsWithUrls = await Promise.all(content.contentItems.map(async (item) => {
+            let itemSignedUrl;
+            if (item.s3Key) {
+                try {
+                    itemSignedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400);
+                }
+                catch (error) {
+                    this.logger.error(`Failed to generate signed URL for item ${item.id}:`, error);
+                }
+            }
+            return {
+                id: item.id,
+                s3Key: item.s3Key,
+                s3Bucket: item.s3Bucket,
+                fileSize: item.fileSize,
+                order: item.order,
+                signedUrl: itemSignedUrl,
+            };
+        }));
+        if (contentItemsWithUrls.length > 0 && contentItemsWithUrls[0]) {
+            signedUrl = contentItemsWithUrls[0].signedUrl;
         }
         return {
             success: true,
@@ -155,6 +183,8 @@ let ContentService = ContentService_1 = class ContentService {
                 s3Key: content.s3Key,
                 s3Bucket: content.s3Bucket,
                 thumbnailUrl: content.thumbnailUrl,
+                signedUrl,
+                contentItems: contentItemsWithUrls,
                 createdAt: content.createdAt.toISOString(),
                 updatedAt: content.updatedAt.toISOString(),
                 creator: {
@@ -279,6 +309,7 @@ exports.ContentService = ContentService;
 exports.ContentService = ContentService = ContentService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        email_service_1.EmailService])
+        email_service_1.EmailService,
+        s3_service_1.S3Service])
 ], ContentService);
 //# sourceMappingURL=content.service.js.map

@@ -171,8 +171,8 @@ let RecognitionService = RecognitionService_1 = class RecognitionService {
     async getVideoSafetyResults(jobId, nextToken) {
         this.logger.log(`Getting video safety results for job: ${jobId}`);
         try {
-            if (!this.isConfigured || !this.rekognitionClient) {
-                this.logger.warn('[SIMULATED] Video safety results');
+            if (jobId.startsWith('simulated-') || !this.isConfigured || !this.rekognitionClient) {
+                this.logger.warn('[SIMULATED] Video safety results - auto-approving');
                 return {
                     jobId,
                     status: 'SUCCEEDED',

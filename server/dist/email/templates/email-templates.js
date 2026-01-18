@@ -1,52 +1,10 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HTML_TEMPLATES = exports.EMAIL_TEMPLATES = exports.SENDGRID_TEMPLATE_ID = void 0;
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
-const getLogoBase64 = () => {
-    try {
-        const logoPath = path.join(__dirname, '../../assets/logo_pngs/Secondary_Logo_white.png');
-        const pngBuffer = fs.readFileSync(logoPath);
-        const base64 = pngBuffer.toString('base64');
-        return `data:image/png;base64,${base64}`;
-    }
-    catch (error) {
-        console.error('Failed to load email logo:', error);
-        return '';
-    }
+const getLogoUrl = () => {
+    const bucketName = process.env.AWS_S3_BUCKET_NAME || 'velo-content';
+    const region = process.env.AWS_REGION || 'us-east-1';
+    return `https://${bucketName}.s3.${region}.amazonaws.com/Secondary_Logo_black.png`;
 };
 exports.SENDGRID_TEMPLATE_ID = process.env.SENDGRID_TEMPLATE_ID || 'd-your-template-id';
 exports.EMAIL_TEMPLATES = {
@@ -228,7 +186,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -280,7 +238,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -331,7 +289,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -378,7 +336,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -425,7 +383,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -472,7 +430,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -519,7 +477,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -566,7 +524,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -620,7 +578,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -686,7 +644,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -749,7 +707,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -809,7 +767,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -874,7 +832,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -936,7 +894,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -990,7 +948,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -1039,7 +997,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -1089,7 +1047,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -1138,7 +1096,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -1170,7 +1128,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"
@@ -1224,7 +1182,7 @@ exports.HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       <img
-        src="${getLogoBase64()}"
+        src="${getLogoUrl()}"
         alt="VeloLink Logo"
         width="200"
         height="165"

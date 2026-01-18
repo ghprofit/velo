@@ -113,7 +113,7 @@ export default function PaymentFailedPage({ params }: { params: Promise<{ id: st
             </ul>
             <div className="mt-4 pt-4 border-t border-blue-200">
               <p className="text-sm text-blue-700">
-                Need help? <Link href="/help" className="font-semibold underline hover:text-blue-900">Contact our support team</Link>
+                Need help? <Link href="/creator/support" className="font-semibold underline hover:text-blue-900">Contact our support team</Link>
               </p>
             </div>
           </div>

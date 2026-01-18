@@ -65,7 +65,7 @@ export default function VerifyIdentityPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-8" />
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" width={120} height={32} className="h-8" />
           </div>
 
           {/* Mobile: Simplified Step Indicator (Dots) */}

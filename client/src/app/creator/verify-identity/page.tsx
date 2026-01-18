@@ -209,26 +209,38 @@ export default function CreatorVerifyIdentityPage() {
                 Verification In Progress
               </h2>
               <p className="text-gray-700 mb-6">
-                Your verification is currently being reviewed. This usually takes a few minutes, but can take up to 24 hours. We&apos;ll send you an email notification once the review is complete.
+                Your identity verification is being reviewed. This usually takes a few minutes, but can take up to 24 hours.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   onClick={checkVerificationStatus}
                   className="w-full sm:w-auto"
                 >
-                  Refresh Status
+                  Check Status
                 </Button>
-                {verificationSession && (
+                {verificationSession ? (
                   <Button
                     variant="outline"
                     onClick={() => window.open(verificationSession.verificationUrl, '_blank')}
                     className="w-full sm:w-auto"
                   >
-                    Reopen Verification Window
+                    View Details
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={sessionId ? handleResubmit : handleInitiateVerification}
+                    isLoading={isLoading}
+                    className="w-full sm:w-auto"
+                  >
+                    {isLoading ? 'Loading...' : 'View Details'}
                   </Button>
                 )}
               </div>
+              <p className="text-sm text-gray-600 mt-4">
+                Need help? <a href="/support" className="text-indigo-600 hover:text-indigo-700 underline">Contact our support team</a>
+              </p>
             </div>
           ) : (
             <div className="space-y-8">

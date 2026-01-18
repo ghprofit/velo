@@ -239,7 +239,7 @@ export default function UploadBlockedScreen({
           {/* Help Text */}
           <p className="text-xs sm:text-sm text-gray-500 text-center mt-6">
             <p className="text-sm text-blue-700">
-                Need help? <Link href="/help" className="font-semibold underline hover:text-blue-900">Contact our support team</Link>
+                Need help? <Link href="/creator/support" className="font-semibold underline hover:text-blue-900">Contact our support team</Link>
               </p>
           </p>
         </div>

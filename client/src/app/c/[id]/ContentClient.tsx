@@ -288,7 +288,7 @@ export function ContentClient({ id }: { id: string }) {
                 Go Back Home
               </Link>
               <Link
-                href="/help"
+                href="/creator/help"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-200 shadow-md hover:shadow-lg border border-white/20"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

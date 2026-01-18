@@ -107,7 +107,7 @@ export default function CompletePage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo"/>
+            <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" width={120} height={32}/>
           </div>
 
           {/* Step Indicator */}

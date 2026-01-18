@@ -425,7 +425,7 @@ export default function RegisterPage() {
       />
       {/* Mobile: Sticky Header */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 py-4 border-b border-gray-100 md:hidden">
-        <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-12"/>
+        <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" width={120} height={48} className="h-12"/>
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 py-6 md:py-0">
@@ -442,7 +442,7 @@ export default function RegisterPage() {
           >
             {/* Logo (Desktop Only) */}
             <motion.div variants={staggerItem} className="hidden md:flex justify-center mb-8">
-              <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" className="h-15"/>
+              <Image src="/assets/logo_svgs/Primary_Logo(black).svg" alt="velo logo" width={150} height={60} className="h-15"/>
             </motion.div>
 
             {/* Title */}

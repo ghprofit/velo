@@ -3,9 +3,13 @@ import type { EmailTemplate } from '../interfaces/email.interface';
 /**
  * VeloLink Logo URL from S3
  * Using hosted S3 URL for reliable display across all email clients
+ * Note: Using PNG instead of SVG as Gmail blocks SVG images for security reasons
+ * Using black logo for better visibility in email clients
  */
 const getLogoUrl = (): string => {
-  return 'https://velolink-content.s3.eu-north-1.amazonaws.com/Secondary_Logo(white).svg';
+  const bucketName = process.env.AWS_S3_BUCKET_NAME || 'velo-content';
+  const region = process.env.AWS_REGION || 'us-east-1';
+  return `https://${bucketName}.s3.${region}.amazonaws.com/Secondary_Logo_black.png`;
 };
 
 /**

@@ -219,24 +219,17 @@ export default function CreatorVerifyIdentityPage() {
                 >
                   Check Status
                 </Button>
-                {verificationSession ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => window.open(verificationSession.verificationUrl, '_blank')}
-                    className="w-full sm:w-auto"
-                  >
-                    View Details
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={sessionId ? handleResubmit : handleInitiateVerification}
-                    isLoading={isLoading}
-                    className="w-full sm:w-auto"
-                  >
-                    {isLoading ? 'Loading...' : 'View Details'}
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  onClick={verificationSession 
+                    ? () => window.open(verificationSession.verificationUrl, '_blank')
+                    : (sessionId ? handleResubmit : handleInitiateVerification)
+                  }
+                  isLoading={isLoading}
+                  className="w-full sm:w-auto"
+                >
+                  {isLoading ? 'Loading...' : verificationSession ? 'View Details' : 'Continue Verification'}
+                </Button>
               </div>
               <p className="text-sm text-gray-600 mt-4">
                 Need help? <a href="/support" className="text-indigo-600 hover:text-indigo-700 underline">Contact our support team</a>

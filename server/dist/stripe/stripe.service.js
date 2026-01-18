@@ -27,7 +27,7 @@ let StripeService = StripeService_1 = class StripeService {
             throw new Error('STRIPE_SECRET_KEY is required');
         }
         this.stripe = new stripe_1.default(stripeSecretKey, {
-            apiVersion: '2025-11-17.clover',
+            apiVersion: '2025-12-15.clover',
             timeout: 30000,
             maxNetworkRetries: 2,
         });

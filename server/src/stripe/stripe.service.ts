@@ -16,7 +16,7 @@ export class StripeService {
     }
 
     this.stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2025-11-17.clover',
+      apiVersion: '2025-12-15.clover',
       timeout: 30000, // Bug #24 fix: 30 seconds timeout
       maxNetworkRetries: 2, // Bug #24 fix: Retry failed requests twice
     });

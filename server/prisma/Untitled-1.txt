@@ -1,2 +1,0 @@
-taskkill /F /PID 18120
-netstat -ano | findstr :8000

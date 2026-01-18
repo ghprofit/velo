@@ -24,7 +24,7 @@ export default function TicketDetailModal({ ticketId, isOpen, onClose }: TicketD
   const handleStatusChange = async (newStatus: string) => {
     try {
       await updateStatus({ id: ticketId, status: newStatus }).unwrap();
-    } catch (error) {
+    } catch {
       alert('Failed to update ticket status');
     }
   };

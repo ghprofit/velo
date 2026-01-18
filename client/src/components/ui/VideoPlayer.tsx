@@ -91,7 +91,6 @@ const dropdownVariants = {
 export function VideoPlayer({
   src,
   poster,
-  title,
   className,
   autoPlay = false,
   loop = false,

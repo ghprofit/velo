@@ -113,16 +113,6 @@ export default function ContentDetailsPage() {
     return status?.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Unknown';
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Never';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
   const formatDateTime = (dateString: string) => {
     if (!dateString) return 'Never';
     const date = new Date(dateString);

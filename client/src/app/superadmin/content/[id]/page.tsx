@@ -104,16 +104,6 @@ export default function SuperAdminContentDetailsPage() {
     return status?.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Unknown';
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Never';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
   const formatDateTime = (dateString: string) => {
     if (!dateString) return 'Never';
     const date = new Date(dateString);
@@ -222,7 +212,7 @@ export default function SuperAdminContentDetailsPage() {
                   /* Gallery Grid for multiple items */
                   <div>
                     <div className="grid grid-cols-2 gap-3 mb-4">
-                      {content.contentItems.map((item: any, index: number) => (
+                      {content.contentItems.map((item: { id: string; s3Key: string; signedUrl?: string }, index: number) => (
                         <button
                           key={item.id}
                           onClick={() => setSelectedItemIndex(index)}

@@ -7,7 +7,7 @@ import VerificationStatusBanner from '@/components/VerificationStatusBanner';
 import { authApi, analyticsApi } from '@/lib/api-client';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem, fadeInUp } from '@/lib/animations';
+import { staggerContainer, staggerItem } from '@/lib/animations';
 import FloatingLogo from '@/components/FloatingLogo';
 
 interface CreatorProfile {

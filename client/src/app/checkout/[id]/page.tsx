@@ -9,7 +9,7 @@ import Footer from '@/components/Footer';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { PageTransition } from '@/components/ui/PageTransition';
-import { staggerContainer, staggerItem, fadeInUp } from '@/lib/animations';
+import { staggerContainer, staggerItem } from '@/lib/animations';
 import { useCurrencyCountUp } from '@/hooks/useCountUp';
 import FloatingLogo from '@/components/FloatingLogo';
 

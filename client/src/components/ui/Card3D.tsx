@@ -4,6 +4,7 @@ import React, { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { card3DTilt } from '@/lib/animations';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 export type GlowColor = 'indigo' | 'purple' | 'pink' | 'cyan' | 'none';
 
@@ -170,7 +171,7 @@ export function ProductCard3D({
   return (
     <Card3D glowColor={glowColor} className={cn('overflow-hidden', className)}>
       <div className="relative">
-        <img src={image} alt={title} className="w-full h-48 object-cover" />
+        <Image src={image} alt={title} className="w-full h-48 object-cover" />
         {badge && (
           <div className="absolute top-3 right-3 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-900">
             {badge}

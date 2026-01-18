@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
 import TicketDetailModal from '@/components/TicketDetailModal';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -13,7 +12,6 @@ import {
 import { exportToCSV } from '@/utils/export-utils';
 
 export default function SupportReportsPage() {
-  const router = useRouter();
   const [activeTab] = useState('support-reports');
   const [searchQuery, setSearchQuery] = useState('');
   const [issueType, setIssueType] = useState('All Types');
@@ -60,7 +58,7 @@ export default function SupportReportsPage() {
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     try {
       await updateStatus({ id: ticketId, status: newStatus }).unwrap();
-    } catch (error) {
+    } catch {
       alert('Failed to update ticket status');
     }
   };

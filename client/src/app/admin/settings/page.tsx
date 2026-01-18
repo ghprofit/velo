@@ -8,6 +8,14 @@ interface Toast {
   type: 'success' | 'error';
 }
 
+interface Session {
+  id: string;
+  deviceName: string;
+  ipAddress: string;
+  lastActive: string;
+  isCurrent: boolean;
+}
+
 export default function AdminSettingsPage() {
   const [activeTab] = useState('settings');
   const [settingsTab, setSettingsTab] = useState('profile');
@@ -36,7 +44,7 @@ export default function AdminSettingsPage() {
   const [qrCode, setQrCode] = useState('');
   const [twoFactorSecret, setTwoFactorSecret] = useState('');
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
-  const [activeSessions, setActiveSessions] = useState<any[]>([]);
+  const [activeSessions, setActiveSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
 
   // Notification Settings State
@@ -46,7 +54,7 @@ export default function AdminSettingsPage() {
   const [paymentAlert, setPaymentAlert] = useState(true);
   const [reportAlert, setReportAlert] = useState(true);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [notificationsError, setNotificationsError] = useState('');
+  const [notificationsError, ] = useState('');
 
   // Platform Settings State
   const [platformName, setPlatformName] = useState('VeloLink');
@@ -166,7 +174,7 @@ export default function AdminSettingsPage() {
         const error = await response.json();
         showToast(error.message || 'Failed to update profile', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while updating profile', 'error');
     } finally {
       setProfileLoading(false);
@@ -243,7 +251,7 @@ export default function AdminSettingsPage() {
         const error = await response.json();
         showToast(error.message || 'Failed to change password', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while changing password', 'error');
     } finally {
       setPasswordLoading(false);
@@ -293,7 +301,7 @@ export default function AdminSettingsPage() {
           showToast('Failed to disable 2FA', 'error');
         }
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred with 2FA', 'error');
     } finally {
       setTwoFactorLoading(false);
@@ -316,7 +324,7 @@ export default function AdminSettingsPage() {
       } else {
         showToast('Failed to revoke session', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while revoking session', 'error');
     }
   };
@@ -345,7 +353,7 @@ export default function AdminSettingsPage() {
       } else {
         showToast('Failed to save notification preferences', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while saving preferences', 'error');
     } finally {
       setNotificationsLoading(false);

@@ -41,7 +41,7 @@ export default function NotificationsPage() {
   const [deleteNotification] = useDeleteNotificationMutation();
 
   const stats = statsData?.data;
-  const notifications = notificationsData?.data || [];
+  const notifications = useMemo(() => notificationsData?.data || [], [notificationsData?.data]);
   const pagination = notificationsData?.pagination;
 
   // Sort notifications
@@ -102,7 +102,7 @@ export default function NotificationsPage() {
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead({}).unwrap();
-    } catch (error) {
+    } catch {
       alert('Failed to mark all notifications as read');
     }
   };
@@ -113,7 +113,7 @@ export default function NotificationsPage() {
     if (confirm('Delete this notification?')) {
       try {
         await deleteNotification(notificationId).unwrap();
-      } catch (error) {
+      } catch {
         alert('Failed to delete notification');
       }
     }

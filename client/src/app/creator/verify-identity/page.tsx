@@ -223,12 +223,12 @@ export default function CreatorVerifyIdentityPage() {
                   variant="outline"
                   onClick={verificationSession 
                     ? () => window.open(verificationSession.verificationUrl, '_blank')
-                    : (sessionId ? handleResubmit : handleInitiateVerification)
+                    : handleInitiateVerification
                   }
                   isLoading={isLoading}
                   className="w-full sm:w-auto"
                 >
-                  {isLoading ? 'Loading...' : verificationSession ? 'View Details' : 'Continue Verification'}
+                  {isLoading ? 'Starting...' : verificationSession ? 'View Details' : 'Restart Verification'}
                 </Button>
               </div>
               <p className="text-sm text-gray-600 mt-4">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui';
 import { veriffApi } from '@/lib/api-client';
 import { useAppSelector } from '../../redux';
@@ -11,6 +11,7 @@ type VerificationStatusType = 'PENDING' | 'IN_PROGRESS' | 'VERIFIED' | 'REJECTED
 
 export default function CreatorVerifyIdentityPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,10 +21,18 @@ export default function CreatorVerifyIdentityPage() {
 
   const { user } = useAppSelector((state) => state.auth);
 
-  // Check current verification status on mount
+  // Check current verification status on mount and when redirected from Veriff
   useEffect(() => {
-    checkVerificationStatus();
-  }, []);
+    const verified = searchParams.get('verified');
+    if (verified === 'true') {
+      // User was just redirected from Veriff - immediately check status
+      checkVerificationStatus();
+      // Clean up URL
+      router.replace('/creator/verify-identity');
+    } else {
+      checkVerificationStatus();
+    }
+  }, [searchParams]);
 
   // Auto-poll status when IN_PROGRESS
   useEffect(() => {

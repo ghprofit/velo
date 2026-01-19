@@ -203,9 +203,9 @@ export class VeriffController {
       this.logger.error('Error updating verification status:', error);
     }
 
-    // Always redirect user back to frontend
+    // Always redirect user back to frontend with success indicator
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    response.redirect(`${clientUrl}/creator/verify-identity`);
+    response.redirect(`${clientUrl}/creator/verify-identity?verified=true`);
   }
 
   /**

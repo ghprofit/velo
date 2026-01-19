@@ -38,6 +38,8 @@ export default function PaymentFailedPage({ params }: { params: Promise<{ id: st
             <Image
               src="/assets/logo_svgs/Primary_Logo(black).svg"
               alt="Velo Link"
+              width={120}
+              height={32}
               className="h-8 w-auto"
             />
           </Link>

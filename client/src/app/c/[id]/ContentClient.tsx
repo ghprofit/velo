@@ -437,12 +437,10 @@ export function ContentClient({ id }: { id: string }) {
                             )}
                             {itemFileType === 'IMAGE' && item.signedUrl && (
                               <div className="relative aspect-video">
-                                <Image
+                                <img
                                   src={item.signedUrl}
                                   alt={`${purchasedContent.title} - Image ${index + 1}`}
-                                  fill
-                                  className="object-contain pointer-events-none select-none"
-                                  sizes="(max-width: 640px) 100vw, 50vw"
+                                  className="w-full h-full object-contain pointer-events-none select-none absolute inset-0"
                                   draggable={false}
                                   onContextMenu={(e) => e.preventDefault()}
                                 />
@@ -512,12 +510,10 @@ export function ContentClient({ id }: { id: string }) {
                 {effectiveContentType === 'IMAGE' && (
                   <div className="aspect-video relative">
                     {purchasedContent.contentItems && purchasedContent.contentItems.length > 0 && purchasedContent.contentItems[0].signedUrl ? (
-                      <Image
+                      <img
                         src={purchasedContent.contentItems[0].signedUrl}
                         alt={purchasedContent.title}
-                        fill
-                        className="object-contain select-none"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                        className="w-full h-full object-contain select-none absolute inset-0"
                         draggable={false}
                         onContextMenu={(e) => e.preventDefault()}
                       />
@@ -706,15 +702,12 @@ export function ContentClient({ id }: { id: string }) {
 
                     {itemFileType === 'IMAGE' && currentItem.signedUrl && (
                       <div className="relative max-h-[90vh] mx-auto flex items-center justify-center">
-                        <Image
+                        <img
                           src={currentItem.signedUrl}
                           alt={`${purchasedContent.title} - Item ${lightboxIndex + 1}`}
-                          width={1920}
-                          height={1080}
                           className="max-w-full max-h-[90vh] object-contain select-none pointer-events-none"
                           draggable={false}
                           onContextMenu={(e) => e.preventDefault()}
-                          priority
                         />
                       </div>
                     )}

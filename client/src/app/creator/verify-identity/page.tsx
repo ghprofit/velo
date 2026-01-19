@@ -191,15 +191,15 @@ export default function CreatorVerifyIdentityPage() {
                 Verification Declined
               </h2>
               <p className="text-gray-700 mb-6">
-                Unfortunately, your identity verification was declined. This could be due to unclear photos, document issues, or mismatched information. You can resubmit your verification with updated information.
+                Unfortunately, your identity verification was declined. This could be due to unclear photos, document issues, or mismatched information. You can start a new verification with updated information.
               </p>
               <Button
                 variant="primary"
-                onClick={handleResubmit}
+                onClick={handleInitiateVerification}
                 isLoading={isLoading}
                 className="w-full sm:w-auto"
               >
-                {isLoading ? 'Starting...' : 'Resubmit Verification'}
+                {isLoading ? 'Starting...' : 'Start New Verification'}
               </Button>
             </div>
           ) : verificationStatus === 'IN_PROGRESS' ? (

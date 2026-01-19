@@ -10,6 +10,7 @@
     "start:prod": "node dist/main",
     "dev": "ts-node -r tsconfig-paths/register src/main.ts",
     "seed": "tsx prisma/seed.ts",
+    "import-waitlist": "tsx scripts/import-waitlist.ts",
     "postinstall": "prisma generate"
   },
   "keywords": [],
@@ -65,6 +66,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "cookie-parser": "^1.4.7",
+    "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",

@@ -694,8 +694,11 @@ export class ContentService {
           
           if (content.contentType === 'VIDEO' && content.contentItems && content.contentItems.length > 0) {
             // Use the first content item (the actual video file)
-            s3KeyToCheck = content.contentItems[0].s3Key;
-            this.logger.log(`Using video file for recognition: ${s3KeyToCheck}`);
+            const firstContentItem = content.contentItems[0];
+            if (firstContentItem) {
+              s3KeyToCheck = firstContentItem.s3Key;
+              this.logger.log(`Using video file for recognition: ${s3KeyToCheck}`);
+            }
           }
 
           // Check content with AWS Rekognition

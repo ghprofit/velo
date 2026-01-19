@@ -161,6 +161,7 @@ export class VeriffController {
   @HttpCode(HttpStatus.OK)
   async handleWebhook(@Req() request: Request): Promise<{ received: boolean }> {
     this.logger.log('Received Veriff webhook');
+    this.logger.log(`Headers: ${JSON.stringify(request.headers)}`);
 
     try {
       // 1. MANDATORY signature verification
@@ -168,7 +169,15 @@ export class VeriffController {
 
       if (!signature) {
         this.logger.error('Webhook received without signature - REJECTED');
-        throw new UnauthorizedException('Missing webhook signature');
+        
+        // For development: log body anyway to debug
+        if (process.env.NODE_ENV === 'development') {
+          this.logger.warn('DEVELOPMENT MODE: Processing webhook without signature verification');
+          const rawBody = request.body as Buffer;
+          this.logger.log(`Webhook body: ${rawBody.toString('utf-8')}`);
+        } else {
+          throw new UnauthorizedException('Missing webhook signature');
+        }
       }
 
       // 2. Use raw body for signature verification (configured in main.ts)
@@ -176,20 +185,24 @@ export class VeriffController {
 
       if (!Buffer.isBuffer(rawBody)) {
         this.logger.error('Raw body not available - check main.ts configuration');
+        this.logger.error(`Body type: ${typeof request.body}`);
         throw new BadRequestException('Raw body parser not configured');
       }
 
-      const isValid = this.veriffService.verifyWebhookSignature(
-        rawBody,
-        signature,
-      );
+      // Skip signature verification in development if signature is missing
+      if (signature) {
+        const isValid = this.veriffService.verifyWebhookSignature(
+          rawBody,
+          signature,
+        );
 
-      if (!isValid) {
-        this.logger.error('Invalid webhook signature - REJECTED');
-        throw new UnauthorizedException('Invalid webhook signature');
+        if (!isValid) {
+          this.logger.error('Invalid webhook signature - REJECTED');
+          throw new UnauthorizedException('Invalid webhook signature');
+        }
+
+        this.logger.log('Webhook signature verified successfully');
       }
-
-      this.logger.log('Webhook signature verified successfully');
 
       // 3. Parse body AFTER signature verification
       const webhookData: WebhookDecisionDto = JSON.parse(rawBody.toString('utf-8'));

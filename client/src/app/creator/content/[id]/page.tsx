@@ -434,13 +434,11 @@ export default function ContentDetailPage() {
                 <div className="aspect-video bg-gray-100 relative">
                   {previewUrls[content.contentItems[0].id] ? (
                     <>
-                      <Image
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={previewUrls[content.contentItems[0].id]}
                         alt={content.title}
-                        fill
-                        className="object-contain"
-                        sizes="(max-width: 1024px) 100vw, 66vw"
-                        unoptimized
+                        className="absolute inset-0 w-full h-full object-contain"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23eee" width="800" height="450"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3EFailed to load%3C/text%3E%3C/svg%3E';
                         }}

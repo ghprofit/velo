@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>S3 URL Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+        img, video {
+            max-width: 100%;
+            border: 1px solid #ccc;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 S3 Image/Video Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Thumbnail URL</h2>
+        <p><strong>URL:</strong> <span id="thumbnail-url">https://amnz-s3-pm-bucket.s3.us-east-1.amazonaws.com/thumbnails/2KzUP0K7BU3SU_GE.jpg</span></p>
+        <div id="thumbnail-status" class="status"></div>
+        <img id="thumbnail-img" src="https://amnz-s3-pm-bucket.s3.us-east-1.amazonaws.com/thumbnails/2KzUP0K7BU3SU_GE.jpg" 
+             alt="Thumbnail Test"
+             onload="handleImageLoad('thumbnail')"
+             onerror="handleImageError('thumbnail')" />
+    </div>
+
+    <div class="test-section">
+        <h2>Test Direct HTTP Request</h2>
+        <button onclick="testUrl('https://amnz-s3-pm-bucket.s3.us-east-1.amazonaws.com/thumbnails/2KzUP0K7BU3SU_GE.jpg')">Test Thumbnail Access</button>
+        <div id="fetch-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Diagnosis</h2>
+        <div id="diagnosis"></div>
+    </div>
+
+    <script>
+        function handleImageLoad(type) {
+            const statusDiv = document.getElementById(`${type}-status`);
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = '✅ <strong>SUCCESS!</strong> Image loaded successfully. S3 permissions are correctly configured.';
+            updateDiagnosis(true);
+        }
+
+        function handleImageError(type) {
+            const statusDiv = document.getElementById(`${type}-status`);
+            statusDiv.className = 'status error';
+            statusDiv.innerHTML = `
+                ❌ <strong>FAILED!</strong> Image failed to load.<br><br>
+                <strong>Most likely cause:</strong> S3 "Block Public Access" is enabled.<br><br>
+                <strong>Fix:</strong><br>
+                1. Go to AWS S3 Console → amnz-s3-pm-bucket → Permissions<br>
+                2. Click "Edit" on "Block public access (bucket settings)"<br>
+                3. <strong>UNCHECK</strong> these two options:<br>
+                   &nbsp;&nbsp;☐ Block public access to buckets and objects granted through new access control lists (ACLs)<br>
+                   &nbsp;&nbsp;☐ Block public access to buckets and objects granted through any access control lists (ACLs)<br>
+                4. Save changes and wait 1-2 minutes<br>
+                5. Refresh this page
+            `;
+            updateDiagnosis(false);
+        }
+
+        async function testUrl(url) {
+            const resultDiv = document.getElementById('fetch-result');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">
+                            ✅ <strong>HTTP ${response.status} OK</strong><br>
+                            Headers:<br>
+                            Content-Type: ${response.headers.get('content-type')}<br>
+                            Content-Length: ${response.headers.get('content-length')}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status error">
+                            ❌ <strong>HTTP ${response.status} ${response.statusText}</strong><br><br>
+                            ${response.status === 403 ? `
+                                <strong>403 Forbidden Error</strong><br>
+                                This confirms S3 Block Public Access is blocking the image.<br><br>
+                                <strong>Action Required:</strong><br>
+                                Follow the instructions in <code>FIX_S3_PUBLIC_ACCESS.md</code> to:<br>
+                                1. Disable Block Public Access for ACLs<br>
+                                2. Add bucket policy for thumbnails folder<br>
+                                3. Run: npm run fix:thumbnails
+                            ` : ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">
+                        ❌ <strong>Network Error:</strong> ${error.message}<br><br>
+                        This could indicate CORS issues or network problems.
+                    </div>
+                `;
+            }
+        }
+
+        function updateDiagnosis(success) {
+            const diagnosisDiv = document.getElementById('diagnosis');
+            
+            if (success) {
+                diagnosisDiv.innerHTML = `
+                    <div class="status success">
+                        <h3>✅ S3 Configuration is Working!</h3>
+                        <p>Your thumbnails are publicly accessible. Images and videos should now display in your application.</p>
+                        <p><strong>Next steps:</strong></p>
+                        <ul>
+                            <li>Clear your browser cache (Ctrl+Shift+Delete)</li>
+                            <li>Hard refresh the app (Ctrl+Shift+R or Ctrl+F5)</li>
+                            <li>Check that all images now display</li>
+                        </ul>
+                    </div>
+                `;
+            } else {
+                diagnosisDiv.innerHTML = `
+                    <div class="status error">
+                        <h3>❌ S3 Block Public Access is Still Enabled</h3>
+                        <p><strong>The issue:</strong> AWS S3 bucket has "Block Public Access" settings that prevent images from being publicly viewable.</p>
+                        
+                        <p><strong>Solution:</strong></p>
+                        <ol>
+                            <li><strong>Go to AWS S3 Console:</strong> <a href="https://s3.console.aws.amazon.com/s3/buckets/amnz-s3-pm-bucket?region=us-east-1&tab=permissions" target="_blank">Click here</a></li>
+                            <li><strong>Navigate to:</strong> amnz-s3-pm-bucket → Permissions tab</li>
+                            <li><strong>Find "Block public access (bucket settings)"</strong> section</li>
+                            <li><strong>Click "Edit"</strong></li>
+                            <li><strong>UNCHECK these two boxes:</strong>
+                                <ul>
+                                    <li>☐ Block public access to buckets and objects granted through <strong>new</strong> access control lists (ACLs)</li>
+                                    <li>☐ Block public access to buckets and objects granted through <strong>any</strong> access control lists (ACLs)</li>
+                                </ul>
+                            </li>
+                            <li><strong>Keep CHECKED:</strong>
+                                <ul>
+                                    <li>☑ Block public access to buckets and objects granted through new public bucket or access point policies</li>
+                                    <li>☑ Block public and cross-account access to buckets and objects through any public bucket or access point policies</li>
+                                </ul>
+                            </li>
+                            <li><strong>Click "Save changes"</strong> and type "confirm"</li>
+                            <li><strong>Wait 1-2 minutes</strong> for AWS to propagate changes</li>
+                            <li><strong>Refresh this page</strong> to retest</li>
+                        </ol>
+
+                        <p><strong>After fixing Block Public Access:</strong></p>
+                        <ol>
+                            <li>Add bucket policy (see FIX_S3_PUBLIC_ACCESS.md step 2)</li>
+                            <li>Run: <code>npm run fix:thumbnails</code></li>
+                            <li>Test again on this page</li>
+                        </ol>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-test on page load
+        setTimeout(() => {
+            testUrl('https://amnz-s3-pm-bucket.s3.us-east-1.amazonaws.com/thumbnails/2KzUP0K7BU3SU_GE.jpg');
+        }, 1000);
+    </script>
+</body>
+</html>

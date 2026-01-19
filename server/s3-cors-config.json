@@ -1,0 +1,26 @@
+[
+    {
+        "AllowedHeaders": [
+            "*"
+        ],
+        "AllowedMethods": [
+            "GET",
+            "HEAD"
+        ],
+        "AllowedOrigins": [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "https://velolink.club",
+            "https://www.velolink.club",
+            "https://*.amplifyapp.com",
+            "https://*.vercel.app"
+        ],
+        "ExposeHeaders": [
+            "ETag",
+            "Content-Length",
+            "Content-Type",
+            "x-amz-request-id"
+        ],
+        "MaxAgeSeconds": 3000
+    }
+]

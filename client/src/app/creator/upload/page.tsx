@@ -311,18 +311,8 @@ export default function UploadContentPage() {
       
       setShortId(response.data.data.shortId);
       setCurrentStep('success');
-
-      // Start countdown and redirect to dashboard
-      let countdown = 5;
-      setRedirectCountdown(countdown);
-      const interval = setInterval(() => {
-        countdown -= 1;
-        setRedirectCountdown(countdown);
-        if (countdown <= 0) {
-          clearInterval(interval);
-          router.push('/creator');
-        }
-      }, 1000);
+      
+      // No automatic redirect - user stays on success page
     } catch (err: unknown) {
       console.error('Error creating content:', err);
 
@@ -776,17 +766,14 @@ export default function UploadContentPage() {
                 </div>
               </div>
 
-              {/* Redirect Notice */}
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-600">
-                  Redirecting to dashboard in <span className="font-semibold text-indigo-600">{redirectCountdown}</span> seconds...
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+              {/* Action Buttons */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button
                     onClick={() => router.push('/creator')}
                     className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors text-sm"
                   >
-                    Go to Dashboard Now
+                    Go to Dashboard
                   </button>
                   <button
                     onClick={handleRestart}

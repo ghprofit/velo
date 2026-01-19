@@ -150,11 +150,16 @@ export class AuthController {
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() req: any) {
-    const result = await this.authService.getProfile(req.user.id);
-    return {
-      success: true,
-      data: result,
-    };
+    try {
+      const result = await this.authService.getProfile(req.user.id);
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      console.error('Error in getProfile controller:', error);
+      throw error;
+    }
   }
 
   @Post('verify-email')

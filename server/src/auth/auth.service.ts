@@ -334,79 +334,94 @@ export class AuthService {
   }
 
   async getProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        creatorProfile: true,
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('User not found.');
-    }
-
-    // Compute real stats if user has a creator profile
-    let computedStats = {
-      totalEarnings: 0,
-      totalViews: 0,
-      totalPurchases: 0,
-    };
-
-    if (user.creatorProfile) {
-      // Get all completed purchases for this creator's content
-      const purchases = await this.prisma.purchase.findMany({
-        where: {
-          content: {
-            creatorId: user.creatorProfile.id,
-          },
-          status: 'COMPLETED',
-        },
-        select: {
-          amount: true,
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          creatorProfile: true,
         },
       });
 
-      // Get all content for this creator to sum views
-      const contents = await this.prisma.content.findMany({
-        where: {
-          creatorId: user.creatorProfile.id,
-        },
-        select: {
-          viewCount: true,
-          purchaseCount: true,
-        },
-      });
+      if (!user) {
+        throw new UnauthorizedException('User not found.');
+      }
 
-      computedStats.totalEarnings = purchases.reduce(
-        (sum, p) => sum + p.amount,
-        0,
-      );
-      computedStats.totalPurchases = purchases.length;
-      computedStats.totalViews = contents.reduce(
-        (sum, c) => sum + c.viewCount,
-        0,
+      // Compute real stats if user has a creator profile
+      let computedStats = {
+        totalEarnings: 0,
+        totalViews: 0,
+        totalPurchases: 0,
+      };
+
+      if (user.creatorProfile) {
+        try {
+          // Get all completed purchases for this creator's content
+          const purchases = await this.prisma.purchase.findMany({
+            where: {
+              content: {
+                creatorId: user.creatorProfile.id,
+              },
+              status: 'COMPLETED',
+            },
+            select: {
+              amount: true,
+            },
+          });
+
+          // Get all content for this creator to sum views
+          const contents = await this.prisma.content.findMany({
+            where: {
+              creatorId: user.creatorProfile.id,
+            },
+            select: {
+              viewCount: true,
+              purchaseCount: true,
+            },
+          });
+
+          computedStats.totalEarnings = purchases.reduce(
+            (sum, p) => sum + p.amount,
+            0,
+          );
+          computedStats.totalPurchases = purchases.length;
+          computedStats.totalViews = contents.reduce(
+            (sum, c) => sum + c.viewCount,
+            0,
+          );
+        } catch (statsError) {
+          this.logger.error(
+            `Error computing creator stats for user ${userId}:`,
+            statsError,
+          );
+          // Continue with default stats if computation fails
+        }
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        emailVerified: user.emailVerified,
+        displayName: user.displayName || user.creatorProfile?.displayName,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profilePicture: user.profilePicture,
+        creatorProfile: user.creatorProfile
+          ? {
+              ...user.creatorProfile,
+              // Override with computed real-time stats
+              totalEarnings: computedStats.totalEarnings,
+              totalViews: computedStats.totalViews,
+              totalPurchases: computedStats.totalPurchases,
+            }
+          : null,
+      };
+    } catch (error) {
+      this.logger.error(`Error in getProfile for user ${userId}:`, error);
+      throw new InternalServerErrorException(
+        'Failed to fetch user profile. Please try again later.',
       );
     }
-
-    return {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      emailVerified: user.emailVerified,
-      displayName: user.displayName || user.creatorProfile?.displayName,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      profilePicture: user.profilePicture,
-      creatorProfile: user.creatorProfile
-        ? {
-            ...user.creatorProfile,
-            // Override with computed real-time stats
-            totalEarnings: computedStats.totalEarnings,
-            totalViews: computedStats.totalViews,
-            totalPurchases: computedStats.totalPurchases,
-          }
-        : null,
-    };
   }
 
   // Helper methods

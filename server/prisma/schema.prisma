@@ -275,6 +275,7 @@ model Content {
   complianceStatus    ComplianceCheckStatus @default(PENDING)
   complianceCheckedAt DateTime?
   complianceNotes     String?
+  scheduledReviewAt   DateTime? // When content should be reviewed (10 mins after upload)
 
   // Async Video Moderation (AWS Rekognition)
   rekognitionJobId          String?

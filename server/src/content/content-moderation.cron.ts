@@ -27,4 +27,29 @@ export class ContentModerationCron {
       }
     }
   }
+
+  /**
+   * Check for content scheduled for review every minute
+   * Process content that has been waiting 10+ minutes after upload
+   */
+  @Cron('0 * * * * *') // Every minute
+  async processScheduledReviews() {
+    try {
+      this.logger.debug('Checking for scheduled content reviews...');
+      const result = await this.contentService.processScheduledContentReviews();
+      
+      if (result.processed > 0) {
+        this.logger.log(
+          `Processed ${result.successful}/${result.processed} scheduled reviews`,
+        );
+      }
+    } catch (error) {
+      const err = error as Error;
+      if (!err.message.includes('Connection terminated') && !err.message.includes('timeout')) {
+        this.logger.error(`Scheduled review cron failed: ${err.message}`);
+      } else {
+        this.logger.warn('Scheduled review cron: Connection timeout (will retry)');
+      }
+    }
+  }
 }

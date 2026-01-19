@@ -27,20 +27,32 @@ export default function VerifyIdentityPage() {
     setError(null);
     setIsLoading(true);
 
+    // Open window IMMEDIATELY (before async call) to avoid iOS popup blocker
+    const verificationWindow = window.open('about:blank', '_blank');
+    if (!verificationWindow) {
+      setError('Please allow popups for this site to complete verification.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await veriffApi.initiateVerification();
       const sessionData = response.data.data;
 
       setVerificationSession(sessionData);
 
-      // Open Veriff verification in new window
+      // Update the already-opened window with the verification URL
       if (sessionData.verificationUrl) {
-        window.open(sessionData.verificationUrl, '_blank');
+        verificationWindow.location.href = sessionData.verificationUrl;
+      } else {
+        verificationWindow.close();
+        setError('No verification URL received.');
       }
     } catch (err: unknown) {
       console.error('Verification initiation error:', err);
       const error = err as { response?: { data?: { message?: string } } };
       setError(error.response?.data?.message || 'Failed to initiate verification. Please try again.');
+      verificationWindow.close();
     } finally {
       setIsLoading(false);
     }

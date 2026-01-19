@@ -161,17 +161,32 @@ export default function UploadContentPage() {
         img.src = URL.createObjectURL(file);
       } else if (file.type.startsWith('video/')) {
         // For videos, use object URL (no base64 loading)
+        console.log(`[THUMBNAIL] Generating thumbnail for video: ${file.name}`);
         const video = document.createElement('video');
         video.preload = 'metadata';
         video.muted = true; // Mute to allow autoplay in some browsers
+        video.playsInline = true; // Important for iOS
+
+        const timeoutId = setTimeout(() => {
+          console.error(`[THUMBNAIL] Timeout generating thumbnail for ${file.name}`);
+          const blobUrl = video.src;
+          video.src = '';
+          video.load();
+          if (blobUrl && blobUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(blobUrl);
+          }
+          reject(new Error('Video thumbnail generation timed out after 10 seconds'));
+        }, 10000); // 10 second timeout
 
         video.onloadeddata = () => {
+          console.log(`[THUMBNAIL] Video loaded, duration: ${video.duration}s, dimensions: ${video.videoWidth}x${video.videoHeight}`);
           // Seek to 1 second or 10% of video duration, whichever is smaller
           const seekTime = Math.min(1, video.duration * 0.1);
           video.currentTime = seekTime;
         };
 
         video.onseeked = () => {
+          clearTimeout(timeoutId);
           try {
             const canvas = document.createElement('canvas');
             
@@ -179,6 +194,8 @@ export default function UploadContentPage() {
             if (!video.videoWidth || !video.videoHeight) {
               throw new Error('Video has invalid dimensions');
             }
+            
+            console.log(`[THUMBNAIL] Creating canvas from video frame`);
             
             // Calculate thumbnail size (max 600px width, maintain aspect ratio)
             const maxWidth = 600;
@@ -206,7 +223,9 @@ export default function UploadContentPage() {
             video.src = '';
             video.load();
             // Then revoke object URL to free memory
-            URL.revokeObjectURL(blobUrl);
+            if (blobUrl && blobUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(blobUrl);
+            }
             
             // Use higher quality for Rekognition (0.9 instead of 0.7)
             const dataURL = canvas.toDataURL('image/jpeg', 0.9);
@@ -216,22 +235,39 @@ export default function UploadContentPage() {
               throw new Error('Failed to generate valid JPEG thumbnail');
             }
             
+            console.log(`[THUMBNAIL] ✅ Successfully generated thumbnail for ${file.name}`);
             resolve(dataURL);
           } catch (err) {
+            console.error(`[THUMBNAIL] Error in onseeked:`, err);
             const blobUrl = video.src;
             video.src = '';
             video.load();
-            URL.revokeObjectURL(blobUrl);
+            if (blobUrl && blobUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(blobUrl);
+            }
             reject(err);
           }
         };
 
         video.onerror = (err) => {
-          URL.revokeObjectURL(video.src);
-          reject(err || new Error('Failed to load video'));
+          clearTimeout(timeoutId);
+          console.error(`[THUMBNAIL] Video error event:`, err, video.error);
+          const blobUrl = video.src;
+          if (blobUrl && blobUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(blobUrl);
+          }
+          const errorMsg = video.error ? `${video.error.message} (code: ${video.error.code})` : 'Unknown video error';
+          reject(new Error(`Failed to load video: ${errorMsg}`));
         };
         
-        video.src = URL.createObjectURL(file); // Use object URL instead of base64
+        try {
+          video.src = URL.createObjectURL(file); // Use object URL instead of base64
+          console.log(`[THUMBNAIL] Created object URL for video`);
+        } catch (err) {
+          clearTimeout(timeoutId);
+          console.error(`[THUMBNAIL] Failed to create object URL:`, err);
+          reject(err);
+        }
       }
     });
   };
@@ -273,8 +309,12 @@ export default function UploadContentPage() {
     
     for (const file of validFiles) {
       try {
+        console.log(`[UPLOAD] Processing file: ${file.name}, type: ${file.type}, size: ${(file.size / 1048576).toFixed(2)}MB`);
+        
         // Generate thumbnail only (no base64 conversion of full file)
         const thumbnail = await generateThumbnail(file);
+        
+        console.log(`[UPLOAD] ✅ Thumbnail generated for ${file.name}`);
 
         const newFile: UploadedFile = {
           file,
@@ -284,9 +324,22 @@ export default function UploadContentPage() {
 
         newFiles.push(newFile);
       } catch (err) {
-        console.error('Error processing file:', file.name, err);
+        console.error(`[UPLOAD] ❌ Error processing file "${file.name}":`, err);
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-        setError(`Failed to process "${file.name}": ${errorMsg}`);
+        
+        // For videos, try to add with a fallback thumbnail
+        if (file.type.startsWith('video/')) {
+          console.log(`[UPLOAD] Using fallback thumbnail for video: ${file.name}`);
+          const fallbackThumbnail = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23000" width="400" height="300"/%3E%3Ctext fill="%23fff" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3EVideo%3C/text%3E%3C/svg%3E';
+          
+          newFiles.push({
+            file,
+            thumbnail: fallbackThumbnail,
+            id: Math.random().toString(36).substring(7),
+          });
+        } else {
+          setError(`Failed to process "${file.name}": ${errorMsg}`);
+        }
       }
     }
 

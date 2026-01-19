@@ -43,8 +43,7 @@ let ContentService = ContentService_1 = class ContentService {
         const thumbnailUpload = await this.s3Service.uploadFile(createContentDto.thumbnailData, `thumbnail-${contentId}.jpg`, 'image/jpeg', 'thumbnails');
         const contentStatus = 'PENDING_REVIEW';
         const complianceStatus = 'PENDING';
-        const scheduledReviewAt = new Date(Date.now() + 10 * 60 * 1000);
-        this.logger.log(`Content ${contentId} scheduled for review at ${scheduledReviewAt.toISOString()}`);
+        this.logger.log(`Content ${contentId} will be reviewed immediately`);
         const contentItemsData = await Promise.all(createContentDto.items.map(async (item, index) => {
             const dataUriMatch = item.fileData.match(/^data:(.+);base64,/);
             if (!dataUriMatch || !dataUriMatch[1]) {
@@ -99,7 +98,6 @@ let ContentService = ContentService_1 = class ContentService {
                 fileSize: totalFileSize,
                 status: contentStatus,
                 complianceStatus: complianceStatus,
-                scheduledReviewAt: scheduledReviewAt,
                 isPublished: true,
                 publishedAt: new Date(),
                 contentItems: {
@@ -120,6 +118,10 @@ let ContentService = ContentService_1 = class ContentService {
                     },
                 },
             },
+        });
+        this.logger.log(`Triggering immediate review for content ${contentId}`);
+        this.reviewContentImmediately(content.id).catch(err => {
+            this.logger.error(`Immediate review failed for ${content.id}:`, err.message);
         });
         return {
             content,
@@ -160,8 +162,7 @@ let ContentService = ContentService_1 = class ContentService {
         const hasVideo = files.some(file => file.mimetype.startsWith('video/'));
         const contentStatus = 'PENDING_REVIEW';
         const complianceStatus = 'PENDING';
-        const scheduledReviewAt = new Date(Date.now() + 10 * 60 * 1000);
-        this.logger.log(`Content ${contentId} scheduled for review at ${scheduledReviewAt.toISOString()}`);
+        this.logger.log(`Content ${contentId} will be reviewed immediately`);
         const totalFileSize = files.reduce((sum, file) => sum + file.size, 0);
         const content = await this.prisma.content.create({
             data: {
@@ -177,7 +178,6 @@ let ContentService = ContentService_1 = class ContentService {
                 fileSize: totalFileSize,
                 status: contentStatus,
                 complianceStatus: complianceStatus,
-                scheduledReviewAt: scheduledReviewAt,
                 isPublished: true,
                 publishedAt: new Date(),
                 contentItems: {
@@ -200,11 +200,15 @@ let ContentService = ContentService_1 = class ContentService {
                 },
             },
         });
+        this.logger.log(`Triggering immediate review for content ${contentId}`);
+        this.reviewContentImmediately(content.id).catch(err => {
+            this.logger.error(`Immediate review failed for ${content.id}:`, err.message);
+        });
         return {
             content,
             shortId: contentId,
             status: contentStatus,
-            message: 'Content submitted for review. You will receive an email when approved (usually within 10-15 minutes).',
+            message: 'Content submitted for review. Approval usually takes 1-2 minutes.',
         };
     }
     async processVideoModerationJobs() {
@@ -477,6 +481,74 @@ let ContentService = ContentService_1 = class ContentService {
             totalPurchases: stats._sum.purchaseCount || 0,
             totalRevenue: stats._sum.totalRevenue || 0,
         };
+    }
+    async reviewContentImmediately(contentId) {
+        const content = await this.prisma.content.findUnique({
+            where: { id: contentId },
+            include: {
+                contentItems: true,
+                creator: {
+                    include: {
+                        user: {
+                            select: {
+                                email: true,
+                                displayName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!content) {
+            this.logger.error(`Content ${contentId} not found for immediate review`);
+            return;
+        }
+        try {
+            this.logger.log(`Running immediate recognition check for content ${content.id} (type: ${content.contentType})`);
+            const safetyResult = await this.recognitionService.checkImageSafety({
+                type: 's3',
+                data: content.s3Key,
+                bucket: content.s3Bucket,
+            }, 50);
+            if (safetyResult.isSafe) {
+                await this.prisma.content.update({
+                    where: { id: content.id },
+                    data: {
+                        status: 'APPROVED',
+                        complianceStatus: 'PASSED',
+                    },
+                });
+                this.logger.log(`Content ${content.id} APPROVED immediately`);
+                if (content.creator?.user?.email) {
+                    await this.emailService.sendContentApproved(content.creator.user.email, {
+                        creator_name: content.creator.user.displayName || 'Creator',
+                        content_title: content.title,
+                        content_link: `https://velolink.club/c/${content.id}`,
+                    }).catch((err) => this.logger.error('Failed to send approval email:', err.message));
+                }
+            }
+            else {
+                await this.prisma.content.update({
+                    where: { id: content.id },
+                    data: {
+                        status: 'PENDING_REVIEW',
+                        complianceStatus: 'MANUAL_REVIEW',
+                    },
+                });
+                this.logger.warn(`Content ${content.id} flagged for manual review`);
+            }
+        }
+        catch (error) {
+            const err = error;
+            this.logger.error(`Immediate review failed for content ${content.id}: ${err.message}`);
+            await this.prisma.content.update({
+                where: { id: content.id },
+                data: {
+                    status: 'PENDING_REVIEW',
+                    complianceStatus: 'MANUAL_REVIEW',
+                },
+            });
+        }
     }
     async processScheduledContentReviews() {
         const now = new Date();

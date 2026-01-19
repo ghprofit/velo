@@ -334,6 +334,7 @@ export declare class ContentService {
         totalPurchases: number;
         totalRevenue: number;
     }>;
+    private reviewContentImmediately;
     processScheduledContentReviews(): Promise<{
         processed: number;
         results: never[];

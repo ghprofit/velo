@@ -50,14 +50,11 @@ export class ContentService {
       'thumbnails',
     );
 
-    // Set content to PENDING_REVIEW - recognition will run after 10 minutes
+    // Set content to PENDING_REVIEW - recognition will run immediately
     const contentStatus: ContentStatus = 'PENDING_REVIEW';
     const complianceStatus: ComplianceCheckStatus = 'PENDING';
     
-    // Schedule review for 10 minutes from now
-    const scheduledReviewAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-    
-    this.logger.log(`Content ${contentId} scheduled for review at ${scheduledReviewAt.toISOString()}`);
+    this.logger.log(`Content ${contentId} will be reviewed immediately`);
 
     // Upload all content items to S3
     const contentItemsData = await Promise.all(
@@ -140,7 +137,6 @@ export class ContentService {
         fileSize: totalFileSize,
         status: contentStatus,
         complianceStatus: complianceStatus,
-        scheduledReviewAt: scheduledReviewAt,
         isPublished: true,
         publishedAt: new Date(),
         contentItems: {
@@ -161,6 +157,12 @@ export class ContentService {
           },
         },
       },
+    });
+
+    // Trigger immediate content review (don't wait for scheduled cron)
+    this.logger.log(`Triggering immediate review for content ${contentId}`);
+    this.reviewContentImmediately(content.id).catch(err => {
+      this.logger.error(`Immediate review failed for ${content.id}:`, err.message);
     });
 
     return {
@@ -243,14 +245,11 @@ export class ContentService {
     // Determine if content contains video
     const hasVideo = files.some(file => file.mimetype.startsWith('video/'));
 
-    // Set content to PENDING_REVIEW - recognition will run after 10 minutes
+    // Set content to PENDING_REVIEW - recognition will run immediately
     const contentStatus: ContentStatus = 'PENDING_REVIEW';
     const complianceStatus: ComplianceCheckStatus = 'PENDING';
     
-    // Schedule review for 10 minutes from now
-    const scheduledReviewAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-    
-    this.logger.log(`Content ${contentId} scheduled for review at ${scheduledReviewAt.toISOString()}`);
+    this.logger.log(`Content ${contentId} will be reviewed immediately`);
 
     const totalFileSize = files.reduce((sum, file) => sum + file.size, 0);
 
@@ -269,7 +268,6 @@ export class ContentService {
         fileSize: totalFileSize,
         status: contentStatus,
         complianceStatus: complianceStatus,
-        scheduledReviewAt: scheduledReviewAt,
         isPublished: true,
         publishedAt: new Date(),
         contentItems: {
@@ -293,12 +291,18 @@ export class ContentService {
       },
     });
 
+    // Trigger immediate content review (don't wait for scheduled cron)
+    this.logger.log(`Triggering immediate review for content ${contentId}`);
+    this.reviewContentImmediately(content.id).catch(err => {
+      this.logger.error(`Immediate review failed for ${content.id}:`, err.message);
+    });
+
     // Return response - content is now in review status
     return {
       content,
       shortId: contentId,
       status: contentStatus,
-      message: 'Content submitted for review. You will receive an email when approved (usually within 10-15 minutes).',
+      message: 'Content submitted for review. Approval usually takes 1-2 minutes.',
     };
   }
 
@@ -644,6 +648,95 @@ export class ContentService {
       totalPurchases: stats._sum.purchaseCount || 0,
       totalRevenue: stats._sum.totalRevenue || 0,
     };
+  }
+
+  /**
+   * Review content immediately after upload instead of waiting for scheduled cron
+   */
+  private async reviewContentImmediately(contentId: string) {
+    const content = await this.prisma.content.findUnique({
+      where: { id: contentId },
+      include: {
+        contentItems: true,
+        creator: {
+          include: {
+            user: {
+              select: {
+                email: true,
+                displayName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!content) {
+      this.logger.error(`Content ${contentId} not found for immediate review`);
+      return;
+    }
+
+    try {
+      this.logger.log(`Running immediate recognition check for content ${content.id} (type: ${content.contentType})`);
+
+      // Check content with AWS Rekognition (using thumbnail for quick screening)
+      const safetyResult = await this.recognitionService.checkImageSafety(
+        {
+          type: 's3',
+          data: content.s3Key,
+          bucket: content.s3Bucket,
+        },
+        50, // 50% minimum confidence threshold
+      );
+
+      if (safetyResult.isSafe) {
+        // Content is safe - approve it
+        await this.prisma.content.update({
+          where: { id: content.id },
+          data: {
+            status: 'APPROVED',
+            complianceStatus: 'PASSED',
+          },
+        });
+
+        this.logger.log(`Content ${content.id} APPROVED immediately`);
+
+        // Send approval email
+        if (content.creator?.user?.email) {
+          await this.emailService.sendContentApproved(
+            content.creator.user.email,
+            {
+              creator_name: content.creator.user.displayName || 'Creator',
+              content_title: content.title,
+              content_link: `https://velolink.club/c/${content.id}`,
+            },
+          ).catch((err: Error) => this.logger.error('Failed to send approval email:', err.message));
+        }
+      } else {
+        // Content flagged - mark for manual review
+        await this.prisma.content.update({
+          where: { id: content.id },
+          data: {
+            status: 'PENDING_REVIEW',
+            complianceStatus: 'MANUAL_REVIEW',
+          },
+        });
+
+        this.logger.warn(`Content ${content.id} flagged for manual review`);
+      }
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Immediate review failed for content ${content.id}: ${err.message}`);
+      
+      // On error, flag for manual review
+      await this.prisma.content.update({
+        where: { id: content.id },
+        data: {
+          status: 'PENDING_REVIEW',
+          complianceStatus: 'MANUAL_REVIEW',
+        },
+      });
+    }
   }
 
   /**

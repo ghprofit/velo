@@ -12,9 +12,10 @@ import {
   BadRequestException,
   Headers,
   Req,
+  Res,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { VeriffService } from './veriff.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VerificationStatus } from '@prisma/client';
@@ -134,6 +135,19 @@ export class VeriffController {
       this.logger.error(`Failed to cancel session ${sessionId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * GET endpoint for user redirect after verification
+   * Veriff redirects users here after they click "Continue"
+   * Redirect them back to the frontend verify-identity page
+   */
+  @Get('webhooks/decision')
+  @HttpCode(HttpStatus.FOUND)
+  async handleUserRedirect(@Res() response: Response): Promise<void> {
+    this.logger.log('User redirected from Veriff - sending to frontend');
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    response.redirect(`${clientUrl}/creator/verify-identity`);
   }
 
   /**

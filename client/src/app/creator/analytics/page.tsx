@@ -614,13 +614,13 @@ export default function AnalyticsPage() {
                     <div key={item.id} className="p-4">
                       <div className="flex items-start gap-3 mb-3">
                         <Image
-                          src={item.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
+                          src={item.thumbnailUrl || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48"%3E%3Crect fill="%23eee" width="48" height="48"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="10"%3ENo Image%3C/text%3E%3C/svg%3E'}
                           alt={item.title}
                           width={48}
                           height={48}
-                          className="w-12 h-12 rounded-lg object-cover shrink-0"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
+                          className="rounded-lg object-cover"
+                          onError={(e) =>
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48"%3E%3Crect fill="%23eee" width="48" height="48"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="10"%3ENo Image%3C/text%3E%3C/svg%3E';
                           }}
                         />
                         <div className="flex-1 min-w-0">
@@ -680,13 +680,13 @@ export default function AnalyticsPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
                               <Image
-                                src={item.thumbnailUrl || 'https://via.placeholder.com/48x48?text=No+Image'}
+                                src={item.thumbnailUrl || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48"%3E%3Crect fill="%23eee" width="48" height="48"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="10"%3ENo Image%3C/text%3E%3C/svg%3E'}
                                 alt={item.title}
                                 width={48}
                                 height={48}
-                                className="w-12 h-12 rounded-lg object-cover shrink-0"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48?text=No+Image';
+                                className="rounded-lg object-cover"
+                                onError={(e) =>
+                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48"%3E%3Crect fill="%23eee" width="48" height="48"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="10"%3ENo Image%3C/text%3E%3C/svg%3E';
                                 }}
                               />
                               <div>

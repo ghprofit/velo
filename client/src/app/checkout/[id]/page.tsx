@@ -242,7 +242,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                 whileHover={{ scale: 1.02 }}
               >
                 <Image
-                  src={content.thumbnailUrl || 'https://via.placeholder.com/1280x720?text=Content+Preview'}
+                  src={content.thumbnailUrl || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"%3E%3Crect fill="%23eee" width="1280" height="720"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3EContent Preview%3C/text%3E%3C/svg%3E'}
                   alt={content.title}
                   fill
                   className="object-cover blur-sm"

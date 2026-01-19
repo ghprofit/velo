@@ -439,7 +439,7 @@ export default function ContentDetailPage() {
                     height={450}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x450?text=No+Thumbnail';
+                      (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23eee" width="800" height="450"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3ENo Thumbnail%3C/text%3E%3C/svg%3E';
                     }}
                   />
                   <div className="absolute top-4 left-4 flex items-center gap-2">

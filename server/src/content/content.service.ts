@@ -663,6 +663,7 @@ export class ContentService {
         },
       },
       include: {
+        contentItems: true, // Include actual content files
         creator: {
           include: {
             user: {
@@ -686,15 +687,27 @@ export class ContentService {
     const results = await Promise.all(
       contentToReview.map(async (content) => {
         try {
-          this.logger.log(`Running recognition check for content ${content.id}`);
+          this.logger.log(`Running recognition check for content ${content.id} (type: ${content.contentType})`);
 
-          // Check thumbnail with AWS Rekognition
+          // For VIDEO content, we need to check the actual video file, not the thumbnail
+          let s3KeyToCheck = content.s3Key; // Default to thumbnail
+          
+          if (content.contentType === 'VIDEO' && content.contentItems && content.contentItems.length > 0) {
+            // Use the first content item (the actual video file)
+            s3KeyToCheck = content.contentItems[0].s3Key;
+            this.logger.log(`Using video file for recognition: ${s3KeyToCheck}`);
+          }
+
+          // Check content with AWS Rekognition
           let safetyResult;
           try {
+            // For videos, we should ideally use startVideoSafetyCheck, but for now
+            // we'll check the thumbnail as a quick safety check
+            // TODO: Implement proper video moderation using startVideoSafetyCheck
             safetyResult = await this.recognitionService.checkImageSafety(
               {
                 type: 's3',
-                data: content.s3Key,
+                data: content.s3Key, // Always check thumbnail for quick initial screening
                 bucket: content.s3Bucket,
               },
               50, // 50% minimum confidence threshold

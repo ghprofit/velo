@@ -187,14 +187,16 @@ export class VeriffController {
 
         if (inProgressProfiles.length > 0) {
           const profile = inProgressProfiles[0];
-          await this.prisma.creatorProfile.update({
-            where: { id: profile.id },
-            data: {
-              verificationStatus: VerificationStatus.VERIFIED,
-              verifiedAt: new Date(),
-            },
-          });
-          this.logger.log(`Updated most recent IN_PROGRESS creator ${profile.id} to VERIFIED`);
+          if (profile) {
+            await this.prisma.creatorProfile.update({
+              where: { id: profile.id },
+              data: {
+                verificationStatus: VerificationStatus.VERIFIED,
+                verifiedAt: new Date(),
+              },
+            });
+            this.logger.log(`Updated most recent IN_PROGRESS creator ${profile.id} to VERIFIED`);
+          }
         }
       }
     } catch (error) {

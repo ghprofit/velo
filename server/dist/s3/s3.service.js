@@ -101,8 +101,8 @@ let S3Service = class S3Service {
                 base64Content = parts[1] || base64Data;
             }
             const fileBuffer = Buffer.from(base64Content, 'base64');
-            const fileExtension = fileName.split('.').pop() || 'bin';
-            const uniqueFileName = `${(0, nanoid_1.nanoid)(16)}.${fileExtension}`;
+            const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'bin';
+            const uniqueFileName = `${(0, nanoid_1.nanoid)(16)}.${fileExtension}`.toLowerCase();
             const key = `${folder}/${uniqueFileName}`;
             const isPublic = folder === 'thumbnails';
             const upload = new lib_storage_1.Upload({
@@ -133,8 +133,8 @@ let S3Service = class S3Service {
     }
     async uploadFileStream(fileStream, fileName, contentType, folder = 'content') {
         try {
-            const fileExtension = fileName.split('.').pop() || 'bin';
-            const uniqueFileName = `${(0, nanoid_1.nanoid)(16)}.${fileExtension}`;
+            const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'bin';
+            const uniqueFileName = `${(0, nanoid_1.nanoid)(16)}.${fileExtension}`.toLowerCase();
             const key = `${folder}/${uniqueFileName}`;
             const isPublic = folder === 'thumbnails';
             const upload = new lib_storage_1.Upload({

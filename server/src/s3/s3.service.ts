@@ -83,9 +83,9 @@ export class S3Service {
       // Convert base64 to buffer
       const fileBuffer = Buffer.from(base64Content, 'base64');
 
-      // Generate unique file name
-      const fileExtension = fileName.split('.').pop() || 'bin';
-      const uniqueFileName = `${nanoid(16)}.${fileExtension}`;
+      // Generate unique file name (lowercase for Linux compatibility)
+      const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'bin';
+      const uniqueFileName = `${nanoid(16)}.${fileExtension}`.toLowerCase();
       const key = `${folder}/${uniqueFileName}`;
 
       // Upload to S3
@@ -139,9 +139,9 @@ export class S3Service {
     folder: string = 'content',
   ): Promise<{ key: string; url: string }> {
     try {
-      // Generate unique file name
-      const fileExtension = fileName.split('.').pop() || 'bin';
-      const uniqueFileName = `${nanoid(16)}.${fileExtension}`;
+      // Generate unique file name (lowercase for Linux compatibility)
+      const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'bin';
+      const uniqueFileName = `${nanoid(16)}.${fileExtension}`.toLowerCase();
       const key = `${folder}/${uniqueFileName}`;
 
       // Make thumbnails publicly accessible, but keep content private

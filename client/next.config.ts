@@ -28,6 +28,14 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'amnz-s3-pm-bucket.s3.us-east-1.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'amnz-s3-pm-bucket.s3.amazonaws.com',
+      },
+      {
+        protocol: 'https',
         hostname: 'velo-content.s3.us-east-1.amazonaws.com',
       },
       {
@@ -35,6 +43,7 @@ const nextConfig: NextConfig = {
         hostname: 'velo-content.s3.amazonaws.com',
       },
     ],
+    unoptimized: process.env.NODE_ENV === 'production', // Disable optimization on production to avoid issues
   },
 };
 

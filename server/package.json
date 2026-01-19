@@ -11,6 +11,8 @@
     "dev": "ts-node -r tsconfig-paths/register src/main.ts",
     "seed": "tsx prisma/seed.ts",
     "import-waitlist": "tsx scripts/import-waitlist.ts",
+    "test:s3": "tsx scripts/test-s3-access.ts",
+    "fix:thumbnails": "tsx scripts/make-thumbnails-public.ts",
     "postinstall": "prisma generate"
   },
   "keywords": [],

@@ -56,6 +56,7 @@ export class CreatorsService {
       // Prepare Veriff session data
       // IMPORTANT: callback must point to API webhook endpoint, NOT frontend
       const apiUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:8000';
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
       
       // Log the data being sent for debugging
       this.logger.log(`Creator profile data: firstName=${user.creatorProfile.firstName}, lastName=${user.creatorProfile.lastName}, dateOfBirth=${user.creatorProfile.dateOfBirth}`);
@@ -63,6 +64,7 @@ export class CreatorsService {
       const sessionData: CreateSessionDto = {
         verification: {
           callback: `${apiUrl}/api/veriff/webhooks/decision`,
+          url: `${clientUrl}/creator/verify-identity`, // Redirect user here after verification
           person: {
             firstName: user.creatorProfile.firstName || undefined,
             lastName: user.creatorProfile.lastName || undefined,

@@ -20,10 +20,47 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const content_service_1 = require("./content.service");
 const create_content_dto_1 = require("./dto/create-content.dto");
 const create_content_multipart_dto_1 = require("./dto/create-content-multipart.dto");
+const get_upload_url_dto_1 = require("./dto/get-upload-url.dto");
+const confirm_upload_dto_1 = require("./dto/confirm-upload.dto");
 let ContentController = ContentController_1 = class ContentController {
     constructor(contentService) {
         this.contentService = contentService;
         this.logger = new common_1.Logger(ContentController_1.name);
+    }
+    async getUploadUrls(req, dto) {
+        try {
+            const urls = await this.contentService.getPresignedUploadUrls(req.user.id, dto);
+            return {
+                success: true,
+                data: urls,
+            };
+        }
+        catch (error) {
+            const err = error;
+            this.logger.error(`Failed to generate upload URLs: ${err.message}`, err.stack);
+            throw new common_1.BadRequestException({
+                success: false,
+                message: err.message || 'Failed to generate upload URLs',
+            });
+        }
+    }
+    async confirmUpload(req, dto) {
+        try {
+            const result = await this.contentService.confirmDirectUpload(req.user.id, dto);
+            return {
+                success: true,
+                message: 'Content uploaded successfully. Your content will be reviewed within 1-2 minutes.',
+                data: result,
+            };
+        }
+        catch (error) {
+            const err = error;
+            this.logger.error(`Upload confirmation failed: ${err.message}`, err.stack);
+            throw new common_1.BadRequestException({
+                success: false,
+                message: err.message || 'Failed to confirm upload',
+            });
+        }
     }
     async createContent(req, createContentDto) {
         try {
@@ -105,6 +142,24 @@ let ContentController = ContentController_1 = class ContentController {
     }
 };
 exports.ContentController = ContentController;
+__decorate([
+    (0, common_1.Post)('upload-urls'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, get_upload_url_dto_1.GetUploadUrlDto]),
+    __metadata("design:returntype", Promise)
+], ContentController.prototype, "getUploadUrls", null);
+__decorate([
+    (0, common_1.Post)('confirm-upload'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, confirm_upload_dto_1.ConfirmUploadDto]),
+    __metadata("design:returntype", Promise)
+], ContentController.prototype, "confirmUpload", null);
 __decorate([
     (0, common_1.Post)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

@@ -17,12 +17,59 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ContentService } from './content.service';
 import { CreateContentDto } from './dto/create-content.dto';
 import { CreateContentMultipartDto } from './dto/create-content-multipart.dto';
+import { GetUploadUrlDto } from './dto/get-upload-url.dto';
+import { ConfirmUploadDto } from './dto/confirm-upload.dto';
 
 @Controller('content')
 export class ContentController {
   private readonly logger = new Logger(ContentController.name);
 
   constructor(private contentService: ContentService) {}
+
+  /**
+   * Get presigned S3 upload URLs (bypasses API Gateway 10MB limit)
+   */
+  @Post('upload-urls')
+  @UseGuards(JwtAuthGuard)
+  async getUploadUrls(@Request() req: any, @Body() dto: GetUploadUrlDto) {
+    try {
+      const urls = await this.contentService.getPresignedUploadUrls(req.user.id, dto);
+      return {
+        success: true,
+        data: urls,
+      };
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Failed to generate upload URLs: ${err.message}`, err.stack);
+      throw new BadRequestException({
+        success: false,
+        message: err.message || 'Failed to generate upload URLs',
+      });
+    }
+  }
+
+  /**
+   * Confirm S3 upload completion and create content record
+   */
+  @Post('confirm-upload')
+  @UseGuards(JwtAuthGuard)
+  async confirmUpload(@Request() req: any, @Body() dto: ConfirmUploadDto) {
+    try {
+      const result = await this.contentService.confirmDirectUpload(req.user.id, dto);
+      return {
+        success: true,
+        message: 'Content uploaded successfully. Your content will be reviewed within 1-2 minutes.',
+        data: result,
+      };
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Upload confirmation failed: ${err.message}`, err.stack);
+      throw new BadRequestException({
+        success: false,
+        message: err.message || 'Failed to confirm upload',
+      });
+    }
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard)

@@ -333,45 +333,98 @@ export default function UploadContentPage() {
     setUploadProgress(0);
 
     try {
-      // Create FormData
-      const formData = new FormData();
-
-      // Add form fields
-      formData.append('title', title.trim());
-      if (description.trim()) {
-        formData.append('description', description.trim());
-      }
-      formData.append('price', price);
-      formData.append('contentType', contentType);
-
-      // Add files metadata as JSON
-      const filesMetadata = uploadedFiles.map(uf => ({
-        fileName: uf.file.name,
-        contentType: uf.file.type,
-        fileSize: uf.file.size,
-        duration: undefined,
-      }));
-      formData.append('filesMetadata', JSON.stringify(filesMetadata));
-
-      // Add actual file objects
-      uploadedFiles.forEach(uf => {
-        formData.append('files', uf.file);
-      });
-
-      // Add thumbnail (convert base64 to Blob)
+      // Step 1: Get presigned upload URLs from backend (5%)
+      setUploadProgress(5);
+      
       const thumbnailBlob = await fetch(uploadedFiles[0].thumbnail).then(r => r.blob());
-      formData.append('thumbnail', thumbnailBlob, 'thumbnail.jpg');
-
-      // Send multipart request with progress tracking
-      const response = await contentApi.createContentMultipart(formData, (progressEvent) => {
-        if (progressEvent.total) {
-          // Cap at 95% during upload, reserve 95-100% for server processing
-          const percentCompleted = Math.min(95, Math.round((progressEvent.loaded * 100) / progressEvent.total));
-          setUploadProgress(percentCompleted);
-        }
+      
+      const uploadUrlsResponse = await contentApi.getUploadUrls({
+        title: title.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
+        thumbnailFileName: 'thumbnail.jpg',
+        thumbnailContentType: 'image/jpeg',
+        thumbnailFileSize: thumbnailBlob.size,
+        contentFiles: uploadedFiles.map(uf => ({
+          fileName: uf.file.name,
+          contentType: uf.file.type,
+          fileSize: uf.file.size,
+          type: uf.file.type.startsWith('image/') ? 'IMAGE' : 'VIDEO',
+        })),
       });
 
-      // Upload complete, now processing on server
+      const { contentId, thumbnailUrl, contentUrls } = uploadUrlsResponse.data.data;
+
+      // Step 2: Upload thumbnail directly to S3 (10%)
+      setUploadProgress(10);
+      await fetch(thumbnailUrl.uploadUrl, {
+        method: 'PUT',
+        body: thumbnailBlob,
+        headers: {
+          'Content-Type': 'image/jpeg',
+        },
+      });
+
+      // Step 3: Upload content files directly to S3 (10% -> 90%)
+      const totalBytes = uploadedFiles.reduce((sum, uf) => sum + uf.file.size, 0);
+      let uploadedBytes = 0;
+
+      const uploadedItems = await Promise.all(
+        contentUrls.map(async (urlData: { uploadUrl: string; key: string; index: number; originalFileName: string }, index: number) => {
+          const file = uploadedFiles[index].file;
+          
+          // Upload to S3 with progress tracking
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', (e) => {
+              if (e.lengthComputable) {
+                const previousBytes = uploadedBytes;
+                uploadedBytes = contentUrls
+                  .slice(0, index)
+                  .reduce((sum: number, _: unknown, i: number) => sum + uploadedFiles[i].file.size, 0) + e.loaded;
+                
+                const percentCompleted = Math.min(90, 10 + Math.round((uploadedBytes / totalBytes) * 80));
+                setUploadProgress(percentCompleted);
+              }
+            });
+
+            xhr.addEventListener('load', () => {
+              if (xhr.status === 200) {
+                resolve();
+              } else {
+                reject(new Error(`Upload failed with status ${xhr.status}`));
+              }
+            });
+
+            xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+            xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
+
+            xhr.open('PUT', urlData.uploadUrl);
+            xhr.setRequestHeader('Content-Type', file.type);
+            xhr.send(file);
+          });
+
+          return {
+            s3Key: urlData.key,
+            type: file.type.startsWith('image/') ? 'IMAGE' : 'VIDEO',
+            fileSize: file.size,
+          };
+        })
+      );
+
+      // Step 4: Confirm upload with backend (95%)
+      setUploadProgress(95);
+      const response = await contentApi.confirmUpload({
+        contentId,
+        title: title.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
+        thumbnailS3Key: thumbnailUrl.key,
+        items: uploadedItems,
+      });
+
+      // Upload complete
       setUploadProgress(100);
       
       setShortId(response.data.data.shortId);
@@ -395,7 +448,7 @@ export default function UploadContentPage() {
       } else if (axiosError.code === 'ERR_NETWORK' || !axiosError.response) {
         errorMessage = 'Network error. Please check your internet connection and try again.';
       } else if (axiosError.response?.status === 413) {
-        errorMessage = 'File too large for server. Maximum total upload size is 500MB per file.';
+        errorMessage = 'File too large. Maximum file size is 500MB per file.';
       } else if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
         errorMessage = 'Authentication error. Please log in again.';
       } else if (axiosError.response?.status === 500) {

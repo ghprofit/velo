@@ -213,22 +213,33 @@ let S3Service = class S3Service {
         const urlPromises = keys.map((key) => this.getSignedUrl(key, expiresIn));
         return Promise.all(urlPromises);
     }
-    async getUploadSignedUrl(key, contentType, expiresIn = 900) {
+    async getUploadSignedUrl(key, contentType, acl = 'private', expiresIn = 3600) {
         try {
             const command = new client_s3_1.PutObjectCommand({
                 Bucket: this.bucketName,
                 Key: key,
                 ContentType: contentType,
+                ACL: acl,
             });
             const signedUrl = await (0, s3_request_presigner_1.getSignedUrl)(this.s3Client, command, {
                 expiresIn,
             });
+            console.log(`[S3] Generated upload signed URL for key: ${key} (expires in ${expiresIn}s)`);
             return signedUrl;
         }
         catch (error) {
             console.error('Error generating upload signed URL:', error);
             throw new common_1.InternalServerErrorException('Failed to generate upload signed URL');
         }
+    }
+    async getPresignedUploadUrl(fileName, contentType, fileType) {
+        const fileExtension = fileName.split('.').pop();
+        const uniqueFileName = `${(0, nanoid_1.nanoid)()}.${fileExtension}`.toLowerCase();
+        const folder = fileType === 'thumbnail' ? 'thumbnails' : 'content';
+        const key = `${folder}/${uniqueFileName}`;
+        const acl = fileType === 'thumbnail' ? 'public-read' : 'private';
+        const uploadUrl = await this.getUploadSignedUrl(key, contentType, acl);
+        return { uploadUrl, key };
     }
 };
 exports.S3Service = S3Service;

@@ -477,11 +477,9 @@ export default function ContentDetailPage() {
             {content.contentType !== 'VIDEO' && content.contentType !== 'IMAGE' && content.contentType !== 'GALLERY' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="aspect-video bg-gray-100 relative">
-                  <Image
+                  <img
                     src={content.thumbnailUrl}
                     alt={content.title}
-                    width={800}
-                    height={450}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23eee" width="800" height="450"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3ENo Thumbnail%3C/text%3E%3C/svg%3E';
@@ -525,13 +523,10 @@ export default function ContentDetailPage() {
                           {/* Show actual image/video if preview URL available */}
                           {previewUrls[item.id] && itemFileType === 'IMAGE' && (
                             <>
-                              <Image
+                              <img
                                 src={previewUrls[item.id]}
                                 alt={fileName || 'Gallery item'}
-                                fill
-                                className="object-cover"
-                                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-                                unoptimized
+                                className="w-full h-full object-cover absolute inset-0"
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                 <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

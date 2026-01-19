@@ -334,6 +334,40 @@ export const contentApi = {
       onUploadProgress,
     }),
 
+  // Get presigned S3 upload URLs (bypasses API Gateway 10MB limit)
+  getUploadUrls: (data: {
+    title: string;
+    description: string;
+    category?: string;
+    price: number;
+    thumbnailFileName: string;
+    thumbnailContentType: string;
+    thumbnailFileSize: number;
+    contentFiles: Array<{
+      fileName: string;
+      contentType: string;
+      fileSize: number;
+      type: 'IMAGE' | 'VIDEO';
+    }>;
+  }) =>
+    apiClient.post('/content/upload-urls', data),
+
+  // Confirm direct S3 upload completion
+  confirmUpload: (data: {
+    contentId: string;
+    title: string;
+    description: string;
+    category?: string;
+    price: number;
+    thumbnailS3Key: string;
+    items: Array<{
+      s3Key: string;
+      type: string;
+      fileSize: number;
+    }>;
+  }) =>
+    apiClient.post('/content/confirm-upload', data),
+
   // Get creator's content
   getMyContent: () =>
     apiClient.get('/content/my-content'),

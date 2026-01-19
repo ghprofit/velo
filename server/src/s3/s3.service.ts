@@ -273,25 +273,29 @@ export class S3Service {
    * Get a signed URL for uploading a file (presigned PUT)
    * @param key - S3 key where the file will be uploaded
    * @param contentType - MIME type of the file
-   * @param expiresIn - Expiration time in seconds (default: 15 minutes)
+   * @param acl - ACL for the file (public-read for thumbnails, private for content)
+   * @param expiresIn - Expiration time in seconds (default: 1 hour)
    * @returns Signed URL for upload
    */
   async getUploadSignedUrl(
     key: string,
     contentType: string,
-    expiresIn: number = 900,
+    acl: 'public-read' | 'private' = 'private',
+    expiresIn: number = 3600,
   ): Promise<string> {
     try {
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
         Key: key,
         ContentType: contentType,
+        ACL: acl,
       });
 
       const signedUrl = await getSignedUrl(this.s3Client, command, {
         expiresIn,
       });
 
+      console.log(`[S3] Generated upload signed URL for key: ${key} (expires in ${expiresIn}s)`);
       return signedUrl;
     } catch (error) {
       console.error('Error generating upload signed URL:', error);
@@ -299,5 +303,28 @@ export class S3Service {
         'Failed to generate upload signed URL',
       );
     }
+  }
+
+  /**
+   * Generate presigned upload URL with auto-generated key
+   * @param fileName - Original file name
+   * @param contentType - MIME type
+   * @param fileType - 'content' or 'thumbnail'
+   * @returns Upload URL and S3 key
+   */
+  async getPresignedUploadUrl(
+    fileName: string,
+    contentType: string,
+    fileType: 'content' | 'thumbnail',
+  ): Promise<{ uploadUrl: string; key: string }> {
+    const fileExtension = fileName.split('.').pop();
+    const uniqueFileName = `${nanoid()}.${fileExtension}`.toLowerCase();
+    const folder = fileType === 'thumbnail' ? 'thumbnails' : 'content';
+    const key = `${folder}/${uniqueFileName}`;
+    const acl = fileType === 'thumbnail' ? 'public-read' : 'private';
+
+    const uploadUrl = await this.getUploadSignedUrl(key, contentType, acl);
+
+    return { uploadUrl, key };
   }
 }

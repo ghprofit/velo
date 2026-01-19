@@ -25,6 +25,10 @@ export declare class S3Service {
     deleteMultipleFiles(keys: string[]): Promise<void>;
     getSignedUrl(key: string, expiresIn?: number): Promise<string>;
     getSignedUrls(keys: string[], expiresIn?: number): Promise<string[]>;
-    getUploadSignedUrl(key: string, contentType: string, expiresIn?: number): Promise<string>;
+    getUploadSignedUrl(key: string, contentType: string, acl?: 'public-read' | 'private', expiresIn?: number): Promise<string>;
+    getPresignedUploadUrl(fileName: string, contentType: string, fileType: 'content' | 'thumbnail'): Promise<{
+        uploadUrl: string;
+        key: string;
+    }>;
 }
 //# sourceMappingURL=s3.service.d.ts.map

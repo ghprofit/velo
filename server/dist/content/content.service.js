@@ -735,6 +735,124 @@ let ContentService = ContentService_1 = class ContentService {
             results,
         };
     }
+    async getPresignedUploadUrls(userId, dto) {
+        const creatorProfile = await this.prisma.creatorProfile.findUnique({
+            where: { userId },
+        });
+        if (!creatorProfile) {
+            throw new common_1.ForbiddenException('Creator profile not found');
+        }
+        if (dto.contentFiles.length === 0) {
+            throw new common_1.BadRequestException('At least one content file is required');
+        }
+        if (dto.contentFiles.length > 10) {
+            throw new common_1.BadRequestException('Maximum 10 content files allowed per upload');
+        }
+        const MAX_FILE_SIZE = 524288000;
+        for (const file of dto.contentFiles) {
+            if (file.fileSize > MAX_FILE_SIZE) {
+                throw new common_1.BadRequestException(`File "${file.fileName}" exceeds maximum size of 500MB (${Math.round(file.fileSize / 1048576)}MB)`);
+            }
+        }
+        if (dto.thumbnailFileSize > MAX_FILE_SIZE) {
+            throw new common_1.BadRequestException(`Thumbnail exceeds maximum size of 500MB`);
+        }
+        const contentId = (0, nanoid_1.nanoid)(10);
+        const thumbnailUrl = await this.s3Service.getPresignedUploadUrl(dto.thumbnailFileName, dto.thumbnailContentType, 'thumbnail');
+        const contentUrls = await Promise.all(dto.contentFiles.map((file, index) => {
+            const fileExtension = file.fileName.split('.').pop();
+            const fileName = `${contentId}-item-${index}.${fileExtension}`;
+            return this.s3Service.getPresignedUploadUrl(fileName, file.contentType, 'content');
+        }));
+        return {
+            contentId,
+            thumbnailUrl: {
+                uploadUrl: thumbnailUrl.uploadUrl,
+                key: thumbnailUrl.key,
+            },
+            contentUrls: contentUrls.map((url, index) => ({
+                uploadUrl: url.uploadUrl,
+                key: url.key,
+                index,
+                originalFileName: dto.contentFiles[index]?.fileName || `file-${index}`,
+            })),
+            metadata: {
+                title: dto.title,
+                description: dto.description,
+                category: dto.category,
+                price: dto.price,
+            },
+        };
+    }
+    async confirmDirectUpload(userId, dto) {
+        const creatorProfile = await this.prisma.creatorProfile.findUnique({
+            where: { userId },
+            include: {
+                user: {
+                    select: {
+                        email: true,
+                        displayName: true,
+                        profilePicture: true,
+                    },
+                },
+            },
+        });
+        if (!creatorProfile) {
+            throw new common_1.ForbiddenException('Creator profile not found');
+        }
+        const contentLink = `velolink.club/c/${dto.contentId}`;
+        const totalFileSize = dto.items.reduce((sum, item) => sum + item.fileSize, 0);
+        const content = await this.prisma.content.create({
+            data: {
+                id: dto.contentId,
+                creatorId: creatorProfile.id,
+                title: dto.title,
+                description: dto.description,
+                price: dto.price,
+                thumbnailUrl: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${dto.thumbnailS3Key}`,
+                contentType: dto.items.length === 1 && dto.items[0]?.type === 'IMAGE' ? 'IMAGE' : 'VIDEO',
+                s3Key: dto.thumbnailS3Key,
+                s3Bucket: process.env.AWS_S3_BUCKET_NAME || 'amnz-s3-pm-bucket',
+                fileSize: totalFileSize,
+                status: 'PENDING_REVIEW',
+                complianceStatus: 'PENDING',
+                isPublished: true,
+                publishedAt: new Date(),
+                contentItems: {
+                    create: dto.items.map((item, index) => ({
+                        s3Key: item.s3Key,
+                        s3Bucket: process.env.AWS_S3_BUCKET_NAME || 'amnz-s3-pm-bucket',
+                        fileSize: item.fileSize,
+                        order: index,
+                    })),
+                },
+            },
+            include: {
+                contentItems: true,
+                creator: {
+                    include: {
+                        user: {
+                            select: {
+                                displayName: true,
+                                profilePicture: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        this.logger.log(`Triggering immediate review for direct upload ${dto.contentId}`);
+        this.reviewContentImmediately(content.id).catch(err => {
+            this.logger.error(`Immediate review failed for ${content.id}:`, err.message);
+        });
+        return {
+            content,
+            link: `https://${contentLink}`,
+            shortId: dto.contentId,
+            status: 'PENDING_REVIEW',
+        };
+    }
 };
 exports.ContentService = ContentService;
 exports.ContentService = ContentService = ContentService_1 = __decorate([

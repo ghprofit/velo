@@ -5,6 +5,8 @@ import { RecognitionService } from '../recognition/recognition.service';
 import { EmailService } from '../email/email.service';
 import { CreateContentDto } from './dto/create-content.dto';
 import { CreateContentMultipartDto } from './dto/create-content-multipart.dto';
+import { GetUploadUrlDto } from './dto/get-upload-url.dto';
+import { ConfirmUploadDto } from './dto/confirm-upload.dto';
 import { ContentStatus, ComplianceCheckStatus } from '@prisma/client';
 import { nanoid } from 'nanoid';
 
@@ -968,4 +970,169 @@ export class ContentService {
       results,
     };
   }
+
+  /**
+   * Generate presigned upload URLs for direct S3 upload (bypasses API Gateway 10MB limit)
+   */
+  async getPresignedUploadUrls(userId: string, dto: GetUploadUrlDto) {
+    // Verify user has creator profile
+    const creatorProfile = await this.prisma.creatorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!creatorProfile) {
+      throw new ForbiddenException('Creator profile not found');
+    }
+
+    // Validate file limits
+    if (dto.contentFiles.length === 0) {
+      throw new BadRequestException('At least one content file is required');
+    }
+
+    if (dto.contentFiles.length > 10) {
+      throw new BadRequestException('Maximum 10 content files allowed per upload');
+    }
+
+    // Validate file sizes (500MB max)
+    const MAX_FILE_SIZE = 524288000; // 500MB
+    for (const file of dto.contentFiles) {
+      if (file.fileSize > MAX_FILE_SIZE) {
+        throw new BadRequestException(
+          `File "${file.fileName}" exceeds maximum size of 500MB (${Math.round(file.fileSize / 1048576)}MB)`
+        );
+      }
+    }
+
+    if (dto.thumbnailFileSize > MAX_FILE_SIZE) {
+      throw new BadRequestException(
+        `Thumbnail exceeds maximum size of 500MB`
+      );
+    }
+
+    // Generate unique content ID
+    const contentId = nanoid(10);
+
+    // Generate presigned URL for thumbnail
+    const thumbnailUrl = await this.s3Service.getPresignedUploadUrl(
+      dto.thumbnailFileName,
+      dto.thumbnailContentType,
+      'thumbnail',
+    );
+
+    // Generate presigned URLs for content files
+    const contentUrls = await Promise.all(
+      dto.contentFiles.map((file, index) => {
+        const fileExtension = file.fileName.split('.').pop();
+        const fileName = `${contentId}-item-${index}.${fileExtension}`;
+        return this.s3Service.getPresignedUploadUrl(
+          fileName,
+          file.contentType,
+          'content',
+        );
+      }),
+    );
+
+    return {
+      contentId,
+      thumbnailUrl: {
+        uploadUrl: thumbnailUrl.uploadUrl,
+        key: thumbnailUrl.key,
+      },
+      contentUrls: contentUrls.map((url, index) => ({
+        uploadUrl: url.uploadUrl,
+        key: url.key,
+        index,
+        originalFileName: dto.contentFiles[index]?.fileName || `file-${index}`,
+      })),
+      metadata: {
+        title: dto.title,
+        description: dto.description,
+        category: dto.category,
+        price: dto.price,
+      },
+    };
+  }
+
+  /**
+   * Confirm direct S3 upload and create content record
+   */
+  async confirmDirectUpload(userId: string, dto: ConfirmUploadDto) {
+    // Verify user has creator profile
+    const creatorProfile = await this.prisma.creatorProfile.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            email: true,
+            displayName: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    if (!creatorProfile) {
+      throw new ForbiddenException('Creator profile not found');
+    }
+
+    // Generate content link
+    const contentLink = `velolink.club/c/${dto.contentId}`;
+    const totalFileSize = dto.items.reduce((sum: number, item) => sum + item.fileSize, 0);
+
+    // Create content record with PENDING_REVIEW status
+    const content = await this.prisma.content.create({
+      data: {
+        id: dto.contentId,
+        creatorId: creatorProfile.id,
+        title: dto.title,
+        description: dto.description,
+        price: dto.price,
+        thumbnailUrl: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${dto.thumbnailS3Key}`,
+        contentType: dto.items.length === 1 && dto.items[0]?.type === 'IMAGE' ? 'IMAGE' : 'VIDEO',
+        s3Key: dto.thumbnailS3Key,
+        s3Bucket: process.env.AWS_S3_BUCKET_NAME || 'amnz-s3-pm-bucket',
+        fileSize: totalFileSize,
+        status: 'PENDING_REVIEW',
+        complianceStatus: 'PENDING',
+        isPublished: true,
+        publishedAt: new Date(),
+        contentItems: {
+          create: dto.items.map((item: any, index: number) => ({
+            s3Key: item.s3Key,
+            s3Bucket: process.env.AWS_S3_BUCKET_NAME || 'amnz-s3-pm-bucket',
+            fileSize: item.fileSize,
+            order: index,
+          })),
+        },
+      },
+      include: {
+        contentItems: true,
+        creator: {
+          include: {
+            user: {
+              select: {
+                displayName: true,
+                profilePicture: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Trigger immediate content review
+    this.logger.log(`Triggering immediate review for direct upload ${dto.contentId}`);
+    this.reviewContentImmediately(content.id).catch(err => {
+      this.logger.error(`Immediate review failed for ${content.id}:`, err.message);
+    });
+
+    return {
+      content,
+      link: `https://${contentLink}`,
+      shortId: dto.contentId,
+      status: 'PENDING_REVIEW',
+    };
+  }
 }
+

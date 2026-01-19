@@ -18,7 +18,7 @@ async function bootstrap() {
   app.use('/api/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
 
   // Veriff webhook needs raw body for HMAC signature verification
-  app.use('/api/webhooks/veriff', bodyParser.raw({ type: 'application/json' }));
+  app.use('/api/veriff/webhooks/decision', bodyParser.raw({ type: 'application/json' }));
 
   // Increase payload size limit for base64-encoded content uploads
   // Video uploads: 500MB max file size → ~750MB with base64 overhead (33%) + metadata

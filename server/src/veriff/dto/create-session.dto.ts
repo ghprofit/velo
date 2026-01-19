@@ -17,7 +17,6 @@ export class CreateSessionDto {
       country?: string;
     };
     vendorData?: string;
-    url?: string; // Success redirect URL
   };
 
   @IsOptional()

@@ -64,7 +64,6 @@ export class CreatorsService {
       const sessionData: CreateSessionDto = {
         verification: {
           callback: `${apiUrl}/api/veriff/webhooks/decision`,
-          url: `${clientUrl}/creator/verify-identity`, // Redirect user here after verification
           person: {
             firstName: user.creatorProfile.firstName || undefined,
             lastName: user.creatorProfile.lastName || undefined,

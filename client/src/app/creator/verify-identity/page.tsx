@@ -25,6 +25,18 @@ export default function CreatorVerifyIdentityPage() {
     checkVerificationStatus();
   }, []);
 
+  // Auto-poll status when IN_PROGRESS
+  useEffect(() => {
+    if (verificationStatus === 'IN_PROGRESS') {
+      // Poll every 5 seconds for status updates
+      const interval = setInterval(() => {
+        checkVerificationStatus();
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [verificationStatus]);
+
   const checkVerificationStatus = async () => {
     try {
       setIsCheckingStatus(true);

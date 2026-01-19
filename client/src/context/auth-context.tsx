@@ -65,22 +65,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (refreshError) {
           // If refresh fails, the user might be logged out on server
           console.error('Failed to refresh user on init:', refreshError);
-          // Clear everything and force re-login
-          localStorage.clear();
-          sessionStorage.clear();
+          // Clear only auth-related items, not ALL localStorage
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
           setUser(null);
         }
-      } else {
-        // Incomplete auth data - clear everything
-        localStorage.clear();
-        sessionStorage.clear();
+      } else if (storedUser || accessToken || refreshToken) {
+        // Incomplete auth data - clear only auth items
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
         setUser(null);
       }
     } catch (error) {
       console.error('Failed to initialize auth:', error);
-      // Clear ALL stored data on error
-      localStorage.clear();
-      sessionStorage.clear();
+      // Clear only auth items on error, not everything
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
       setUser(null);
     } finally {
       setLoading(false);
@@ -202,19 +205,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     
     try {
+      // Get refresh token BEFORE clearing storage
       const refreshToken = localStorage.getItem('refreshToken');
       
-      // Clear ALL localStorage items to prevent data retention
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Make logout API call
+      // Make logout API call first
       if (refreshToken) {
         await authApi.logout(refreshToken);
       }
     } catch (error) {
       console.error('Logout error:', error);
-      // Ensure cleanup happens even if API fails
+    } finally {
+      // Clear ALL localStorage items to prevent data retention
+      // This ensures old user data doesn't persist
       localStorage.clear();
       sessionStorage.clear();
       setUser(null);

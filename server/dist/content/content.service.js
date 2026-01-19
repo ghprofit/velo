@@ -489,6 +489,7 @@ let ContentService = ContentService_1 = class ContentService {
                 },
             },
             include: {
+                contentItems: true,
                 creator: {
                     include: {
                         user: {
@@ -508,7 +509,15 @@ let ContentService = ContentService_1 = class ContentService {
         this.logger.log(`Processing ${contentToReview.length} scheduled content review(s)`);
         const results = await Promise.all(contentToReview.map(async (content) => {
             try {
-                this.logger.log(`Running recognition check for content ${content.id}`);
+                this.logger.log(`Running recognition check for content ${content.id} (type: ${content.contentType})`);
+                let s3KeyToCheck = content.s3Key;
+                if (content.contentType === 'VIDEO' && content.contentItems && content.contentItems.length > 0) {
+                    const firstContentItem = content.contentItems[0];
+                    if (firstContentItem) {
+                        s3KeyToCheck = firstContentItem.s3Key;
+                        this.logger.log(`Using video file for recognition: ${s3KeyToCheck}`);
+                    }
+                }
                 let safetyResult;
                 try {
                     safetyResult = await this.recognitionService.checkImageSafety({

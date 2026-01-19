@@ -482,36 +482,7 @@ export class ContentService {
       },
     });
 
-    // Generate signed URLs for all content items so creator can preview their content
-    const contentWithSignedUrls = await Promise.all(
-      content.map(async (contentItem) => {
-        if (contentItem.contentItems && contentItem.contentItems.length > 0) {
-          const itemsWithUrls = await Promise.all(
-            contentItem.contentItems.map(async (item) => {
-              try {
-                const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400); // 24 hours
-                return {
-                  ...item,
-                  signedUrl,
-                };
-              } catch (error) {
-                this.logger.error(`Failed to generate signed URL for ${item.s3Key}:`, error);
-                return item;
-              }
-            })
-          );
-
-          return {
-            ...contentItem,
-            contentItems: itemsWithUrls,
-          };
-        }
-
-        return contentItem;
-      })
-    );
-
-    return contentWithSignedUrls;
+    return content;
   }
 
   async getContentById(contentId: string) {
@@ -663,7 +634,6 @@ export class ContentService {
         },
       },
       include: {
-        contentItems: true, // Include actual content files
         creator: {
           include: {
             user: {
@@ -687,58 +657,17 @@ export class ContentService {
     const results = await Promise.all(
       contentToReview.map(async (content) => {
         try {
-          this.logger.log(`Running recognition check for content ${content.id} (type: ${content.contentType})`);
+          this.logger.log(`Running recognition check for content ${content.id}`);
 
-          // For VIDEO content, we need to check the actual video file, not the thumbnail
-          let s3KeyToCheck = content.s3Key; // Default to thumbnail
-          
-          if (content.contentType === 'VIDEO' && content.contentItems && content.contentItems.length > 0) {
-            // Use the first content item (the actual video file)
-            const firstContentItem = content.contentItems[0];
-            if (firstContentItem) {
-              s3KeyToCheck = firstContentItem.s3Key;
-              this.logger.log(`Using video file for recognition: ${s3KeyToCheck}`);
-            }
-          }
-
-          // Check content with AWS Rekognition
-          let safetyResult;
-          try {
-            // For videos, we should ideally use startVideoSafetyCheck, but for now
-            // we'll check the thumbnail as a quick safety check
-            // TODO: Implement proper video moderation using startVideoSafetyCheck
-            safetyResult = await this.recognitionService.checkImageSafety(
-              {
-                type: 's3',
-                data: content.s3Key, // Always check thumbnail for quick initial screening
-                bucket: content.s3Bucket,
-              },
-              50, // 50% minimum confidence threshold
-            );
-          } catch (recognitionError) {
-            const err = recognitionError as Error;
-            this.logger.error(
-              `Rekognition check failed for content ${content.id}: ${err.message}`,
-            );
-            this.logger.error('S3 Key:', content.s3Key, 'Bucket:', content.s3Bucket);
-            
-            // If Rekognition fails, flag for manual review instead of auto-approving
-            await this.prisma.content.update({
-              where: { id: content.id },
-              data: {
-                status: 'PENDING_REVIEW',
-                complianceStatus: 'MANUAL_REVIEW',
-                complianceCheckedAt: new Date(),
-                complianceNotes: `Automated check failed: ${err.message}. Requires manual review.`,
-              },
-            });
-            
-            return { 
-              id: content.id, 
-              status: 'PENDING_REVIEW',
-              error: `Rekognition error: ${err.message}` 
-            };
-          }
+          // Check thumbnail with AWS Rekognition
+          const safetyResult = await this.recognitionService.checkImageSafety(
+            {
+              type: 's3',
+              data: content.s3Key,
+              bucket: content.s3Bucket,
+            },
+            50, // 50% minimum confidence threshold
+          );
 
           let newStatus: ContentStatus;
           let newComplianceStatus: ComplianceCheckStatus;

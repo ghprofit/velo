@@ -109,128 +109,63 @@ export default function UploadContentPage() {
         // For images, use object URL and resize
         const img = new Image();
         img.onload = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d', { alpha: false }); // No alpha for better JPEG compression
-            
-            if (!ctx) {
-              throw new Error('Failed to get canvas context');
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          let width = img.width;
+          let height = img.height;
+          const maxSize = 300;
+
+          if (width > height) {
+            if (width > maxSize) {
+              height = (height * maxSize) / width;
+              width = maxSize;
             }
-
-            let width = img.width;
-            let height = img.height;
-            const maxSize = 600; // Increased from 300 for better quality
-
-            if (width > height) {
-              if (width > maxSize) {
-                height = (height * maxSize) / width;
-                width = maxSize;
-              }
-            } else {
-              if (height > maxSize) {
-                width = (width * maxSize) / height;
-                height = maxSize;
-              }
+          } else {
+            if (height > maxSize) {
+              width = (width * maxSize) / height;
+              height = maxSize;
             }
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Revoke object URL to free memory
-            URL.revokeObjectURL(img.src);
-            
-            // Use higher quality for Rekognition (0.9 instead of 0.7)
-            const dataURL = canvas.toDataURL('image/jpeg', 0.9);
-            
-            // Verify we got a valid data URL
-            if (!dataURL || !dataURL.startsWith('data:image/jpeg')) {
-              throw new Error('Failed to generate valid JPEG thumbnail');
-            }
-            
-            resolve(dataURL);
-          } catch (err) {
-            URL.revokeObjectURL(img.src);
-            reject(err);
           }
-        };
-        img.onerror = (err) => {
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Revoke object URL to free memory
           URL.revokeObjectURL(img.src);
-          reject(err || new Error('Failed to load image'));
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
+        img.onerror = reject;
         img.src = URL.createObjectURL(file);
       } else if (file.type.startsWith('video/')) {
         // For videos, use object URL (no base64 loading)
         const video = document.createElement('video');
         video.preload = 'metadata';
-        video.muted = true; // Mute to allow autoplay in some browsers
 
         video.onloadeddata = () => {
-          // Seek to 1 second or 10% of video duration, whichever is smaller
-          const seekTime = Math.min(1, video.duration * 0.1);
-          video.currentTime = seekTime;
+          video.currentTime = 0.1;
         };
 
         video.onseeked = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            
-            // Ensure we have valid dimensions
-            if (!video.videoWidth || !video.videoHeight) {
-              throw new Error('Video has invalid dimensions');
-            }
-            
-            // Calculate thumbnail size (max 600px width, maintain aspect ratio)
-            const maxWidth = 600;
-            let width = video.videoWidth;
-            let height = video.videoHeight;
-            
-            if (width > maxWidth) {
-              height = (height * maxWidth) / width;
-              width = maxWidth;
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth > 300 ? 300 : video.videoWidth;
+          canvas.height = (canvas.width / video.videoWidth) * video.videoHeight;
 
-            const ctx = canvas.getContext('2d', { alpha: false }); // No alpha for better JPEG compression
-            if (!ctx) {
-              throw new Error('Failed to get canvas context');
-            }
-            
-            ctx.drawImage(video, 0, 0, width, height);
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Store the URL before clearing the source
-            const blobUrl = video.src;
-            // Clear source first to stop any pending requests
-            video.src = '';
-            video.load();
-            // Then revoke object URL to free memory
-            URL.revokeObjectURL(blobUrl);
-            
-            // Use higher quality for Rekognition (0.9 instead of 0.7)
-            const dataURL = canvas.toDataURL('image/jpeg', 0.9);
-            
-            // Verify we got a valid data URL
-            if (!dataURL || !dataURL.startsWith('data:image/jpeg')) {
-              throw new Error('Failed to generate valid JPEG thumbnail');
-            }
-            
-            resolve(dataURL);
-          } catch (err) {
-            const blobUrl = video.src;
-            video.src = '';
-            video.load();
-            URL.revokeObjectURL(blobUrl);
-            reject(err);
-          }
+          // Store the URL before clearing the source
+          const blobUrl = video.src;
+          // Clear source first to stop any pending requests
+          video.src = '';
+          video.load();
+          // Then revoke object URL to free memory
+          URL.revokeObjectURL(blobUrl);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
 
-        video.onerror = (err) => {
-          URL.revokeObjectURL(video.src);
-          reject(err || new Error('Failed to load video'));
-        };
-        
+        video.onerror = reject;
         video.src = URL.createObjectURL(file); // Use object URL instead of base64
       }
     });

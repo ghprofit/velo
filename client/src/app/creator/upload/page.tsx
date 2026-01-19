@@ -622,7 +622,7 @@ export default function UploadContentPage() {
                     ref={fileInputRef}
                     type="file"
                     onChange={handleFileSelect}
-                    accept="image/*,video/*"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/x-msvideo,video/webm"
                     multiple
                     className="hidden"
                   />

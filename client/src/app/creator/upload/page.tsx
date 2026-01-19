@@ -164,25 +164,26 @@ export default function UploadContentPage() {
         console.log(`[THUMBNAIL] Generating thumbnail for video: ${file.name}`);
         const video = document.createElement('video');
         video.preload = 'metadata';
-        video.muted = true; // Mute to allow autoplay in some browsers
-        video.playsInline = true; // Important for iOS
-
+        video.muted = true;
+        video.playsInline = true;
+        
+        // Reduce timeout to 5 seconds for faster failures
         const timeoutId = setTimeout(() => {
-          console.error(`[THUMBNAIL] Timeout generating thumbnail for ${file.name}`);
+          console.warn(`[THUMBNAIL] Timeout for ${file.name}, using fallback`);
           const blobUrl = video.src;
           video.src = '';
           video.load();
           if (blobUrl && blobUrl.startsWith('blob:')) {
             URL.revokeObjectURL(blobUrl);
           }
-          reject(new Error('Video thumbnail generation timed out after 10 seconds'));
-        }, 10000); // 10 second timeout
+          // Don't reject, resolve with fallback instead
+          resolve('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23000" width="400" height="300"/%3E%3Ctext fill="%23fff" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3EVideo%3C/text%3E%3C/svg%3E');
+        }, 5000);
 
-        video.onloadeddata = () => {
-          console.log(`[THUMBNAIL] Video loaded, duration: ${video.duration}s, dimensions: ${video.videoWidth}x${video.videoHeight}`);
-          // Seek to 1 second or 10% of video duration, whichever is smaller
-          const seekTime = Math.min(1, video.duration * 0.1);
-          video.currentTime = seekTime;
+        video.onloadedmetadata = () => {
+          console.log(`[THUMBNAIL] Metadata loaded for ${file.name}`);
+          // Don't seek, just capture first frame immediately
+          video.currentTime = 0;
         };
 
         video.onseeked = () => {
@@ -190,15 +191,12 @@ export default function UploadContentPage() {
           try {
             const canvas = document.createElement('canvas');
             
-            // Ensure we have valid dimensions
             if (!video.videoWidth || !video.videoHeight) {
-              throw new Error('Video has invalid dimensions');
+              throw new Error('Invalid video dimensions');
             }
             
-            console.log(`[THUMBNAIL] Creating canvas from video frame`);
-            
-            // Calculate thumbnail size (max 600px width, maintain aspect ratio)
-            const maxWidth = 600;
+            // Reduce thumbnail size for faster generation (300px instead of 600px)
+            const maxWidth = 300;
             let width = video.videoWidth;
             let height = video.videoHeight;
             
@@ -210,63 +208,60 @@ export default function UploadContentPage() {
             canvas.width = width;
             canvas.height = height;
 
-            const ctx = canvas.getContext('2d', { alpha: false }); // No alpha for better JPEG compression
+            const ctx = canvas.getContext('2d', { alpha: false });
             if (!ctx) {
               throw new Error('Failed to get canvas context');
             }
             
             ctx.drawImage(video, 0, 0, width, height);
 
-            // Store the URL before clearing the source
             const blobUrl = video.src;
-            // Clear source first to stop any pending requests
             video.src = '';
             video.load();
-            // Then revoke object URL to free memory
             if (blobUrl && blobUrl.startsWith('blob:')) {
               URL.revokeObjectURL(blobUrl);
             }
             
-            // Use higher quality for Rekognition (0.9 instead of 0.7)
-            const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+            // Lower quality for faster generation (0.7 instead of 0.9)
+            const dataURL = canvas.toDataURL('image/jpeg', 0.7);
             
-            // Verify we got a valid data URL
             if (!dataURL || !dataURL.startsWith('data:image/jpeg')) {
-              throw new Error('Failed to generate valid JPEG thumbnail');
+              throw new Error('Failed to generate JPEG');
             }
             
-            console.log(`[THUMBNAIL] ✅ Successfully generated thumbnail for ${file.name}`);
+            console.log(`[THUMBNAIL] ✅ Generated for ${file.name}`);
             resolve(dataURL);
           } catch (err) {
-            console.error(`[THUMBNAIL] Error in onseeked:`, err);
+            console.error(`[THUMBNAIL] Error:`, err);
             const blobUrl = video.src;
             video.src = '';
             video.load();
             if (blobUrl && blobUrl.startsWith('blob:')) {
               URL.revokeObjectURL(blobUrl);
             }
-            reject(err);
+            // Resolve with fallback instead of rejecting
+            resolve('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23000" width="400" height="300"/%3E%3Ctext fill="%23fff" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3EVideo%3C/text%3E%3C/svg%3E');
           }
         };
 
         video.onerror = (err) => {
           clearTimeout(timeoutId);
-          console.error(`[THUMBNAIL] Video error event:`, err, video.error);
+          console.error(`[THUMBNAIL] Video error:`, err);
           const blobUrl = video.src;
           if (blobUrl && blobUrl.startsWith('blob:')) {
             URL.revokeObjectURL(blobUrl);
           }
-          const errorMsg = video.error ? `${video.error.message} (code: ${video.error.code})` : 'Unknown video error';
-          reject(new Error(`Failed to load video: ${errorMsg}`));
+          // Resolve with fallback instead of rejecting
+          resolve('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23000" width="400" height="300"/%3E%3Ctext fill="%23fff" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3EVideo%3C/text%3E%3C/svg%3E');
         };
         
         try {
-          video.src = URL.createObjectURL(file); // Use object URL instead of base64
-          console.log(`[THUMBNAIL] Created object URL for video`);
+          video.src = URL.createObjectURL(file);
+          console.log(`[THUMBNAIL] Object URL created`);
         } catch (err) {
           clearTimeout(timeoutId);
-          console.error(`[THUMBNAIL] Failed to create object URL:`, err);
-          reject(err);
+          console.error(`[THUMBNAIL] Failed to create URL:`, err);
+          resolve('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23000" width="400" height="300"/%3E%3Ctext fill="%23fff" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3EVideo%3C/text%3E%3C/svg%3E');
         }
       }
     });

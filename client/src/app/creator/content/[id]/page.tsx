@@ -98,9 +98,9 @@ export default function ContentDetailPage() {
           console.log('[CREATOR] Total preview URLs stored:', Object.keys(urls).length);
           if (Object.keys(urls).length > 0) {
             setPreviewUrls(urls);
-          } else if (contentData.contentType === 'VIDEO') {
-            // If VIDEO content but no signed URLs, fetch them automatically
-            console.log('[CREATOR] VIDEO content detected without signed URLs, fetching now...');
+          } else if (contentData.contentType === 'VIDEO' || contentData.contentType === 'IMAGE') {
+            // If VIDEO or IMAGE content but no signed URLs, fetch them automatically
+            console.log(`[CREATOR] ${contentData.contentType} content detected without signed URLs, fetching now...`);
             // Delay to ensure state is set
             setTimeout(() => {
               fetchPreviewUrls();
@@ -428,8 +428,55 @@ export default function ContentDetailPage() {
               </div>
             )}
 
-            {/* Thumbnail Preview (for non-VIDEO types) */}
-            {content.contentType !== 'VIDEO' && (
+            {/* Content Preview (for IMAGE types - show actual content) */}
+            {content.contentType === 'IMAGE' && content.contentItems && content.contentItems.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="aspect-video bg-gray-100 relative">
+                  {previewUrls[content.contentItems[0].id] ? (
+                    <>
+                      <Image
+                        src={previewUrls[content.contentItems[0].id]}
+                        alt={content.title}
+                        fill
+                        className="object-contain"
+                        sizes="(max-width: 1024px) 100vw, 66vw"
+                        unoptimized
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23eee" width="800" height="450"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-family="sans-serif" font-size="20"%3EFailed to load%3C/text%3E%3C/svg%3E';
+                        }}
+                      />
+                      <div className="absolute top-4 left-4 flex items-center gap-2 pointer-events-none">
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(content.status)}`}>
+                          {content.status.replace('_', ' ')}
+                        </span>
+                        {content.isPublished && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Published
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-16 h-16 border-4 border-gray-300 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-gray-600 text-sm mb-3">Loading image preview...</p>
+                        <button
+                          onClick={fetchPreviewUrls}
+                          disabled={loadingPreview}
+                          className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loadingPreview ? 'Loading...' : 'Load Preview'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Other content types (DOCUMENT, AUDIO, etc.) - show thumbnail */}
+            {content.contentType !== 'VIDEO' && content.contentType !== 'IMAGE' && content.contentType !== 'GALLERY' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="aspect-video bg-gray-100 relative">
                   <Image

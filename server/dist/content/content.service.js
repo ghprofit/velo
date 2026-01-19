@@ -810,7 +810,9 @@ let ContentService = ContentService_1 = class ContentService {
                 description: dto.description,
                 price: dto.price,
                 thumbnailUrl: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${dto.thumbnailS3Key}`,
-                contentType: dto.items.length === 1 && dto.items[0]?.type === 'IMAGE' ? 'IMAGE' : 'VIDEO',
+                contentType: dto.items.length === 1
+                    ? (dto.items[0]?.type === 'IMAGE' ? 'IMAGE' : 'VIDEO')
+                    : 'GALLERY',
                 s3Key: dto.thumbnailS3Key,
                 s3Bucket: process.env.AWS_S3_BUCKET_NAME || 'amnz-s3-pm-bucket',
                 fileSize: totalFileSize,

@@ -48,7 +48,7 @@ async function bootstrap() {
     });
     app.use((0, cookie_parser_1.default)());
     app.use('/api/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
-    app.use('/api/webhooks/veriff', bodyParser.raw({ type: 'application/json' }));
+    app.use('/api/veriff/webhooks/decision', bodyParser.raw({ type: 'application/json' }));
     app.use(bodyParser.json({ limit: '750mb' }));
     app.use(bodyParser.urlencoded({ limit: '750mb', extended: true }));
     app.use((0, helmet_1.default)());

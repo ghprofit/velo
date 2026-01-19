@@ -59,23 +59,31 @@ export const useLogin = (): UseLoginReturn => {
         return;
       }
 
-      // Login successful - user is now set in context
-      // Store in Redux as well for compatibility
-      if (user) {
+      // Login successful - get user data from localStorage (just set by authLogin)
+      const storedUser = localStorage.getItem('user');
+      const accessToken = localStorage.getItem('accessToken');
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (storedUser && accessToken && refreshToken) {
+        const userData = JSON.parse(storedUser);
+        
+        // Store in Redux for compatibility
         dispatch(
           setCredentials({
-            user,
+            user: userData,
             tokens: {
-              accessToken: localStorage.getItem('accessToken') || '',
-              refreshToken: localStorage.getItem('refreshToken') || '',
+              accessToken,
+              refreshToken,
               expiresIn: 900,
             },
           })
         );
 
         // Redirect based on user role
-        const redirectPath = getRoleRedirectPath(user.role);
+        const redirectPath = getRoleRedirectPath(userData.role);
         router.push(redirectPath);
+      } else {
+        throw new Error('Login failed: User data not found');
       }
     } catch (err: unknown) {
       const errorMessage =
@@ -100,22 +108,30 @@ export const useLogin = (): UseLoginReturn => {
     try {
       await authVerify2FA(tempToken, code);
 
-      // 2FA verification successful - user is now set in context
-      if (user) {
+      // 2FA verification successful - get user data from localStorage (just set by authVerify2FA)
+      const storedUser = localStorage.getItem('user');
+      const accessToken = localStorage.getItem('accessToken');
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (storedUser && accessToken && refreshToken) {
+        const userData = JSON.parse(storedUser);
+        
         dispatch(
           setCredentials({
-            user,
+            user: userData,
             tokens: {
-              accessToken: localStorage.getItem('accessToken') || '',
-              refreshToken: localStorage.getItem('refreshToken') || '',
+              accessToken,
+              refreshToken,
               expiresIn: 900,
             },
           })
         );
 
         // Redirect based on user role
-        const redirectPath = getRoleRedirectPath(user.role);
+        const redirectPath = getRoleRedirectPath(userData.role);
         router.push(redirectPath);
+      } else {
+        throw new Error('2FA verification failed: User data not found');
       }
     } catch (err: unknown) {
       const errorMessage =

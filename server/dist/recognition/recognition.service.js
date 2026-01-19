@@ -19,7 +19,7 @@ let RecognitionService = RecognitionService_1 = class RecognitionService {
         this.rekognitionClient = null;
         this.isConfigured = false;
         this.region = process.env.AWS_REGION || 'us-east-1';
-        this.s3Bucket = process.env.AWS_S3_BUCKET;
+        this.s3Bucket = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET;
     }
     async onModuleInit() {
         try {

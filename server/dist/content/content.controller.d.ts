@@ -12,6 +12,7 @@ export declare class ContentController {
             content: {
                 creator: {
                     user: {
+                        email: string;
                         displayName: string | null;
                         profilePicture: string | null;
                     };
@@ -83,6 +84,7 @@ export declare class ContentController {
                 complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
                 complianceCheckedAt: Date | null;
                 complianceNotes: string | null;
+                scheduledReviewAt: Date | null;
                 rekognitionJobId: string | null;
                 rekognitionJobStatus: string | null;
                 rekognitionJobStartedAt: Date | null;
@@ -93,7 +95,7 @@ export declare class ContentController {
             };
             link: string;
             shortId: string;
-            status: "PENDING_REVIEW" | "APPROVED";
+            status: "PENDING_REVIEW";
         };
     }>;
     createContentMultipart(req: any, createContentDto: CreateContentMultipartDto, uploadedFiles: {
@@ -179,6 +181,7 @@ export declare class ContentController {
                 complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
                 complianceCheckedAt: Date | null;
                 complianceNotes: string | null;
+                scheduledReviewAt: Date | null;
                 rekognitionJobId: string | null;
                 rekognitionJobStatus: string | null;
                 rekognitionJobStartedAt: Date | null;
@@ -188,7 +191,7 @@ export declare class ContentController {
                 totalRevenue: number;
             };
             shortId: string;
-            status: "PENDING_REVIEW" | "APPROVED";
+            status: "PENDING_REVIEW";
             message: string;
         };
     }>;
@@ -228,6 +231,7 @@ export declare class ContentController {
             complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
             complianceCheckedAt: Date | null;
             complianceNotes: string | null;
+            scheduledReviewAt: Date | null;
             rekognitionJobId: string | null;
             rekognitionJobStatus: string | null;
             rekognitionJobStartedAt: Date | null;
@@ -322,6 +326,7 @@ export declare class ContentController {
             complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
             complianceCheckedAt: Date | null;
             complianceNotes: string | null;
+            scheduledReviewAt: Date | null;
             rekognitionJobId: string | null;
             rekognitionJobStatus: string | null;
             rekognitionJobStartedAt: Date | null;

@@ -12,14 +12,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       connectionString: process.env.DATABASE_URL,
 
       // Connection timeouts for Neon serverless
-      connectionTimeoutMillis: 30000,  // 30 seconds - wait for Neon to wake up
-      idleTimeoutMillis: 30000,        // Close idle clients after 30 seconds
-      statement_timeout: 60000,        // 60 seconds for queries
+      connectionTimeoutMillis: 60000,  // 60 seconds - wait for Neon to wake up
+      idleTimeoutMillis: 60000,        // Close idle clients after 60 seconds
+      statement_timeout: 300000,       // 5 minutes for long-running operations (video uploads)
 
       // Connection pool limits
       max: 5,                          // Neon free tier connection limit
       min: 0,                          // No minimum idle connections
 
+      // Retry configuration
+      query_timeout: 300000,           // 5 minutes total query timeout
+      
       // SSL/TLS required for Neon
       ssl: {
         rejectUnauthorized: true,      // Verify certificate

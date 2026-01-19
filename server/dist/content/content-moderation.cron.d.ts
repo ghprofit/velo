@@ -4,5 +4,6 @@ export declare class ContentModerationCron {
     private readonly logger;
     constructor(contentService: ContentService);
     checkVideoModerationJobs(): Promise<void>;
+    processScheduledReviews(): Promise<void>;
 }
 //# sourceMappingURL=content-moderation.cron.d.ts.map

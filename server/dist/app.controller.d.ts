@@ -22,5 +22,25 @@ export declare class AppController {
             version: string;
         };
     };
+    getAWSHealth(): {
+        success: boolean;
+        data: {
+            s3: {
+                configured: boolean;
+                bucket: string;
+                region: string;
+                hasCredentials: boolean;
+            };
+            rekognition: {
+                configured: boolean;
+                region: string;
+                minConfidence: string;
+            };
+            ses: {
+                configured: boolean;
+                fromEmail: string;
+            };
+        };
+    };
 }
 //# sourceMappingURL=app.controller.d.ts.map

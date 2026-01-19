@@ -34,6 +34,24 @@ let ContentModerationCron = ContentModerationCron_1 = class ContentModerationCro
             }
         }
     }
+    async processScheduledReviews() {
+        try {
+            this.logger.debug('Checking for scheduled content reviews...');
+            const result = await this.contentService.processScheduledContentReviews();
+            if (result.processed > 0) {
+                this.logger.log(`Processed ${result.successful}/${result.processed} scheduled reviews`);
+            }
+        }
+        catch (error) {
+            const err = error;
+            if (!err.message.includes('Connection terminated') && !err.message.includes('timeout')) {
+                this.logger.error(`Scheduled review cron failed: ${err.message}`);
+            }
+            else {
+                this.logger.warn('Scheduled review cron: Connection timeout (will retry)');
+            }
+        }
+    }
 };
 exports.ContentModerationCron = ContentModerationCron;
 __decorate([
@@ -42,6 +60,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], ContentModerationCron.prototype, "checkVideoModerationJobs", null);
+__decorate([
+    (0, schedule_1.Cron)('0 * * * * *'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ContentModerationCron.prototype, "processScheduledReviews", null);
 exports.ContentModerationCron = ContentModerationCron = ContentModerationCron_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [content_service_1.ContentService])

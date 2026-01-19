@@ -29,6 +29,12 @@ let AppController = class AppController {
             data: this.appService.getHealth(),
         };
     }
+    getAWSHealth() {
+        return {
+            success: true,
+            data: this.appService.getAWSHealth(),
+        };
+    }
 };
 exports.AppController = AppController;
 __decorate([
@@ -45,6 +51,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AppController.prototype, "getHealth", null);
+__decorate([
+    (0, common_1.Get)('health/aws'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], AppController.prototype, "getAWSHealth", null);
 exports.AppController = AppController = __decorate([
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [app_service_1.AppService])

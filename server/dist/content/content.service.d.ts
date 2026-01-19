@@ -15,6 +15,7 @@ export declare class ContentService {
         content: {
             creator: {
                 user: {
+                    email: string;
                     displayName: string | null;
                     profilePicture: string | null;
                 };
@@ -86,6 +87,7 @@ export declare class ContentService {
             complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
             complianceCheckedAt: Date | null;
             complianceNotes: string | null;
+            scheduledReviewAt: Date | null;
             rekognitionJobId: string | null;
             rekognitionJobStatus: string | null;
             rekognitionJobStartedAt: Date | null;
@@ -96,7 +98,7 @@ export declare class ContentService {
         };
         link: string;
         shortId: string;
-        status: "PENDING_REVIEW" | "APPROVED";
+        status: "PENDING_REVIEW";
     }>;
     createContentMultipart(userId: string, createContentDto: CreateContentMultipartDto, files: Express.Multer.File[], thumbnailFile: Express.Multer.File, filesMetadata: Array<{
         fileName: string;
@@ -180,6 +182,7 @@ export declare class ContentService {
             complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
             complianceCheckedAt: Date | null;
             complianceNotes: string | null;
+            scheduledReviewAt: Date | null;
             rekognitionJobId: string | null;
             rekognitionJobStatus: string | null;
             rekognitionJobStartedAt: Date | null;
@@ -189,7 +192,7 @@ export declare class ContentService {
             totalRevenue: number;
         };
         shortId: string;
-        status: "PENDING_REVIEW" | "APPROVED";
+        status: "PENDING_REVIEW";
         message: string;
     }>;
     processVideoModerationJobs(): Promise<void>;
@@ -230,6 +233,7 @@ export declare class ContentService {
         complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
         complianceCheckedAt: Date | null;
         complianceNotes: string | null;
+        scheduledReviewAt: Date | null;
         rekognitionJobId: string | null;
         rekognitionJobStatus: string | null;
         rekognitionJobStartedAt: Date | null;
@@ -312,6 +316,7 @@ export declare class ContentService {
         complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
         complianceCheckedAt: Date | null;
         complianceNotes: string | null;
+        scheduledReviewAt: Date | null;
         rekognitionJobId: string | null;
         rekognitionJobStatus: string | null;
         rekognitionJobStartedAt: Date | null;
@@ -328,6 +333,36 @@ export declare class ContentService {
         totalViews: number;
         totalPurchases: number;
         totalRevenue: number;
+    }>;
+    processScheduledContentReviews(): Promise<{
+        processed: number;
+        results: never[];
+        successful?: undefined;
+    } | {
+        processed: number;
+        successful: number;
+        results: ({
+            id: string;
+            status: string;
+            error: string;
+            contentId?: undefined;
+            complianceStatus?: undefined;
+            success?: undefined;
+        } | {
+            contentId: string;
+            status: "PENDING_REVIEW" | "APPROVED";
+            complianceStatus: "PASSED" | "MANUAL_REVIEW";
+            success: boolean;
+            id?: undefined;
+            error?: undefined;
+        } | {
+            contentId: string;
+            success: boolean;
+            error: string;
+            id?: undefined;
+            status?: undefined;
+            complianceStatus?: undefined;
+        })[];
     }>;
 }
 //# sourceMappingURL=content.service.d.ts.map

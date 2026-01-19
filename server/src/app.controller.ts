@@ -23,4 +23,13 @@ export class AppController {
       data: this.appService.getHealth(),
     };
   }
+
+  @Get('health/aws')
+  @HttpCode(HttpStatus.OK)
+  getAWSHealth() {
+    return {
+      success: true,
+      data: this.appService.getAWSHealth(),
+    };
+  }
 }

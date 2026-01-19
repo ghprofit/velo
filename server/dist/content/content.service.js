@@ -41,43 +41,10 @@ let ContentService = ContentService_1 = class ContentService {
         const contentId = (0, nanoid_1.nanoid)(10);
         const contentLink = `velolink.club/c/${contentId}`;
         const thumbnailUpload = await this.s3Service.uploadFile(createContentDto.thumbnailData, `thumbnail-${contentId}.jpg`, 'image/jpeg', 'thumbnails');
-        let contentStatus = 'PENDING_REVIEW';
-        let complianceStatus = 'PENDING';
-        const complianceLogs = [];
-        try {
-            this.logger.log(`Checking content safety for ${contentId} using AWS Rekognition`);
-            const safetyResult = await this.recognitionService.checkImageSafety({
-                type: 's3',
-                data: thumbnailUpload.key,
-                bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
-            }, 50);
-            if (safetyResult.isSafe) {
-                contentStatus = 'APPROVED';
-                complianceStatus = 'PASSED';
-                this.logger.log(`Content ${contentId} auto-approved (Rekognition: safe)`);
-            }
-            else {
-                contentStatus = 'PENDING_REVIEW';
-                complianceStatus = 'MANUAL_REVIEW';
-                this.logger.warn(`Content ${contentId} flagged by Rekognition: ${safetyResult.flaggedCategories.join(', ')}`);
-                complianceLogs.push({
-                    checkType: 'AWS_REKOGNITION',
-                    status: 'FAILED',
-                    details: {
-                        flaggedCategories: safetyResult.flaggedCategories,
-                        moderationLabels: safetyResult.moderationLabels,
-                        confidence: safetyResult.confidence,
-                        reason: 'Content flagged by automated safety system',
-                    },
-                });
-            }
-        }
-        catch (error) {
-            const err = error;
-            this.logger.error(`Rekognition check failed for ${contentId}: ${err.message}`);
-            contentStatus = 'PENDING_REVIEW';
-            complianceStatus = 'PENDING';
-        }
+        const contentStatus = 'PENDING_REVIEW';
+        const complianceStatus = 'PENDING';
+        const scheduledReviewAt = new Date(Date.now() + 10 * 60 * 1000);
+        this.logger.log(`Content ${contentId} scheduled for review at ${scheduledReviewAt.toISOString()}`);
         const contentItemsData = await Promise.all(createContentDto.items.map(async (item, index) => {
             const dataUriMatch = item.fileData.match(/^data:(.+);base64,/);
             if (!dataUriMatch || !dataUriMatch[1]) {
@@ -132,7 +99,7 @@ let ContentService = ContentService_1 = class ContentService {
                 fileSize: totalFileSize,
                 status: contentStatus,
                 complianceStatus: complianceStatus,
-                complianceCheckedAt: new Date(),
+                scheduledReviewAt: scheduledReviewAt,
                 isPublished: true,
                 publishedAt: new Date(),
                 contentItems: {
@@ -147,29 +114,13 @@ let ContentService = ContentService_1 = class ContentService {
                             select: {
                                 displayName: true,
                                 profilePicture: true,
+                                email: true,
                             },
                         },
                     },
                 },
             },
         });
-        if (complianceLogs.length > 0) {
-            try {
-                await this.prisma.complianceLog.createMany({
-                    data: complianceLogs.map((log) => ({
-                        contentId: content.id,
-                        checkType: log.checkType,
-                        status: log.status,
-                        details: log.details,
-                    })),
-                });
-                this.logger.log(`Created ${complianceLogs.length} compliance log(s) for content ${content.id}`);
-            }
-            catch (logError) {
-                const err = logError;
-                this.logger.error(`Failed to create compliance logs: ${err.message}`);
-            }
-        }
         return {
             content,
             link: `https://${contentLink}`,
@@ -207,69 +158,10 @@ let ContentService = ContentService_1 = class ContentService {
             };
         }));
         const hasVideo = files.some(file => file.mimetype.startsWith('video/'));
-        const videoItem = contentItemsData.find(item => item.mimeType.startsWith('video/'));
-        let contentStatus = 'PENDING_REVIEW';
-        let complianceStatus = 'PENDING';
-        let rekognitionJobId = null;
-        let moderationCheckType = 'THUMBNAIL_ONLY';
-        const complianceLogs = [];
-        try {
-            this.logger.log(`Checking thumbnail safety for ${contentId} using AWS Rekognition`);
-            const thumbnailSafetyResult = await this.recognitionService.checkImageSafety({
-                type: 's3',
-                data: thumbnailUpload.key,
-                bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
-            }, 50);
-            if (!thumbnailSafetyResult.isSafe) {
-                contentStatus = 'PENDING_REVIEW';
-                complianceStatus = 'MANUAL_REVIEW';
-                moderationCheckType = 'SYNC_IMAGE';
-                this.logger.warn(`Content ${contentId} thumbnail flagged by Rekognition: ${thumbnailSafetyResult.flaggedCategories.join(', ')}`);
-                complianceLogs.push({
-                    checkType: 'AWS_REKOGNITION_THUMBNAIL',
-                    status: 'FAILED',
-                    details: {
-                        flaggedCategories: thumbnailSafetyResult.flaggedCategories,
-                        moderationLabels: thumbnailSafetyResult.moderationLabels,
-                        confidence: thumbnailSafetyResult.confidence,
-                        reason: 'Thumbnail flagged by automated safety system',
-                    },
-                });
-            }
-            else if (hasVideo && videoItem) {
-                moderationCheckType = 'ASYNC_VIDEO';
-                try {
-                    this.logger.log(`Starting async video moderation for ${contentId}`);
-                    const jobResult = await this.recognitionService.startVideoSafetyCheck({
-                        type: 's3',
-                        data: videoItem.s3Key,
-                        bucket: process.env.AWS_S3_BUCKET_NAME || 'velo-content',
-                    });
-                    rekognitionJobId = jobResult.jobId;
-                    contentStatus = 'PENDING_REVIEW';
-                    complianceStatus = 'PENDING';
-                    this.logger.log(`Video moderation job ${rekognitionJobId} started for content ${contentId}`);
-                }
-                catch (videoError) {
-                    const err = videoError;
-                    this.logger.error(`Failed to start video moderation for ${contentId}: ${err.message}`);
-                    contentStatus = 'PENDING_REVIEW';
-                    complianceStatus = 'PENDING';
-                }
-            }
-            else {
-                contentStatus = 'APPROVED';
-                complianceStatus = 'PASSED';
-                moderationCheckType = 'SYNC_IMAGE';
-                this.logger.log(`Content ${contentId} auto-approved (image-only, thumbnail safe)`);
-            }
-        }
-        catch (error) {
-            const err = error;
-            this.logger.error(`Rekognition thumbnail check failed for ${contentId}: ${err.message}`);
-            contentStatus = 'PENDING_REVIEW';
-            complianceStatus = 'PENDING';
-        }
+        const contentStatus = 'PENDING_REVIEW';
+        const complianceStatus = 'PENDING';
+        const scheduledReviewAt = new Date(Date.now() + 10 * 60 * 1000);
+        this.logger.log(`Content ${contentId} scheduled for review at ${scheduledReviewAt.toISOString()}`);
         const totalFileSize = files.reduce((sum, file) => sum + file.size, 0);
         const content = await this.prisma.content.create({
             data: {
@@ -285,13 +177,9 @@ let ContentService = ContentService_1 = class ContentService {
                 fileSize: totalFileSize,
                 status: contentStatus,
                 complianceStatus: complianceStatus,
-                complianceCheckedAt: new Date(),
-                isPublished: contentStatus === 'APPROVED',
-                publishedAt: contentStatus === 'APPROVED' ? new Date() : null,
-                rekognitionJobId: rekognitionJobId,
-                rekognitionJobStatus: rekognitionJobId ? 'IN_PROGRESS' : null,
-                rekognitionJobStartedAt: rekognitionJobId ? new Date() : null,
-                moderationCheckType: moderationCheckType,
+                scheduledReviewAt: scheduledReviewAt,
+                isPublished: true,
+                publishedAt: new Date(),
                 contentItems: {
                     create: contentItemsData.map(({ mimeType, ...item }) => item),
                 },
@@ -312,33 +200,11 @@ let ContentService = ContentService_1 = class ContentService {
                 },
             },
         });
-        if (complianceLogs.length > 0) {
-            try {
-                await this.prisma.complianceLog.createMany({
-                    data: complianceLogs.map((log) => ({
-                        contentId: content.id,
-                        checkType: log.checkType,
-                        status: log.status,
-                        details: log.details,
-                    })),
-                });
-                this.logger.log(`Created ${complianceLogs.length} compliance log(s) for content ${content.id}`);
-            }
-            catch (logError) {
-                const err = logError;
-                this.logger.error(`Failed to create compliance logs: ${err.message}`);
-            }
-        }
-        if (contentStatus === 'APPROVED') {
-            await this.sendApprovalEmail(content, content.creator.user.id);
-        }
         return {
             content,
             shortId: contentId,
             status: contentStatus,
-            message: contentStatus === 'APPROVED'
-                ? 'Content approved! Check your email for your shareable link.'
-                : 'Content submitted for review. You will receive an email when approved.',
+            message: 'Content submitted for review. You will receive an email when approved (usually within 10-15 minutes).',
         };
     }
     async processVideoModerationJobs() {
@@ -480,7 +346,29 @@ let ContentService = ContentService_1 = class ContentService {
                 createdAt: 'desc',
             },
         });
-        return content;
+        const contentWithSignedUrls = await Promise.all(content.map(async (contentItem) => {
+            if (contentItem.contentItems && contentItem.contentItems.length > 0) {
+                const itemsWithUrls = await Promise.all(contentItem.contentItems.map(async (item) => {
+                    try {
+                        const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400);
+                        return {
+                            ...item,
+                            signedUrl,
+                        };
+                    }
+                    catch (error) {
+                        this.logger.error(`Failed to generate signed URL for ${item.s3Key}:`, error);
+                        return item;
+                    }
+                }));
+                return {
+                    ...contentItem,
+                    contentItems: itemsWithUrls,
+                };
+            }
+            return contentItem;
+        }));
+        return contentWithSignedUrls;
     }
     async getContentById(contentId) {
         const content = await this.prisma.content.findUnique({
@@ -588,6 +476,182 @@ let ContentService = ContentService_1 = class ContentService {
             totalViews: stats._sum.viewCount || 0,
             totalPurchases: stats._sum.purchaseCount || 0,
             totalRevenue: stats._sum.totalRevenue || 0,
+        };
+    }
+    async processScheduledContentReviews() {
+        const now = new Date();
+        const contentToReview = await this.prisma.content.findMany({
+            where: {
+                status: 'PENDING_REVIEW',
+                complianceStatus: 'PENDING',
+                scheduledReviewAt: {
+                    lte: now,
+                },
+            },
+            include: {
+                creator: {
+                    include: {
+                        user: {
+                            select: {
+                                email: true,
+                                displayName: true,
+                            },
+                        },
+                    },
+                },
+            },
+            take: 10,
+        });
+        if (contentToReview.length === 0) {
+            return { processed: 0, results: [] };
+        }
+        this.logger.log(`Processing ${contentToReview.length} scheduled content review(s)`);
+        const results = await Promise.all(contentToReview.map(async (content) => {
+            try {
+                this.logger.log(`Running recognition check for content ${content.id}`);
+                let safetyResult;
+                try {
+                    safetyResult = await this.recognitionService.checkImageSafety({
+                        type: 's3',
+                        data: content.s3Key,
+                        bucket: content.s3Bucket,
+                    }, 50);
+                }
+                catch (recognitionError) {
+                    const err = recognitionError;
+                    this.logger.error(`Rekognition check failed for content ${content.id}: ${err.message}`);
+                    this.logger.error('S3 Key:', content.s3Key, 'Bucket:', content.s3Bucket);
+                    await this.prisma.content.update({
+                        where: { id: content.id },
+                        data: {
+                            status: 'PENDING_REVIEW',
+                            complianceStatus: 'MANUAL_REVIEW',
+                            complianceCheckedAt: new Date(),
+                            complianceNotes: `Automated check failed: ${err.message}. Requires manual review.`,
+                        },
+                    });
+                    return {
+                        id: content.id,
+                        status: 'PENDING_REVIEW',
+                        error: `Rekognition error: ${err.message}`
+                    };
+                }
+                let newStatus;
+                let newComplianceStatus;
+                const complianceLogs = [];
+                if (safetyResult.isSafe) {
+                    newStatus = 'APPROVED';
+                    newComplianceStatus = 'PASSED';
+                    this.logger.log(`Content ${content.id} auto-approved (Rekognition: safe)`);
+                }
+                else {
+                    newStatus = 'PENDING_REVIEW';
+                    newComplianceStatus = 'MANUAL_REVIEW';
+                    this.logger.warn(`Content ${content.id} flagged by Rekognition: ${safetyResult.flaggedCategories.join(', ')}`);
+                    complianceLogs.push({
+                        contentId: content.id,
+                        checkType: 'AWS_REKOGNITION',
+                        status: 'FAILED',
+                        details: {
+                            flaggedCategories: safetyResult.flaggedCategories,
+                            moderationLabels: safetyResult.moderationLabels,
+                            confidence: safetyResult.confidence,
+                            reason: 'Content flagged by automated safety system',
+                        },
+                    });
+                }
+                await this.prisma.content.update({
+                    where: { id: content.id },
+                    data: {
+                        status: newStatus,
+                        complianceStatus: newComplianceStatus,
+                        complianceCheckedAt: new Date(),
+                    },
+                });
+                if (complianceLogs.length > 0) {
+                    await this.prisma.complianceLog.createMany({
+                        data: complianceLogs,
+                    });
+                }
+                try {
+                    const creatorEmail = content.creator.user.email;
+                    const creatorName = content.creator.user.displayName || content.creator.displayName;
+                    if (newStatus === 'APPROVED') {
+                        await this.emailService.sendEmail({
+                            to: creatorEmail,
+                            subject: '✅ Your Content Has Been Approved',
+                            html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #10b981;">Content Approved!</h2>
+                    <p>Hi ${creatorName},</p>
+                    <p>Great news! Your content "<strong>${content.title}</strong>" has been reviewed and approved.</p>
+                    <p>Your content is now live and available for purchase.</p>
+                    <div style="margin: 20px 0; padding: 15px; background: #f0fdf4; border-radius: 8px;">
+                      <p style="margin: 0;"><strong>Content Details:</strong></p>
+                      <p style="margin: 5px 0;">Title: ${content.title}</p>
+                      <p style="margin: 5px 0;">Price: $${content.price.toFixed(2)}</p>
+                      <p style="margin: 5px 0;">Status: Approved ✅</p>
+                    </div>
+                    <p>Start sharing your content link to earn!</p>
+                    <p>Best regards,<br/>The VeloLink Team</p>
+                  </div>
+                `,
+                        });
+                        this.logger.log(`Approval email sent to ${creatorEmail} for content ${content.id}`);
+                    }
+                    else if (newComplianceStatus === 'MANUAL_REVIEW') {
+                        await this.emailService.sendEmail({
+                            to: creatorEmail,
+                            subject: '⚠️ Your Content Requires Manual Review',
+                            html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #f59e0b;">Content Under Review</h2>
+                    <p>Hi ${creatorName},</p>
+                    <p>Your content "<strong>${content.title}</strong>" has been flagged by our automated system and requires manual review.</p>
+                    <p>Our team will review your content within 24-48 hours. You'll receive an email once the review is complete.</p>
+                    <div style="margin: 20px 0; padding: 15px; background: #fffbeb; border-radius: 8px;">
+                      <p style="margin: 0;"><strong>What happens next?</strong></p>
+                      <ul style="margin: 10px 0;">
+                        <li>Our moderation team will manually review your content</li>
+                        <li>We'll check for compliance with our community guidelines</li>
+                        <li>You'll receive an email with the final decision</li>
+                      </ul>
+                    </div>
+                    <p>Thank you for your patience!</p>
+                    <p>Best regards,<br/>The VeloLink Team</p>
+                  </div>
+                `,
+                        });
+                        this.logger.log(`Manual review email sent to ${creatorEmail} for content ${content.id}`);
+                    }
+                }
+                catch (emailError) {
+                    const err = emailError;
+                    this.logger.error(`Failed to send email for content ${content.id}: ${err.message}`);
+                }
+                return {
+                    contentId: content.id,
+                    status: newStatus,
+                    complianceStatus: newComplianceStatus,
+                    success: true,
+                };
+            }
+            catch (error) {
+                const err = error;
+                this.logger.error(`Failed to process content ${content.id}: ${err.message}`);
+                return {
+                    contentId: content.id,
+                    success: false,
+                    error: err.message,
+                };
+            }
+        }));
+        const successCount = results.filter((r) => r.success).length;
+        this.logger.log(`Processed ${successCount}/${contentToReview.length} content reviews successfully`);
+        return {
+            processed: contentToReview.length,
+            successful: successCount,
+            results,
         };
     }
 };

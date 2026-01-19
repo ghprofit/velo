@@ -3,8 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { nanoid } from 'nanoid';
 import { Readable } from 'stream';
+import * as https from 'https';
 
 @Injectable()
 export class S3Service {
@@ -17,10 +19,25 @@ export class S3Service {
     const secretAccessKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
     this.bucketName = this.configService.get<string>('AWS_S3_BUCKET_NAME') || 'velo-content';
 
-    if (!region || !accessKeyId || !secretAccessKey || !this.bucketName) {
-      console.warn('⚠️  AWS S3 credentials not configured. File uploads will fail.');
-      console.warn('   Please set AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET_NAME in your .env file.');
+    if (!region || !accessKeyId || !secretAccessKey) {
+      console.error('❌ AWS S3 credentials not configured!');
+      console.error('   Missing:', [
+        !region && 'AWS_REGION',
+        !accessKeyId && 'AWS_ACCESS_KEY_ID',
+        !secretAccessKey && 'AWS_SECRET_ACCESS_KEY'
+      ].filter(Boolean).join(', '));
+      console.warn('   File uploads and signed URLs will fail.');
     }
+
+    if (!this.bucketName || this.bucketName === 'velo-content') {
+      console.warn('⚠️  AWS_S3_BUCKET_NAME not set in .env - using default: velo-content');
+    }
+
+    console.log('✓ S3 Service initialized:', {
+      region: region || 'us-east-1',
+      bucket: this.bucketName,
+      credentialsConfigured: !!(accessKeyId && secretAccessKey)
+    });
 
     this.s3Client = new S3Client({
       region: region || 'us-east-1',
@@ -28,6 +45,16 @@ export class S3Service {
         accessKeyId,
         secretAccessKey,
       } : undefined,
+      requestHandler: new NodeHttpHandler({
+        requestTimeout: 300000, // 5 minutes for large video uploads
+        connectionTimeout: 30000, // 30 seconds to establish connection
+        httpsAgent: new https.Agent({
+          keepAlive: true,
+          timeout: 300000, // 5 minutes socket timeout
+          maxSockets: 50,
+        }),
+      }),
+      maxAttempts: 5, // Retry up to 5 times for network issues
     });
   }
 
@@ -129,6 +156,9 @@ export class S3Service {
           ContentType: contentType,
           ACL: isPublic ? 'public-read' : undefined,
         },
+        queueSize: 4, // Concurrent part uploads
+        partSize: 5 * 1024 * 1024, // 5MB parts for multipart upload
+        leavePartsOnError: false, // Clean up failed uploads
       });
 
       await upload.done();
@@ -202,6 +232,10 @@ export class S3Service {
    */
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
     try {
+      if (!this.bucketName) {
+        throw new InternalServerErrorException('S3 bucket name not configured');
+      }
+
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
         Key: key,
@@ -211,10 +245,13 @@ export class S3Service {
         expiresIn,
       });
 
+      console.log(`[S3] Generated signed URL for key: ${key} (expires in ${expiresIn}s)`);
       return signedUrl;
     } catch (error) {
-      console.error('Error generating signed URL:', error);
-      throw new InternalServerErrorException('Failed to generate signed URL');
+      const err = error as Error;
+      console.error(`[S3] Error generating signed URL for key "${key}":`, err.message);
+      console.error('[S3] Bucket:', this.bucketName, 'Region:', this.configService.get<string>('AWS_REGION'));
+      throw new InternalServerErrorException(`Failed to generate signed URL: ${err.message}`);
     }
   }
 

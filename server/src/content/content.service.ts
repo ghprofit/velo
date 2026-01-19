@@ -482,7 +482,36 @@ export class ContentService {
       },
     });
 
-    return content;
+    // Generate signed URLs for all content items so creator can preview their content
+    const contentWithSignedUrls = await Promise.all(
+      content.map(async (contentItem) => {
+        if (contentItem.contentItems && contentItem.contentItems.length > 0) {
+          const itemsWithUrls = await Promise.all(
+            contentItem.contentItems.map(async (item) => {
+              try {
+                const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400); // 24 hours
+                return {
+                  ...item,
+                  signedUrl,
+                };
+              } catch (error) {
+                this.logger.error(`Failed to generate signed URL for ${item.s3Key}:`, error);
+                return item;
+              }
+            })
+          );
+
+          return {
+            ...contentItem,
+            contentItems: itemsWithUrls,
+          };
+        }
+
+        return contentItem;
+      })
+    );
+
+    return contentWithSignedUrls;
   }
 
   async getContentById(contentId: string) {
@@ -660,14 +689,40 @@ export class ContentService {
           this.logger.log(`Running recognition check for content ${content.id}`);
 
           // Check thumbnail with AWS Rekognition
-          const safetyResult = await this.recognitionService.checkImageSafety(
-            {
-              type: 's3',
-              data: content.s3Key,
-              bucket: content.s3Bucket,
-            },
-            50, // 50% minimum confidence threshold
-          );
+          let safetyResult;
+          try {
+            safetyResult = await this.recognitionService.checkImageSafety(
+              {
+                type: 's3',
+                data: content.s3Key,
+                bucket: content.s3Bucket,
+              },
+              50, // 50% minimum confidence threshold
+            );
+          } catch (recognitionError) {
+            const err = recognitionError as Error;
+            this.logger.error(
+              `Rekognition check failed for content ${content.id}: ${err.message}`,
+            );
+            this.logger.error('S3 Key:', content.s3Key, 'Bucket:', content.s3Bucket);
+            
+            // If Rekognition fails, flag for manual review instead of auto-approving
+            await this.prisma.content.update({
+              where: { id: content.id },
+              data: {
+                status: 'PENDING_REVIEW',
+                complianceStatus: 'MANUAL_REVIEW',
+                complianceCheckedAt: new Date(),
+                complianceNotes: `Automated check failed: ${err.message}. Requires manual review.`,
+              },
+            });
+            
+            return { 
+              id: content.id, 
+              status: 'PENDING_REVIEW',
+              error: `Rekognition error: ${err.message}` 
+            };
+          }
 
           let newStatus: ContentStatus;
           let newComplianceStatus: ComplianceCheckStatus;

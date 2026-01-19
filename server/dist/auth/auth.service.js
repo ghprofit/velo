@@ -280,63 +280,74 @@ let AuthService = AuthService_1 = class AuthService {
         return { message: 'Logged out successfully.' };
     }
     async getProfile(userId) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            include: {
-                creatorProfile: true,
-            },
-        });
-        if (!user) {
-            throw new common_1.UnauthorizedException('User not found.');
-        }
-        let computedStats = {
-            totalEarnings: 0,
-            totalViews: 0,
-            totalPurchases: 0,
-        };
-        if (user.creatorProfile) {
-            const purchases = await this.prisma.purchase.findMany({
-                where: {
-                    content: {
-                        creatorId: user.creatorProfile.id,
-                    },
-                    status: 'COMPLETED',
-                },
-                select: {
-                    amount: true,
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                include: {
+                    creatorProfile: true,
                 },
             });
-            const contents = await this.prisma.content.findMany({
-                where: {
-                    creatorId: user.creatorProfile.id,
-                },
-                select: {
-                    viewCount: true,
-                    purchaseCount: true,
-                },
-            });
-            computedStats.totalEarnings = purchases.reduce((sum, p) => sum + p.amount, 0);
-            computedStats.totalPurchases = purchases.length;
-            computedStats.totalViews = contents.reduce((sum, c) => sum + c.viewCount, 0);
-        }
-        return {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            emailVerified: user.emailVerified,
-            displayName: user.displayName || user.creatorProfile?.displayName,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            profilePicture: user.profilePicture,
-            creatorProfile: user.creatorProfile
-                ? {
-                    ...user.creatorProfile,
-                    totalEarnings: computedStats.totalEarnings,
-                    totalViews: computedStats.totalViews,
-                    totalPurchases: computedStats.totalPurchases,
+            if (!user) {
+                throw new common_1.UnauthorizedException('User not found.');
+            }
+            let computedStats = {
+                totalEarnings: 0,
+                totalViews: 0,
+                totalPurchases: 0,
+            };
+            if (user.creatorProfile) {
+                try {
+                    const purchases = await this.prisma.purchase.findMany({
+                        where: {
+                            content: {
+                                creatorId: user.creatorProfile.id,
+                            },
+                            status: 'COMPLETED',
+                        },
+                        select: {
+                            amount: true,
+                        },
+                    });
+                    const contents = await this.prisma.content.findMany({
+                        where: {
+                            creatorId: user.creatorProfile.id,
+                        },
+                        select: {
+                            viewCount: true,
+                            purchaseCount: true,
+                        },
+                    });
+                    computedStats.totalEarnings = purchases.reduce((sum, p) => sum + p.amount, 0);
+                    computedStats.totalPurchases = purchases.length;
+                    computedStats.totalViews = contents.reduce((sum, c) => sum + c.viewCount, 0);
                 }
-                : null,
-        };
+                catch (statsError) {
+                    this.logger.error(`Error computing creator stats for user ${userId}:`, statsError);
+                }
+            }
+            return {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                emailVerified: user.emailVerified,
+                displayName: user.displayName || user.creatorProfile?.displayName,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                profilePicture: user.profilePicture,
+                creatorProfile: user.creatorProfile
+                    ? {
+                        ...user.creatorProfile,
+                        totalEarnings: computedStats.totalEarnings,
+                        totalViews: computedStats.totalViews,
+                        totalPurchases: computedStats.totalPurchases,
+                    }
+                    : null,
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error in getProfile for user ${userId}:`, error);
+            throw new common_1.InternalServerErrorException('Failed to fetch user profile. Please try again later.');
+        }
     }
     async hashPassword(password) {
         const saltRounds = 12;

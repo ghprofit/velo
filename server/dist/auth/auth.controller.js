@@ -114,11 +114,17 @@ let AuthController = class AuthController {
         };
     }
     async getProfile(req) {
-        const result = await this.authService.getProfile(req.user.id);
-        return {
-            success: true,
-            data: result,
-        };
+        try {
+            const result = await this.authService.getProfile(req.user.id);
+            return {
+                success: true,
+                data: result,
+            };
+        }
+        catch (error) {
+            console.error('Error in getProfile controller:', error);
+            throw error;
+        }
     }
     async verifyEmail(dto) {
         const result = await this.authService.verifyEmail(dto);

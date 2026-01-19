@@ -68,12 +68,15 @@ export function useLogout() {
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
       });
 
-      // Step 4: Clear Redux auth state
+      // Step 4: Clear Redux auth state (synchronously)
       dispatch(clearAuth());
 
-      // Step 5: Clear RTK Query cache
+      // Step 5: Clear RTK Query cache (synchronously)
       // This ensures no stale data remains in the Redux store
       dispatch(api.util.resetApiState());
+      
+      // Step 6: Force a small delay to ensure all state clears
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Step 6: Redirect to login
       router.push('/login');

@@ -48,6 +48,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 this.logger.warn(`User ${userId} already has an active verification session`);
             }
             const apiUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:8000';
+            const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
             this.logger.log(`Creator profile data: firstName=${user.creatorProfile.firstName}, lastName=${user.creatorProfile.lastName}, dateOfBirth=${user.creatorProfile.dateOfBirth}`);
             const sessionData = {
                 verification: {

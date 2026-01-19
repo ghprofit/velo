@@ -52,18 +52,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const storedUser = localStorage.getItem('user');
       const accessToken = localStorage.getItem('accessToken');
+      const refreshToken = localStorage.getItem('refreshToken');
 
-      if (storedUser && accessToken) {
-        setUser(JSON.parse(storedUser));
-        // Optionally fetch fresh user data
-        await refreshUser();
+      // Verify ALL required auth data exists
+      if (storedUser && accessToken && refreshToken) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        
+        // Fetch fresh user data to ensure it's current
+        try {
+          await refreshUser();
+        } catch (refreshError) {
+          // If refresh fails, the user might be logged out on server
+          console.error('Failed to refresh user on init:', refreshError);
+          // Clear everything and force re-login
+          localStorage.clear();
+          sessionStorage.clear();
+          setUser(null);
+        }
+      } else {
+        // Incomplete auth data - clear everything
+        localStorage.clear();
+        sessionStorage.clear();
+        setUser(null);
       }
     } catch (error) {
       console.error('Failed to initialize auth:', error);
-      // Clear invalid stored data
-      localStorage.removeItem('user');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      // Clear ALL stored data on error
+      localStorage.clear();
+      sessionStorage.clear();
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -180,18 +198,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    // Clear state IMMEDIATELY to prevent race conditions
+    setUser(null);
+    
     try {
       const refreshToken = localStorage.getItem('refreshToken');
+      
+      // Clear ALL localStorage items to prevent data retention
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Make logout API call
       if (refreshToken) {
         await authApi.logout(refreshToken);
       }
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      // Clear local storage regardless of API call result
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      // Ensure cleanup happens even if API fails
+      localStorage.clear();
+      sessionStorage.clear();
       setUser(null);
     }
   };

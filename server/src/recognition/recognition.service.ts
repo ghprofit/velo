@@ -64,7 +64,7 @@ export class RecognitionService implements OnModuleInit {
 
   constructor() {
     this.region = process.env.AWS_REGION || 'us-east-1';
-    this.s3Bucket = process.env.AWS_S3_BUCKET;
+    this.s3Bucket = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET;
   }
 
   async onModuleInit() {

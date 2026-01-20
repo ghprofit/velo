@@ -13,7 +13,7 @@ import FloatingLogo from '@/components/FloatingLogo';
 
 export default function LoginPage() {
   const { login, isLoading, error: serverError, requiresTwoFactor, verify2FA } = useLogin();
-  const { showToast } = useToast();
+  // const { showToast } = useToast();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

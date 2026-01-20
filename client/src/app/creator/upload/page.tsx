@@ -36,7 +36,7 @@ export default function UploadContentPage() {
 
   // Success state
   const [shortId, setShortId] = useState('');
-  const [redirectCountdown, setRedirectCountdown] = useState(5);
+  const [redirectCountdown] = useState(5);
   const [error, setError] = useState('');
 
   // Verification state
@@ -541,7 +541,6 @@ export default function UploadContentPage() {
     setPrice('');
     setShortId('');
     setError('');
-    setRedirectCountdown(5);
   };
 
   return (

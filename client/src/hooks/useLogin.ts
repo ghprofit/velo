@@ -35,7 +35,7 @@ const getRoleRedirectPath = (role: string): string => {
 export const useLogin = (): UseLoginReturn => {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { login: authLogin, verify2FA: authVerify2FA, user } = useAuth();
+  const { login: authLogin, verify2FA: authVerify2FA } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);

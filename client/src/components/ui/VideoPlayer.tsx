@@ -123,7 +123,7 @@ export function VideoPlayer({
     showSpeedMenu: false,
   });
 
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDragging] = useState(false);
 
   // Play/Pause toggle
   const togglePlayPause = useCallback(() => {

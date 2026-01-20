@@ -1183,7 +1183,7 @@ export default function SettingsPage() {
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-gray-900 mb-1">Delete Bank Account?</h3>
                 <p className="text-sm text-gray-600">
-                  Are you sure you want to delete your bank account details? This action cannot be undone and you won't be able to receive payouts until you add new bank details.
+                  Are you sure you want to delete your bank account details? This action cannot be undone and you won&apos;t be able to receive payouts until you add new bank details.
                 </p>
               </div>
             </div>

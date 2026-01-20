@@ -66,6 +66,7 @@ export function useCountUp({
         cancelAnimationFrame(frameRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [start, end, duration, onComplete]);
 
   // Format the number

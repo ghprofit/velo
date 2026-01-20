@@ -216,7 +216,6 @@ export class StripeService {
         type: 'express',
         email,
         capabilities: {
-          card_payments: { requested: false },
           transfers: { requested: true },
         },
         metadata,

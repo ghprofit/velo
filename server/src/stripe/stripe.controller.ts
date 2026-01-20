@@ -493,16 +493,53 @@ export class StripeController {
             },
           });
 
-          // Reverse creator earnings
+          // Calculate creator earnings that need to be reversed
           const creatorEarnings = purchase.basePrice
             ? purchase.basePrice * 0.9
             : purchase.amount * 0.85;
 
-          await tx.creatorProfile.update({
+          // Get current creator balance state
+          const creator = await tx.creatorProfile.findUnique({
             where: { id: purchase.content.creatorId },
+            select: {
+              pendingBalance: true,
+              availableBalance: true,
+            },
+          });
+
+          // Determine if earnings are still pending or already available
+          const earningsReleased = purchase.earningsReleased || false;
+          
+          if (earningsReleased) {
+            // Earnings were released to available balance - deduct from there
+            await tx.creatorProfile.update({
+              where: { id: purchase.content.creatorId },
+              data: {
+                totalEarnings: { decrement: creatorEarnings },
+                availableBalance: { decrement: creatorEarnings },
+                totalPurchases: { decrement: 1 },
+              },
+            });
+            this.logger.log(`Refund deducted from available balance for purchase ${purchase.id}`);
+          } else {
+            // Earnings still in pending - deduct from pending balance
+            await tx.creatorProfile.update({
+              where: { id: purchase.content.creatorId },
+              data: {
+                totalEarnings: { decrement: creatorEarnings },
+                pendingBalance: { decrement: creatorEarnings },
+                totalPurchases: { decrement: 1 },
+              },
+            });
+            this.logger.log(`Refund deducted from pending balance for purchase ${purchase.id}`);
+          }
+
+          // Mark purchase earnings as no longer needing release
+          await tx.purchase.update({
+            where: { id: purchase.id },
             data: {
-              totalEarnings: { decrement: creatorEarnings },
-              totalPurchases: { decrement: 1 },
+              earningsReleased: false,
+              earningsPendingUntil: null,
             },
           });
 

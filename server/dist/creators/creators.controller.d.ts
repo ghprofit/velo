@@ -32,6 +32,10 @@ export declare class CreatorsController {
         success: boolean;
         data: import("./dto/bank-account.dto").BankAccountResponseDto | null;
     }>;
+    deleteBankAccount(req: any): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     requestPayout(req: any, requestPayoutDto: RequestPayoutDto): Promise<{
         success: boolean;
         message: string;

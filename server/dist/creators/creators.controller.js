@@ -84,6 +84,20 @@ let CreatorsController = CreatorsController_1 = class CreatorsController {
             throw error;
         }
     }
+    async deleteBankAccount(req) {
+        this.logger.log(`Deleting bank account for user: ${req.user.id}`);
+        try {
+            await this.creatorsService.deleteBankAccount(req.user.id);
+            return {
+                success: true,
+                message: 'Bank account deleted successfully',
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to delete bank account:', error);
+            throw error;
+        }
+    }
     async requestPayout(req, requestPayoutDto) {
         this.logger.log(`Payout request from user: ${req.user.id}`);
         try {
@@ -197,6 +211,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], CreatorsController.prototype, "getBankAccount", null);
+__decorate([
+    (0, common_1.Delete)('payout/info'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CreatorsController.prototype, "deleteBankAccount", null);
 __decorate([
     (0, common_1.Post)('payout/request'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),

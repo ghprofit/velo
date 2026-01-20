@@ -164,10 +164,13 @@ let StripeController = StripeController_1 = class StripeController {
                             },
                         });
                         const creatorEarnings = basePrice * 0.9;
+                        const earningsPendingUntil = new Date();
+                        earningsPendingUntil.setHours(earningsPendingUntil.getHours() + 24);
                         await tx.creatorProfile.update({
                             where: { id: content.creatorId },
                             data: {
                                 totalEarnings: { increment: creatorEarnings },
+                                pendingBalance: { increment: creatorEarnings },
                                 totalPurchases: { increment: 1 },
                             },
                         });
@@ -215,10 +218,20 @@ let StripeController = StripeController_1 = class StripeController {
                 const creatorEarnings = purchase.basePrice
                     ? purchase.basePrice * 0.9
                     : purchase.amount * 0.85;
+                const earningsPendingUntil = new Date();
+                earningsPendingUntil.setHours(earningsPendingUntil.getHours() + 24);
+                await tx.purchase.update({
+                    where: { id: purchase.id },
+                    data: {
+                        earningsPendingUntil,
+                        earningsReleased: false,
+                    },
+                });
                 await tx.creatorProfile.update({
                     where: { id: purchase.content.creatorId },
                     data: {
                         totalEarnings: { increment: creatorEarnings },
+                        pendingBalance: { increment: creatorEarnings },
                         totalPurchases: { increment: 1 },
                     },
                 });
@@ -338,11 +351,41 @@ let StripeController = StripeController_1 = class StripeController {
                     const creatorEarnings = purchase.basePrice
                         ? purchase.basePrice * 0.9
                         : purchase.amount * 0.85;
-                    await tx.creatorProfile.update({
+                    const creator = await tx.creatorProfile.findUnique({
                         where: { id: purchase.content.creatorId },
+                        select: {
+                            pendingBalance: true,
+                            availableBalance: true,
+                        },
+                    });
+                    const earningsReleased = purchase.earningsReleased || false;
+                    if (earningsReleased) {
+                        await tx.creatorProfile.update({
+                            where: { id: purchase.content.creatorId },
+                            data: {
+                                totalEarnings: { decrement: creatorEarnings },
+                                availableBalance: { decrement: creatorEarnings },
+                                totalPurchases: { decrement: 1 },
+                            },
+                        });
+                        this.logger.log(`Refund deducted from available balance for purchase ${purchase.id}`);
+                    }
+                    else {
+                        await tx.creatorProfile.update({
+                            where: { id: purchase.content.creatorId },
+                            data: {
+                                totalEarnings: { decrement: creatorEarnings },
+                                pendingBalance: { decrement: creatorEarnings },
+                                totalPurchases: { decrement: 1 },
+                            },
+                        });
+                        this.logger.log(`Refund deducted from pending balance for purchase ${purchase.id}`);
+                    }
+                    await tx.purchase.update({
+                        where: { id: purchase.id },
                         data: {
-                            totalEarnings: { decrement: creatorEarnings },
-                            totalPurchases: { decrement: 1 },
+                            earningsReleased: false,
+                            earningsPendingUntil: null,
                         },
                     });
                     this.logger.log(`Full refund processed for purchase ${purchase.id}`);

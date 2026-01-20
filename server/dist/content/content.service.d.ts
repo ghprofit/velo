@@ -55,6 +55,8 @@ export declare class ContentService {
                 totalEarnings: number;
                 totalViews: number;
                 totalPurchases: number;
+                pendingBalance: number;
+                availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
                 userId: string;
@@ -150,6 +152,8 @@ export declare class ContentService {
                 totalEarnings: number;
                 totalViews: number;
                 totalPurchases: number;
+                pendingBalance: number;
+                availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
                 userId: string;
@@ -284,6 +288,8 @@ export declare class ContentService {
             totalEarnings: number;
             totalViews: number;
             totalPurchases: number;
+            pendingBalance: number;
+            availableBalance: number;
             waitlistBonus: number;
             bonusWithdrawn: boolean;
             userId: string;
@@ -428,6 +434,8 @@ export declare class ContentService {
                 totalEarnings: number;
                 totalViews: number;
                 totalPurchases: number;
+                pendingBalance: number;
+                availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
                 userId: string;

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { earningsApi } from '@/lib/api-client';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { earningsApi, payoutApi } from '@/lib/api-client';
 
 interface RequestPayoutModalProps {
   isOpen: boolean;
@@ -10,14 +11,49 @@ interface RequestPayoutModalProps {
   onSuccess?: () => void;
 }
 
+interface BankAccount {
+  bankAccountName: string;
+  bankName: string;
+  bankAccountNumber: string;
+  payoutSetupCompleted: boolean;
+}
+
 export default function RequestPayoutModal({ isOpen, onClose, availableBalance, onSuccess }: RequestPayoutModalProps) {
+  const router = useRouter();
   const [amount, setAmount] = useState('');
   const [confirmChecked, setConfirmChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
+  const [loadingBankInfo, setLoadingBankInfo] = useState(true);
+
+  // Fetch bank account info when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchBankAccount();
+    }
+  }, [isOpen]);
+
+  const fetchBankAccount = async () => {
+    try {
+      setLoadingBankInfo(true);
+      const response = await payoutApi.getBankAccountInfo();
+      setBankAccount(response.data.data);
+    } catch (err: unknown) {
+      console.error('Error fetching bank account:', err);
+      setBankAccount(null);
+    } finally {
+      setLoadingBankInfo(false);
+    }
+  };
 
   const handleMaxClick = () => {
     setAmount(availableBalance.toFixed(2));
+  };
+
+  const handleManagePayoutMethods = () => {
+    router.push('/creator/settings#payout');
+    onClose();
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,32 +182,66 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
               <label className="text-sm font-semibold text-gray-900">
                 Select Payout Method
               </label>
-              <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+              <button 
+                onClick={handleManagePayoutMethods}
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+              >
                 Manage Payout Methods
               </button>
             </div>
 
-            <div className="border-2 border-indigo-500 rounded-xl p-4 bg-indigo-50/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-5 h-5 rounded-full border-4 border-indigo-600 bg-white"></div>
-                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Bank Account</p>
-                    <p className="text-sm text-gray-600">****1234</p>
-                  </div>
-                </div>
-                <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            {loadingBankInfo ? (
+              <div className="border-2 border-gray-200 rounded-xl p-4 bg-gray-50">
+                <div className="flex items-center justify-center gap-2 py-4">
+                  <svg className="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
+                  <span className="text-sm text-gray-600">Loading payment methods...</span>
                 </div>
               </div>
-            </div>
+            ) : bankAccount?.payoutSetupCompleted ? (
+              <div className="border-2 border-indigo-500 rounded-xl p-4 bg-indigo-50/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-5 h-5 rounded-full border-4 border-indigo-600 bg-white"></div>
+                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{bankAccount.bankName || 'Bank Account'}</p>
+                      <p className="text-sm text-gray-600">
+                        {bankAccount.bankAccountName} •••• {bankAccount.bankAccountNumber?.slice(-4) || '****'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={handleManagePayoutMethods}
+                className="w-full border-2 border-dashed border-gray-300 hover:border-indigo-500 rounded-xl p-6 bg-gray-50 hover:bg-indigo-50/30 transition-all group"
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-12 h-12 bg-gray-200 group-hover:bg-indigo-100 rounded-lg flex items-center justify-center transition-colors">
+                    <svg className="w-7 h-7 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">Add Bank Details</p>
+                    <p className="text-sm text-gray-500 mt-1">Set up your payout method to receive funds</p>
+                  </div>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Payout Summary */}

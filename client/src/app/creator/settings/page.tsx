@@ -51,6 +51,8 @@ export default function SettingsPage() {
 
   // Bank account state
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
+  const [isEditingBankAccount, setIsEditingBankAccount] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [bankFormData, setBankFormData] = useState({
     bankAccountName: '',
     bankName: '',
@@ -87,6 +89,14 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadUserData();
+  }, []);
+
+  // Handle hash navigation for direct links to specific tabs
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === '#payout') {
+      setSettingsTab('Payouts');
+    }
   }, []);
 
   const loadUserData = async () => {
@@ -177,6 +187,56 @@ export default function SettingsPage() {
     }
   };
 
+  const handleEditBankAccount = () => {
+    if (bankAccount) {
+      setBankFormData({
+        bankAccountName: bankAccount.bankAccountName || '',
+        bankName: bankAccount.bankName || '',
+        bankAccountNumber: '',
+        bankRoutingNumber: '',
+        bankSwiftCode: '',
+        bankIban: '',
+        bankCountry: bankAccount.bankCountry || '',
+        bankCurrency: bankAccount.bankCurrency || 'USD',
+      });
+    }
+    setIsEditingBankAccount(true);
+  };
+
+  const handleCancelEditBankAccount = () => {
+    setIsEditingBankAccount(false);
+    setBankFormData({
+      bankAccountName: '',
+      bankName: '',
+      bankAccountNumber: '',
+      bankRoutingNumber: '',
+      bankSwiftCode: '',
+      bankIban: '',
+      bankCountry: '',
+      bankCurrency: 'USD',
+    });
+    setConfirmAccountNumber('');
+    setError('');
+  };
+
+  const handleDeleteBankAccount = async () => {
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await payoutApi.deleteBankAccount();
+      setSuccess('Bank account deleted successfully!');
+      setShowDeleteConfirmation(false);
+      await loadUserData();
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to delete bank account');
+      setShowDeleteConfirmation(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveBankAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -214,6 +274,7 @@ export default function SettingsPage() {
       await payoutApi.setupBankAccount(payload);
 
       setSuccess('Bank account updated successfully!');
+      setIsEditingBankAccount(false);
       setBankFormData({
         bankAccountName: '',
         bankName: '',
@@ -552,7 +613,7 @@ export default function SettingsPage() {
 
           {/* Payouts Tab */}
           {settingsTab === 'Payouts' && (
-            <div className="max-w-5xl">
+            <div id="payout" className="max-w-5xl">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Payouts</h2>
@@ -566,9 +627,31 @@ export default function SettingsPage() {
               </div>
 
               {/* Current Bank Account */}
-              {bankAccount && (
+              {bankAccount && !isEditingBankAccount && (
                 <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Current Bank Account</h3>
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Current Bank Account</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleEditBankAccount}
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 border border-indigo-600 text-indigo-600 rounded-lg text-xs sm:text-sm font-medium hover:bg-indigo-50 transition-colors flex items-center gap-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirmation(true)}
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 border border-red-600 text-red-600 rounded-lg text-xs sm:text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                     <div>
                       <p className="text-gray-600 text-xs sm:text-sm">Account Holder</p>
@@ -591,10 +674,21 @@ export default function SettingsPage() {
               )}
 
               {/* Bank Account Form */}
-              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">
-                  {bankAccount ? 'Update Bank Account' : 'Add Bank Account'}
-                </h3>
+              {(!bankAccount || isEditingBankAccount) && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4 sm:mb-6">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                      {bankAccount ? 'Update Bank Account' : 'Add Bank Account'}
+                    </h3>
+                    {isEditingBankAccount && (
+                      <button
+                        onClick={handleCancelEditBankAccount}
+                        className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
 
                 <form onSubmit={handleSaveBankAccount} className="space-y-4 sm:space-y-6">
                   {/* Country */}
@@ -749,6 +843,7 @@ export default function SettingsPage() {
                   </button>
                 </form>
               </div>
+              )}
             </div>
           )}
 
@@ -1074,6 +1169,63 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+
+      {/* Delete Bank Account Confirmation Modal */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Delete Bank Account?</h3>
+                <p className="text-sm text-gray-600">
+                  Are you sure you want to delete your bank account details? This action cannot be undone and you won't be able to receive payouts until you add new bank details.
+                </p>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirmation(false);
+                  setError('');
+                }}
+                disabled={saving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteBankAccount}
+                disabled={saving}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Bank Account'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

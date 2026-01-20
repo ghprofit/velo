@@ -70,6 +70,7 @@ export default function EarningsPage() {
   const [typeFilter, setTypeFilter] = useState('All Types');
   const [contentFilter, setContentFilter] = useState('All Content');
   const [currentPage, setCurrentPage] = useState(1);
+  const [payoutRequestsPage, setPayoutRequestsPage] = useState(1);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
 
   // Data state
@@ -77,7 +78,6 @@ export default function EarningsPage() {
   const [payouts, setPayouts] = useState<PayoutsData | null>(null);
   const [transactions, setTransactions] = useState<TransactionsData | null>(null);
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -349,7 +349,7 @@ export default function EarningsPage() {
                 </svg>
                 <div>
                   <p className="text-xs font-medium text-yellow-900">24-Hour Hold Period</p>
-                  <p className="text-xs text-yellow-700 mt-0.5 sm:mt-1">Funds move to available balance after 24 hours (chargeback protection)</p>
+                  <p className="text-xs text-yellow-700 mt-0.5 sm:mt-1">Funds move to available balance after 24 working hours (chargeback protection)</p>
                 </div>
               </div>
             </div>
@@ -377,6 +377,142 @@ export default function EarningsPage() {
               </div>
             </div>
           </div>
+
+          {/* Pending Payout Requests */}
+          {payoutRequests && payoutRequests.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">Pending Payout Requests</h2>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1">Withdrawal requests awaiting approval</p>
+                </div>
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs sm:text-sm font-semibold">
+                  {payoutRequests.length} Request{payoutRequests.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div className="space-y-3 sm:space-y-4">
+                {payoutRequests.slice((payoutRequestsPage - 1) * 2, payoutRequestsPage * 2).map((request: PayoutRequest) => {
+                  const getRequestStatusStyles = (status: string) => {
+                    switch (status) {
+                      case 'APPROVED':
+                        return {
+                          statusColor: 'text-green-600',
+                          statusBg: 'bg-green-50',
+                          iconBg: 'bg-green-100',
+                          icon: (
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ),
+                        };
+                      case 'PROCESSING':
+                        return {
+                          statusColor: 'text-yellow-600',
+                          statusBg: 'bg-yellow-50',
+                          iconBg: 'bg-yellow-100',
+                          icon: (
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ),
+                        };
+                      case 'REJECTED':
+                        return {
+                          statusColor: 'text-red-600',
+                          statusBg: 'bg-red-50',
+                          iconBg: 'bg-red-100',
+                          icon: (
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          ),
+                        };
+                      default: // PENDING
+                        return {
+                          statusColor: 'text-blue-600',
+                          statusBg: 'bg-blue-50',
+                          iconBg: 'bg-blue-100',
+                          icon: (
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ),
+                        };
+                    }
+                  };
+
+                  const styles = getRequestStatusStyles(request.status);
+
+                  return (
+                    <div key={request.id} className={`p-4 sm:p-5 ${styles.statusBg} border border-gray-200 rounded-lg`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className={`w-10 h-10 sm:w-12 sm:h-12 ${styles.iconBg} rounded-full flex items-center justify-center shrink-0`}>
+                            {styles.icon}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm sm:text-base">
+                              Withdrawal Request
+                            </p>
+                            <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
+                              Requested {formatDate(request.createdAt)} • {formatTime(request.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-left sm:text-right pl-14 sm:pl-0">
+                          <p className="text-lg sm:text-xl font-bold text-gray-900">
+                            {formatCurrency(request.requestedAmount)}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${styles.statusColor} ${styles.statusBg}`}>
+                              {request.status.charAt(0) + request.status.slice(1).toLowerCase()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {request.reviewNotes && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <p className="text-xs sm:text-sm text-gray-700">
+                            <span className="font-medium">Admin Note:</span> {request.reviewNotes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Navigation Buttons */}
+              {payoutRequests.length > 2 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    Showing {((payoutRequestsPage - 1) * 2) + 1} to {Math.min(payoutRequestsPage * 2, payoutRequests.length)} of {payoutRequests.length}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPayoutRequestsPage(payoutRequestsPage - 1)}
+                      disabled={payoutRequestsPage === 1}
+                      className="px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs sm:text-sm text-gray-600">
+                      {payoutRequestsPage} / {Math.ceil(payoutRequests.length / 2)}
+                    </span>
+                    <button
+                      onClick={() => setPayoutRequestsPage(payoutRequestsPage + 1)}
+                      disabled={payoutRequestsPage >= Math.ceil(payoutRequests.length / 2)}
+                      className="px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Recent Payout Activity */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">

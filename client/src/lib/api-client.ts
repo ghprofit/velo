@@ -303,6 +303,10 @@ export const payoutApi = {
   // Get current bank account info
   getBankAccountInfo: () =>
     apiClient.get('/creators/payout/info'),
+
+  // Delete bank account
+  deleteBankAccount: () =>
+    apiClient.delete('/creators/payout/info'),
 };
 
 // Content management API

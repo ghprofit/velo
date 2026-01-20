@@ -318,6 +318,59 @@ export class CreatorsService {
   }
 
   /**
+   * Delete bank account information
+   */
+  async deleteBankAccount(userId: string): Promise<void> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { creatorProfile: true },
+      });
+
+      if (!user || !user.creatorProfile) {
+        throw new NotFoundException('Creator profile not found');
+      }
+
+      // Check if there are any pending or processing payout requests
+      const activePayouts = await this.prisma.payoutRequest.findMany({
+        where: {
+          creatorId: user.creatorProfile.id,
+          status: {
+            in: ['PENDING', 'APPROVED', 'PROCESSING'],
+          },
+        },
+      });
+
+      if (activePayouts.length > 0) {
+        throw new BadRequestException(
+          'Cannot delete bank account while you have pending payout requests. Please wait for them to be completed or cancelled.',
+        );
+      }
+
+      // Clear bank account information
+      await this.prisma.creatorProfile.update({
+        where: { id: user.creatorProfile.id },
+        data: {
+          bankAccountName: null,
+          bankName: null,
+          bankAccountNumber: null,
+          bankRoutingNumber: null,
+          bankSwiftCode: null,
+          bankIban: null,
+          bankCountry: null,
+          bankCurrency: 'USD',
+          payoutSetupCompleted: false,
+        },
+      });
+
+      this.logger.log(`Bank account deleted for user: ${userId}`);
+    } catch (error) {
+      this.logger.error(`Failed to delete bank account for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Request a payout
    * Requires: email verified, KYC verified, bank details set
    */

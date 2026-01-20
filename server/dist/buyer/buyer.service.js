@@ -587,10 +587,20 @@ let BuyerService = BuyerService_1 = class BuyerService {
             const creatorEarnings = purchase.basePrice
                 ? purchase.basePrice * 0.9
                 : purchase.amount * 0.85;
+            const earningsPendingUntil = new Date();
+            earningsPendingUntil.setHours(earningsPendingUntil.getHours() + 24);
+            await tx.purchase.update({
+                where: { id: purchase.id },
+                data: {
+                    earningsPendingUntil,
+                    earningsReleased: false,
+                },
+            });
             await tx.creatorProfile.update({
                 where: { id: purchase.content.creatorId },
                 data: {
                     totalEarnings: { increment: creatorEarnings },
+                    pendingBalance: { increment: creatorEarnings },
                     totalPurchases: { increment: 1 },
                 },
             });

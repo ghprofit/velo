@@ -250,6 +250,47 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             throw error;
         }
     }
+    async deleteBankAccount(userId) {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                include: { creatorProfile: true },
+            });
+            if (!user || !user.creatorProfile) {
+                throw new common_1.NotFoundException('Creator profile not found');
+            }
+            const activePayouts = await this.prisma.payoutRequest.findMany({
+                where: {
+                    creatorId: user.creatorProfile.id,
+                    status: {
+                        in: ['PENDING', 'APPROVED', 'PROCESSING'],
+                    },
+                },
+            });
+            if (activePayouts.length > 0) {
+                throw new common_1.BadRequestException('Cannot delete bank account while you have pending payout requests. Please wait for them to be completed or cancelled.');
+            }
+            await this.prisma.creatorProfile.update({
+                where: { id: user.creatorProfile.id },
+                data: {
+                    bankAccountName: null,
+                    bankName: null,
+                    bankAccountNumber: null,
+                    bankRoutingNumber: null,
+                    bankSwiftCode: null,
+                    bankIban: null,
+                    bankCountry: null,
+                    bankCurrency: 'USD',
+                    payoutSetupCompleted: false,
+                },
+            });
+            this.logger.log(`Bank account deleted for user: ${userId}`);
+        }
+        catch (error) {
+            this.logger.error(`Failed to delete bank account for user ${userId}:`, error);
+            throw error;
+        }
+    }
     async requestPayout(userId, requestedAmount) {
         try {
             this.logger.log(`Payout request initiated by user: ${userId} for amount: ${requestedAmount}`);
@@ -264,17 +305,18 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 if (requestedAmount < 50) {
                     throw new common_1.BadRequestException('Minimum payout amount is $50');
                 }
-                const completedPayouts = await tx.payout.aggregate({
+                let availableBalance = user.creatorProfile.availableBalance || 0;
+                const activePayoutsAggregation = await tx.payoutRequest.aggregate({
                     where: {
                         creatorId: user.creatorProfile.id,
-                        status: 'COMPLETED',
+                        status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
                     },
                     _sum: {
-                        amount: true,
+                        requestedAmount: true,
                     },
                 });
-                const totalPayouts = completedPayouts._sum.amount || 0;
-                let availableBalance = user.creatorProfile.totalEarnings - totalPayouts;
+                const reservedForPayouts = activePayoutsAggregation._sum.requestedAmount || 0;
+                availableBalance = Math.max(0, availableBalance - reservedForPayouts);
                 let bonusMessage = '';
                 if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
                     if (user.creatorProfile.totalPurchases >= 5) {

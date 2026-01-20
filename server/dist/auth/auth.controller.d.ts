@@ -132,6 +132,8 @@ export declare class AuthController {
                 stripeAccountId: string | null;
                 payoutStatus: import(".prisma/client").$Enums.PayoutStatus;
                 policyStrikes: number;
+                pendingBalance: number;
+                availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
                 userId: string;

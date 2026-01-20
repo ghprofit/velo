@@ -524,8 +524,8 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
         if (request.status !== 'PENDING') {
             throw new common_1.BadRequestException(`Cannot approve payout request with status: ${request.status}`);
         }
-        if (request.creator.totalEarnings < request.requestedAmount) {
-            throw new common_1.BadRequestException('Creator no longer has sufficient balance');
+        if (request.creator.availableBalance < request.requestedAmount) {
+            throw new common_1.BadRequestException('Creator no longer has sufficient available balance');
         }
         const result = await this.prisma.$transaction(async (tx) => {
             const updatedRequest = await tx.payoutRequest.update({

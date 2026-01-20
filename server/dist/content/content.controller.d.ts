@@ -74,6 +74,8 @@ export declare class ContentController {
                     totalEarnings: number;
                     totalViews: number;
                     totalPurchases: number;
+                    pendingBalance: number;
+                    availableBalance: number;
                     waitlistBonus: number;
                     bonusWithdrawn: boolean;
                     userId: string;
@@ -167,6 +169,8 @@ export declare class ContentController {
                     totalEarnings: number;
                     totalViews: number;
                     totalPurchases: number;
+                    pendingBalance: number;
+                    availableBalance: number;
                     waitlistBonus: number;
                     bonusWithdrawn: boolean;
                     userId: string;
@@ -264,6 +268,8 @@ export declare class ContentController {
                     totalEarnings: number;
                     totalViews: number;
                     totalPurchases: number;
+                    pendingBalance: number;
+                    availableBalance: number;
                     waitlistBonus: number;
                     bonusWithdrawn: boolean;
                     userId: string;
@@ -409,6 +415,8 @@ export declare class ContentController {
                 totalEarnings: number;
                 totalViews: number;
                 totalPurchases: number;
+                pendingBalance: number;
+                availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
                 userId: string;

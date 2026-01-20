@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   UseGuards,
   Request,
   Body,
@@ -110,6 +111,28 @@ export class CreatorsController {
       };
     } catch (error) {
       this.logger.error('Failed to get bank account:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete bank account information
+   * DELETE /api/creators/payout/info
+   */
+  @Delete('payout/info')
+  @HttpCode(HttpStatus.OK)
+  async deleteBankAccount(@Request() req: any) {
+    this.logger.log(`Deleting bank account for user: ${req.user.id}`);
+
+    try {
+      await this.creatorsService.deleteBankAccount(req.user.id);
+
+      return {
+        success: true,
+        message: 'Bank account deleted successfully',
+      };
+    } catch (error) {
+      this.logger.error('Failed to delete bank account:', error);
       throw error;
     }
   }

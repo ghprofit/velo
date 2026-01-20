@@ -26,6 +26,7 @@ export declare class CreatorsService {
     processVeriffWebhook(sessionId: string, status: string, code: number, vendorData?: string): Promise<void>;
     setupBankAccount(userId: string, bankAccountDto: SetupBankAccountDto): Promise<BankAccountResponseDto>;
     getBankAccount(userId: string): Promise<BankAccountResponseDto | null>;
+    deleteBankAccount(userId: string): Promise<void>;
     requestPayout(userId: string, requestedAmount: number): Promise<{
         id: string;
         requestedAmount: number;

@@ -224,9 +224,12 @@ export class StripeService {
 
       this.logger.log(`Connect account created: ${account.id} for ${email}`);
       return account;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Failed to create Connect account:', error);
-      throw new BadRequestException('Failed to create payout account');
+      const errorMessage = error?.message || 'Failed to create payout account';
+      const errorDetails = error?.raw?.message || error?.message;
+      this.logger.error(`Stripe error details: ${errorDetails}`);
+      throw new BadRequestException(errorDetails || 'Failed to create payout account');
     }
   }
 

@@ -278,7 +278,10 @@ export class CreatorsService {
       };
     } catch (error) {
       this.logger.error(`Failed to setup bank account for user ${userId}:`, error);
-      throw error;
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException((error as any)?.message || 'Failed to setup bank account');
     }
   }
 

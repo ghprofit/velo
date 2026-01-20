@@ -75,6 +75,7 @@ export class CreatorsController {
    * POST /api/creators/payout/setup
    */
   @Post('payout/setup')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async setupBankAccount(@Request() req: any, @Body() bankAccountDto: SetupBankAccountDto) {
     this.logger.log(`Setting up bank account for user: ${req.user.id}`);
@@ -98,6 +99,7 @@ export class CreatorsController {
    * GET /api/creators/payout/info
    */
   @Get('payout/info')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async getBankAccount(@Request() req: any) {
     this.logger.log(`Getting bank account info for user: ${req.user.id}`);
@@ -120,6 +122,7 @@ export class CreatorsController {
    * DELETE /api/creators/payout/info
    */
   @Delete('payout/info')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async deleteBankAccount(@Request() req: any) {
     this.logger.log(`Deleting bank account for user: ${req.user.id}`);

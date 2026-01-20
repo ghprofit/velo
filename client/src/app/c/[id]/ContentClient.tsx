@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import axios from 'axios';
 import { buyerApi } from '@/lib/api-client';
 import { getBuyerSession, saveBuyerSession, getBrowserFingerprint, getPurchaseToken, savePurchaseToken } from '@/lib/buyer-session';
 import Footer from '@/components/Footer';
@@ -113,7 +114,19 @@ export function ContentClient({ id }: { id: string }) {
             savePurchaseToken(id, tokenFromUrl);
           }
 
+          // Validate required parameters
+          if (!fingerprint || !accessToken) {
+            console.error('[CONTENT] Missing required parameters:', { hasFingerprint: !!fingerprint, hasAccessToken: !!accessToken });
+            setError('Missing required authentication data. Please refresh the page.');
+            setLoading(false);
+            return;
+          }
+
           // Check eligibility BEFORE fetching content
+          console.log('[CONTENT] Checking eligibility with:', { 
+            accessToken: accessToken.substring(0, 20) + '...', 
+            fingerprint: fingerprint.substring(0, 20) + '...' 
+          });
           let eligibilityResponse = await buyerApi.checkAccessEligibility(accessToken, fingerprint);
           let eligibility = eligibilityResponse.data;
           console.log('[CONTENT] Access eligibility check:', eligibility);
@@ -155,9 +168,32 @@ export function ContentClient({ id }: { id: string }) {
           setIsPurchased(false);
         }
       } catch (err: unknown) {
-        console.error('Failed to fetch content:', err);
-        const error = err as { response?: { data?: { message?: string } } };
-        setError(error.response?.data?.message || 'Failed to load content');
+        console.error('[CONTENT] ❌ Error fetching content:', err);
+        
+        // Check if it's an Axios error
+        if (axios.isAxiosError(err)) {
+          console.error('[CONTENT] Axios error details:', {
+            message: err.message,
+            code: err.code,
+            status: err.response?.status,
+            statusText: err.response?.statusText,
+            responseData: err.response?.data,
+            url: err.config?.url,
+            method: err.config?.method,
+          });
+          
+          // Network error specifically
+          if (err.message === 'Network Error' || err.code === 'ERR_NETWORK') {
+            setError('Unable to connect to server. Please check your internet connection and try again.');
+          } else if (err.response?.status === 404) {
+            setError('Content endpoint not found. Please contact support.');
+          } else {
+            setError(err.response?.data?.message || err.message || 'Failed to load content');
+          }
+        } else {
+          const error = err as { response?: { data?: { message?: string } } };
+          setError(error.response?.data?.message || 'Failed to load content');
+        }
         setIsPurchased(false);
       } finally {
         setLoading(false);

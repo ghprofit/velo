@@ -82,7 +82,21 @@ export class BuyerController {
    */
   @Post('access/check-eligibility')
   async checkAccessEligibility(@Body() dto: CheckEligibilityDto) {
-    return this.buyerService.checkAccessEligibility(dto.accessToken, dto.fingerprint);
+    console.log('[BUYER CONTROLLER] checkAccessEligibility called with:', {
+      hasAccessToken: !!dto.accessToken,
+      accessTokenPreview: dto.accessToken?.substring(0, 20) + '...',
+      hasFingerprint: !!dto.fingerprint,
+      fingerprintPreview: dto.fingerprint?.substring(0, 20) + '...',
+    });
+    
+    try {
+      const result = await this.buyerService.checkAccessEligibility(dto.accessToken, dto.fingerprint);
+      console.log('[BUYER CONTROLLER] checkAccessEligibility result:', result);
+      return result;
+    } catch (error) {
+      console.error('[BUYER CONTROLLER] checkAccessEligibility error:', error);
+      throw error;
+    }
   }
 
   /**

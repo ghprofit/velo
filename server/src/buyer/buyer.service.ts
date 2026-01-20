@@ -788,10 +788,25 @@ export class BuyerService {
           ? purchase.basePrice * 0.9
           : purchase.amount * 0.85;
 
+        // Calculate when earnings will be available (24 hours from now)
+        const earningsPendingUntil = new Date();
+        earningsPendingUntil.setHours(earningsPendingUntil.getHours() + 24);
+
+        // Update purchase with pending period
+        await tx.purchase.update({
+          where: { id: purchase.id },
+          data: {
+            earningsPendingUntil,
+            earningsReleased: false,
+          },
+        });
+
+        // Add earnings to PENDING balance (will move to available after 24hr)
         await tx.creatorProfile.update({
           where: { id: purchase.content.creatorId },
           data: {
             totalEarnings: { increment: creatorEarnings },
+            pendingBalance: { increment: creatorEarnings }, // Add to pending
             totalPurchases: { increment: 1 },
           },
         });

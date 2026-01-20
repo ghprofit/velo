@@ -231,6 +231,10 @@ model CreatorProfile {
   totalViews     Int   @default(0)
   totalPurchases Int   @default(0)
 
+  // Balance tracking - new system with pending period
+  pendingBalance   Float @default(0) // Balance pending 24hr chargeback period
+  availableBalance Float @default(0) // Balance available for payout after 24hr period
+
   // Waitlist bonus tracking
   waitlistBonus  Float   @default(0)    // Amount of bonus received ($50)
   bonusWithdrawn Boolean @default(false) // Whether bonus has been withdrawn
@@ -413,6 +417,10 @@ model Purchase {
 
   // Pricing (Bug #12)
   basePrice Float? // Creator's original price before markup
+
+  // Earnings timing - for 24hr pending period
+  earningsPendingUntil DateTime? // When earnings become available (purchase time + 24hr)
+  earningsReleased     Boolean   @default(false) // Whether earnings moved from pending to available
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -635,10 +635,10 @@ export class PaymentsService {
       );
     }
 
-    // Validate creator still has sufficient balance
-    if (request.creator.totalEarnings < request.requestedAmount) {
+    // Validate creator still has sufficient available balance (after 24hr period)
+    if (request.creator.availableBalance < request.requestedAmount) {
       throw new BadRequestException(
-        'Creator no longer has sufficient balance',
+        'Creator no longer has sufficient available balance',
       );
     }
 

@@ -67,31 +67,12 @@ export class EarningsService {
     // This is maintained by Stripe webhook handlers when purchases are completed
     const lifetimeEarnings = creatorProfile.totalEarnings || 0;
 
-    // Calculate pending balance from payout requests that are awaiting admin approval
-    const pendingPayoutsAggregation = await this.prisma.payoutRequest.aggregate({
-      where: {
-        creatorId: creatorProfile.id,
-        status: 'PENDING', // Only count requests awaiting admin approval
-      },
-      _sum: {
-        requestedAmount: true,
-      },
-    });
+    // Get pending balance (earnings in 24hr hold period)
+    // This comes directly from the profile now
+    let pendingBalance = creatorProfile.pendingBalance || 0;
 
-    const pendingBalance = pendingPayoutsAggregation._sum.requestedAmount || 0;
-
-    // Calculate in-progress payouts (approved but not yet completed)
-    const processingPayoutsAggregation = await this.prisma.payoutRequest.aggregate({
-      where: {
-        creatorId: creatorProfile.id,
-        status: 'PROCESSING', // Approved by admin, being processed
-      },
-      _sum: {
-        requestedAmount: true,
-      },
-    });
-
-    const processingBalance = processingPayoutsAggregation._sum.requestedAmount || 0;
+    // Get available balance (earnings released after 24hr + bonus if unlocked)
+    let availableBalance = creatorProfile.availableBalance || 0;
 
     // Calculate total completed payouts
     const payoutsAggregation = await this.prisma.payout.aggregate({
@@ -106,9 +87,19 @@ export class EarningsService {
 
     const totalPayouts = payoutsAggregation._sum.amount || 0;
 
-    // Calculate available balance
-    // Available = total earnings - completed payouts - pending requests - processing payouts
-    let availableBalance = Math.max(0, lifetimeEarnings - totalPayouts - pendingBalance - processingBalance);
+    // Subtract approved/processing payout requests from available balance
+    const activePayoutsAggregation = await this.prisma.payoutRequest.aggregate({
+      where: {
+        creatorId: creatorProfile.id,
+        status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
+      },
+      _sum: {
+        requestedAmount: true,
+      },
+    });
+
+    const reservedForPayouts = activePayoutsAggregation._sum.requestedAmount || 0;
+    availableBalance = Math.max(0, availableBalance - reservedForPayouts);
 
     // Handle waitlist bonus (tracked separately from purchase earnings)
     let lockedBonus = 0;

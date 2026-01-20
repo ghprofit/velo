@@ -343,23 +343,22 @@ export class CreatorsService {
             throw new BadRequestException('Minimum payout amount is $50');
           }
 
-          // Calculate total completed payouts
-          const completedPayouts = await tx.payout.aggregate({
+          // Get available balance from profile (released after 24hr pending period)
+          let availableBalance = user.creatorProfile.availableBalance || 0;
+
+          // Subtract already requested/processing payouts from available balance
+          const activePayoutsAggregation = await tx.payoutRequest.aggregate({
             where: {
               creatorId: user.creatorProfile.id,
-              status: 'COMPLETED',
+              status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] },
             },
             _sum: {
-              amount: true,
+              requestedAmount: true,
             },
           });
 
-          const totalPayouts = completedPayouts._sum.amount || 0;
-
-          // Calculate available balance: totalEarnings - completedPayouts
-          // Earnings are immediately available after purchase - no pending period
-          // Note: totalEarnings only includes purchase earnings, NOT the waitlist bonus
-          let availableBalance = user.creatorProfile.totalEarnings - totalPayouts;
+          const reservedForPayouts = activePayoutsAggregation._sum.requestedAmount || 0;
+          availableBalance = Math.max(0, availableBalance - reservedForPayouts);
 
           // Check if waitlist bonus should be added to available balance
           // Bonus is separate from earnings and is only unlocked after 5 sales

@@ -72,6 +72,9 @@ export default function ContentDetailPage() {
   const [previewUrls, setPreviewUrls] = useState<{ [key: string]: string }>({});
   const [loadingPreview, setLoadingPreview] = useState(false);
 
+  // Platform fee configuration
+  const PLATFORM_FEE_RATE = 0.10;
+
   useEffect(() => {
     const fetchContent = async () => {
       try {
@@ -766,7 +769,7 @@ export default function ContentDetailPage() {
                     </div>
                     <span className="text-gray-700">Revenue</span>
                   </div>
-                  <span className="text-2xl font-bold text-gray-900">${content.totalRevenue.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-gray-900">${(content.purchaseCount * content.price * (1 - PLATFORM_FEE_RATE)).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -788,13 +791,13 @@ export default function ContentDetailPage() {
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-gray-500">Avg. Revenue per View</span>
                   <span className="font-medium text-gray-900">
-                    ${content.viewCount > 0 ? (content.totalRevenue / content.viewCount).toFixed(2) : '0.00'}
+                    ${content.viewCount > 0 ? ((content.purchaseCount * content.price * (1 - PLATFORM_FEE_RATE)) / content.viewCount).toFixed(2) : '0.00'}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Avg. Revenue per Unlock</span>
                   <span className="font-medium text-gray-900">
-                    ${content.purchaseCount > 0 ? (content.totalRevenue / content.purchaseCount).toFixed(2) : content.price.toFixed(2)}
+                    ${content.purchaseCount > 0 ? ((content.purchaseCount * content.price * (1 - PLATFORM_FEE_RATE)) / content.purchaseCount).toFixed(2) : (content.price * (1 - PLATFORM_FEE_RATE)).toFixed(2)}
                   </span>
                 </div>
               </div>

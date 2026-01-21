@@ -42,7 +42,17 @@ let CreatorsService = class CreatorsService {
                 where,
                 skip,
                 take: limit,
-                include: {
+                select: {
+                    id: true,
+                    displayName: true,
+                    createdAt: true,
+                    verificationStatus: true,
+                    totalEarnings: true,
+                    totalPurchases: true,
+                    payoutStatus: true,
+                    payoutSetupCompleted: true,
+                    stripeAccountId: true,
+                    paypalEmail: true,
                     user: {
                         select: {
                             id: true,
@@ -52,24 +62,35 @@ let CreatorsService = class CreatorsService {
                             createdAt: true,
                         },
                     },
+                    content: {
+                        select: {
+                            viewCount: true,
+                        },
+                    },
                 },
                 orderBy: { createdAt: 'desc' },
             }),
             this.prisma.creatorProfile.count({ where }),
         ]);
-        const formattedCreators = creators.map((creator) => ({
-            id: creator.id,
-            name: creator.displayName,
-            email: creator.user.email,
-            kycStatus: creator.verificationStatus,
-            accountStatus: creator.user.isActive ? 'ACTIVE' : 'SUSPENDED',
-            joinDate: creator.createdAt.toISOString(),
-            lastLogin: creator.user.lastLogin?.toISOString() || null,
-            isActive: creator.user.isActive,
-            totalEarnings: creator.totalEarnings,
-            totalViews: creator.totalViews,
-            totalPurchases: creator.totalPurchases,
-        }));
+        const formattedCreators = creators.map((creator) => {
+            const totalViews = creator.content.reduce((sum, c) => sum + (c.viewCount || 0), 0);
+            const hasPayoutMethod = creator.payoutSetupCompleted || !!creator.stripeAccountId || !!creator.paypalEmail;
+            const effectivePayoutStatus = hasPayoutMethod ? creator.payoutStatus : 'PENDING';
+            return {
+                id: creator.id,
+                name: creator.displayName,
+                email: creator.user.email,
+                kycStatus: creator.verificationStatus,
+                accountStatus: creator.user.isActive ? 'ACTIVE' : 'SUSPENDED',
+                joinDate: creator.createdAt.toISOString(),
+                lastLogin: creator.user.lastLogin?.toISOString() || null,
+                isActive: creator.user.isActive,
+                totalEarnings: creator.totalEarnings,
+                totalViews: totalViews,
+                totalPurchases: creator.totalPurchases,
+                payoutStatus: effectivePayoutStatus,
+            };
+        });
         return {
             success: true,
             data: formattedCreators,
@@ -115,7 +136,21 @@ let CreatorsService = class CreatorsService {
     async getCreatorById(id) {
         const creator = await this.prisma.creatorProfile.findUnique({
             where: { id },
-            include: {
+            select: {
+                id: true,
+                displayName: true,
+                bio: true,
+                profileImage: true,
+                coverImage: true,
+                createdAt: true,
+                verificationStatus: true,
+                totalEarnings: true,
+                totalPurchases: true,
+                payoutStatus: true,
+                payoutSetupCompleted: true,
+                stripeAccountId: true,
+                paypalEmail: true,
+                policyStrikes: true,
                 user: {
                     select: {
                         id: true,
@@ -131,8 +166,8 @@ let CreatorsService = class CreatorsService {
                         title: true,
                         status: true,
                         createdAt: true,
+                        viewCount: true,
                     },
-                    take: 10,
                     orderBy: { createdAt: 'desc' },
                 },
                 payouts: {
@@ -153,6 +188,15 @@ let CreatorsService = class CreatorsService {
                 message: 'Creator not found',
             };
         }
+        const totalViews = creator.content.reduce((sum, c) => sum + (c.viewCount || 0), 0);
+        const recentContent = creator.content.slice(0, 10).map(c => ({
+            id: c.id,
+            title: c.title,
+            status: c.status,
+            createdAt: c.createdAt,
+        }));
+        const hasPayoutMethod = creator.payoutSetupCompleted || !!creator.stripeAccountId || !!creator.paypalEmail;
+        const effectivePayoutStatus = hasPayoutMethod ? creator.payoutStatus : 'PENDING';
         return {
             success: true,
             data: {
@@ -167,11 +211,11 @@ let CreatorsService = class CreatorsService {
                 joinDate: creator.createdAt.toISOString(),
                 lastLogin: creator.user.lastLogin?.toISOString() || null,
                 totalEarnings: creator.totalEarnings,
-                totalViews: creator.totalViews,
+                totalViews: totalViews,
                 totalPurchases: creator.totalPurchases,
-                payoutStatus: creator.payoutStatus,
+                payoutStatus: effectivePayoutStatus,
                 policyStrikes: creator.policyStrikes,
-                recentContent: creator.content,
+                recentContent: recentContent,
                 recentPayouts: creator.payouts,
             },
         };

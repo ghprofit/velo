@@ -157,7 +157,7 @@ let StripeService = StripeService_1 = class StripeService {
                 type: 'express',
                 email,
                 capabilities: {
-                    card_payments: { requested: false },
+                    card_payments: { requested: true },
                     transfers: { requested: true },
                 },
                 metadata,
@@ -167,7 +167,10 @@ let StripeService = StripeService_1 = class StripeService {
         }
         catch (error) {
             this.logger.error('Failed to create Connect account:', error);
-            throw new common_1.BadRequestException('Failed to create payout account');
+            const errorMessage = error?.message || 'Failed to create payout account';
+            const errorDetails = error?.raw?.message || error?.message;
+            this.logger.error(`Stripe error details: ${errorDetails}`);
+            throw new common_1.BadRequestException(errorDetails || 'Failed to create payout account');
         }
     }
     async createAccountLink(accountId, refreshUrl, returnUrl) {

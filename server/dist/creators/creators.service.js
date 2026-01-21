@@ -219,7 +219,10 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
         }
         catch (error) {
             this.logger.error(`Failed to setup bank account for user ${userId}:`, error);
-            throw error;
+            if (error instanceof common_1.BadRequestException) {
+                throw error;
+            }
+            throw new common_1.BadRequestException(error?.message || 'Failed to setup bank account');
         }
     }
     async getBankAccount(userId) {

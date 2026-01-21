@@ -197,7 +197,7 @@ export default function CreatorDetailsPage() {
                 {/* Profile Picture */}
                 <div className="w-32 h-32 rounded-full bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center overflow-hidden text-white text-3xl font-bold">
                   {creator.profileImage ? (
-                    <Image src={creator.profileImage} alt={creator.name} className="w-full h-full object-cover" />
+                    <Image src={creator.profileImage} alt={creator.name} width={128} height={128} className="w-full h-full object-cover" />
                   ) : (
                     getInitials(creator.name)
                   )}
@@ -283,7 +283,7 @@ export default function CreatorDetailsPage() {
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">{creator.totalViews.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">{(creator.totalViews || 0).toLocaleString()}</p>
               <p className="text-sm text-gray-600">Content views</p>
             </div>
 
@@ -297,7 +297,7 @@ export default function CreatorDetailsPage() {
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">{creator.totalPurchases.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">{(creator.totalPurchases || 0).toLocaleString()}</p>
               <p className="text-sm text-gray-600">Successful sales</p>
             </div>
           </div>
@@ -331,9 +331,12 @@ export default function CreatorDetailsPage() {
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-600">{formatDate(content.createdAt)}</td>
                         <td className="py-4 px-4">
-                          <button className="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+                          <Link
+                            href={`/admin/content/${content.id}`}
+                            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                          >
                             View
-                          </button>
+                          </Link>
                         </td>
                       </tr>
                     ))}
@@ -381,9 +384,12 @@ export default function CreatorDetailsPage() {
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-900">{formatDate(payout.createdAt)}</td>
                         <td className="py-4 px-4">
-                          <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
+                          <Link
+                            href={`/admin/payouts`}
+                            className="text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                          >
                             View
-                          </button>
+                          </Link>
                         </td>
                       </tr>
                     ))}

@@ -196,6 +196,7 @@ __decorate([
 ], CreatorsController.prototype, "getVerificationStatus", null);
 __decorate([
     (0, common_1.Post)('payout/setup'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
@@ -205,6 +206,7 @@ __decorate([
 ], CreatorsController.prototype, "setupBankAccount", null);
 __decorate([
     (0, common_1.Get)('payout/info'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -213,6 +215,7 @@ __decorate([
 ], CreatorsController.prototype, "getBankAccount", null);
 __decorate([
     (0, common_1.Delete)('payout/info'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),

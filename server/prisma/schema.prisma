@@ -57,6 +57,7 @@ enum AdminStatus {
 }
 
 enum PayoutStatus {
+  PENDING
   ACTIVE
   ON_HOLD
   SUSPENDED
@@ -221,7 +222,7 @@ model CreatorProfile {
   // Payout Info
   paypalEmail          String?
   stripeAccountId      String?
-  payoutStatus         PayoutStatus @default(ACTIVE)
+  payoutStatus         PayoutStatus @default(PENDING)
 
   // Policy
   policyStrikes Int @default(0)

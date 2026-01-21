@@ -45,11 +45,17 @@ export class AnalyticsService {
       where: purchaseWhere,
       select: {
         amount: true,
+        basePrice: true,
       },
     });
 
-    // Calculate totals
-    const totalRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
+    // Calculate totals (net creator revenue)
+    // For new purchases: creator earns 90% of basePrice
+    // For legacy purchases: creator earns 85% of amount (no basePrice stored)
+    const totalRevenue = purchases.reduce((sum, p) => {
+      const net = p.basePrice != null ? p.basePrice * 0.9 : p.amount * 0.85;
+      return sum + net;
+    }, 0);
     const totalUnlocks = purchases.length;
 
     // Get all content for this creator to sum views
@@ -132,6 +138,7 @@ export class AnalyticsService {
       },
       select: {
         amount: true,
+        basePrice: true,
         createdAt: true,
       },
       orderBy: {
@@ -146,7 +153,11 @@ export class AnalyticsService {
         return purchaseDate === date.toDateString();
       });
 
-      const revenue = dayPurchases.reduce((sum, p) => sum + p.amount, 0);
+      // Net creator revenue per day
+      const revenue = dayPurchases.reduce((sum, p) => {
+        const net = p.basePrice != null ? p.basePrice * 0.9 : p.amount * 0.85;
+        return sum + net;
+      }, 0);
       const unlocks = dayPurchases.length;
 
       return {
@@ -226,6 +237,29 @@ export class AnalyticsService {
       take: options.limit,
     });
 
+    // Compute net creator revenue per content (for displayed values)
+    const contentIds = contents.map((c) => c.id);
+    let revenueMap: Record<string, number> = {};
+    if (contentIds.length > 0) {
+      const purchases = await this.prisma.purchase.findMany({
+        where: {
+          contentId: { in: contentIds },
+          status: 'COMPLETED',
+        },
+        select: {
+          contentId: true,
+          amount: true,
+          basePrice: true,
+        },
+      });
+
+      revenueMap = purchases.reduce((acc, p) => {
+        const net = p.basePrice != null ? p.basePrice * 0.9 : p.amount * 0.85;
+        acc[p.contentId] = (acc[p.contentId] || 0) + net;
+        return acc;
+      }, {} as Record<string, number>);
+    }
+
     // Format response
     const items = contents.map((content) => ({
       id: content.id,
@@ -234,7 +268,8 @@ export class AnalyticsService {
       size: this.formatFileSize(content.fileSize),
       views: content.viewCount,
       unlocks: content.purchaseCount,
-      revenue: content.totalRevenue,
+      // Display net creator revenue
+      revenue: revenueMap[content.id] ?? 0,
       thumbnailUrl: content.thumbnailUrl,
     }));
 

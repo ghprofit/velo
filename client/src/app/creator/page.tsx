@@ -171,7 +171,7 @@ export default function CreatorDashboardPage() {
     },
     {
       label: 'Total Earnings',
-      value: `$${((profile?.creatorProfile?.totalEarnings || 0) * 0.9).toFixed(2)}`,
+      value: `$${(profile?.creatorProfile?.totalEarnings || 0).toFixed(2)}`,
       icon: 'dollar',
       bgColor: 'bg-green-100',
       iconColor: 'text-green-600'
@@ -697,7 +697,7 @@ export default function CreatorDashboardPage() {
                             </div>
                             <div className="bg-green-50 rounded-lg px-2 py-2">
                               <p className="text-xs text-gray-500">Revenue</p>
-                              <p className="text-sm font-semibold text-green-600">${(content.revenue * 0.9).toFixed(2)}</p>
+                              <p className="text-sm font-semibold text-green-600">${content.revenue.toFixed(2)}</p>
                             </div>
                           </div>
                         </div>
@@ -770,7 +770,7 @@ export default function CreatorDashboardPage() {
                                 <span className="text-sm text-gray-600">{content.unlocks.toLocaleString()}</span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm font-medium text-gray-900">${(content.revenue * 0.9).toFixed(2)}</span>
+                                <span className="text-sm font-medium text-gray-900">${content.revenue.toFixed(2)}</span>
                               </td>
                             </tr>
                             );

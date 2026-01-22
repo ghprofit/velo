@@ -123,7 +123,7 @@ export default function SupportTicketPage() {
       }
 
       // Submit the ticket
-      await supportApi.createTicket({
+      const response = await supportApi.createTicket({
         category,
         subject,
         description,
@@ -132,8 +132,9 @@ export default function SupportTicketPage() {
         attachments: attachments && attachments.length > 0 ? attachments : undefined,
       });
 
-      // Redirect to success page on successful submission
-      router.push('/creator/support/ticket/success');
+      // Redirect to success page with ticket ID
+      const ticketId = response.data.id;
+      router.push(`/creator/support/ticket/success?ticketId=${ticketId}`);
     } catch (err: unknown) {
       console.error('Failed to submit ticket:', err);
       const errorMessage = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to submit ticket. Please try again.';

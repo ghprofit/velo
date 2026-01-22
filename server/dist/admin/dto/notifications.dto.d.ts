@@ -20,10 +20,14 @@ export declare class BroadcastNotificationDto {
     userRole?: string;
     metadata?: any;
 }
-export interface NotificationStatsDto {
+export interface NotificationStatsData {
     total: number;
     unread: number;
     byType: Record<string, number>;
     recent: number;
+}
+export interface NotificationStatsDto {
+    success: boolean;
+    data: NotificationStatsData;
 }
 //# sourceMappingURL=notifications.dto.d.ts.map

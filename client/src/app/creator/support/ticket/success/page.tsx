@@ -1,11 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function TicketSuccessPage() {
+  const searchParams = useSearchParams();
   const [copied, setCopied] = useState(false);
-  const ticketId = '#VELOLink-12345';
+
+  // Get ticket ID from URL params, with fallback
+  const rawTicketId = searchParams.get('ticketId');
+  const ticketId = rawTicketId ? `#${rawTicketId.slice(0, 8).toUpperCase()}` : '#PENDING';
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(ticketId);

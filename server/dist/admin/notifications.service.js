@@ -37,10 +37,13 @@ let AdminNotificationsService = class AdminNotificationsService {
             return acc;
         }, {});
         return {
-            total: totalNotifications,
-            unread: unreadNotifications,
-            byType,
-            recent: recentNotifications,
+            success: true,
+            data: {
+                total: totalNotifications,
+                unread: unreadNotifications,
+                byType,
+                recent: recentNotifications,
+            },
         };
     }
     async getAllNotifications(query) {

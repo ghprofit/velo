@@ -37,10 +37,13 @@ export class AdminNotificationsService {
     }, {} as Record<string, number>);
 
     return {
-      total: totalNotifications,
-      unread: unreadNotifications,
-      byType,
-      recent: recentNotifications,
+      success: true,
+      data: {
+        total: totalNotifications,
+        unread: unreadNotifications,
+        byType,
+        recent: recentNotifications,
+      },
     };
   }
 

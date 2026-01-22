@@ -67,9 +67,14 @@ export class BroadcastNotificationDto {
   metadata?: any;
 }
 
-export interface NotificationStatsDto {
+export interface NotificationStatsData {
   total: number;
   unread: number;
   byType: Record<string, number>;
   recent: number;
+}
+
+export interface NotificationStatsDto {
+  success: boolean;
+  data: NotificationStatsData;
 }

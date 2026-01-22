@@ -836,6 +836,25 @@ interface NotificationStatsResponse {
     data: NotificationStatsData;
 }
 
+// User Notification Stats Types
+export interface UserNotificationStatsData {
+    unreadCount: number;
+    recentUnread: number;
+    reportsAwaiting: number;
+    paymentAlerts: number;
+    systemUpdates: number;
+}
+
+interface UserNotificationStatsResponse {
+    success: boolean;
+    data: UserNotificationStatsData;
+}
+
+interface UserNotificationsResponse {
+    success: boolean;
+    data: NotificationData[];
+}
+
 export interface NotificationData {
     id: string;
     userId: string;
@@ -1385,6 +1404,47 @@ export const api = createApi({
             }),
             invalidatesTags: ['Support'],
         }),
+        // User notification endpoints
+        getUserNotifications: build.query<UserNotificationsResponse, { category?: string }>({
+            query: (params = {}) => {
+                const searchParams = new URLSearchParams();
+                if (params.category) searchParams.append('category', params.category);
+                return `/api/notifications?${searchParams.toString()}`;
+            },
+            providesTags: ['Notification'],
+        }),
+        getUserNotificationStats: build.query<UserNotificationStatsResponse, void>({
+            query: () => '/api/notifications/stats',
+            providesTags: ['Notification'],
+        }),
+        markUserNotificationAsRead: build.mutation<SingleNotificationResponse, string>({
+            query: (id) => ({
+                url: `/api/notifications/${id}/read`,
+                method: 'PATCH',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+        markAllUserNotificationsAsRead: build.mutation<{ success: boolean; message: string }, void>({
+            query: () => ({
+                url: '/api/notifications/read-all',
+                method: 'PATCH',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+        clearAllReadNotifications: build.mutation<{ success: boolean; message: string }, void>({
+            query: () => ({
+                url: '/api/notifications/read',
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+        deleteUserNotification: build.mutation<{ success: boolean; message: string }, string>({
+            query: (id) => ({
+                url: `/api/notifications/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
         // Admin notification endpoints
         getNotificationStats: build.query<NotificationStatsResponse, void>({
             query: () => '/api/admin/notifications/stats',
@@ -1551,6 +1611,13 @@ export const {
     useUpdateTicketPriorityMutation,
     useAssignTicketMutation,
     useDeleteTicketMutation,
+    // User notification hooks
+    useGetUserNotificationsQuery,
+    useGetUserNotificationStatsQuery,
+    useMarkUserNotificationAsReadMutation,
+    useMarkAllUserNotificationsAsReadMutation,
+    useClearAllReadNotificationsMutation,
+    useDeleteUserNotificationMutation,
     // Admin notification hooks
     useGetNotificationStatsQuery,
     useGetNotificationsQuery,

@@ -1,15 +1,39 @@
 'use client';
 
-import { JSX, useState } from 'react';
+import { JSX, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LogoutModal from '@/components/LogoutModal';
+import {
+  useGetUserNotificationsQuery,
+  useGetUserNotificationStatsQuery,
+  useMarkUserNotificationAsReadMutation,
+  useMarkAllUserNotificationsAsReadMutation,
+  useClearAllReadNotificationsMutation,
+  useDeleteUserNotificationMutation,
+  NotificationData,
+} from '@/state/api';
 
 export default function NotificationsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('notifications');
   const [filterTab, setFilterTab] = useState('All');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Fetch notifications and stats
+  const { data: notificationsData, isLoading: notificationsLoading } = useGetUserNotificationsQuery({
+    category: filterTab === 'All' ? undefined : filterTab,
+  });
+  const { data: statsData, isLoading: statsLoading } = useGetUserNotificationStatsQuery();
+
+  // Mutations
+  const [markAsRead] = useMarkUserNotificationAsReadMutation();
+  const [markAllAsRead] = useMarkAllUserNotificationsAsReadMutation();
+  const [clearAllRead] = useClearAllReadNotificationsMutation();
+  const [deleteNotification] = useDeleteUserNotificationMutation();
+
+  const notifications = notificationsData?.data || [];
+  const stats = statsData?.data;
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
@@ -21,91 +45,92 @@ export default function NotificationsPage() {
     { id: 'support', label: 'Support', icon: 'support', href: '/dashboard/support' },
   ];
 
-  const notifications = [
-    {
-      id: 1,
-      time: '2 hours ago',
-      icon: 'earning',
-      iconBg: 'bg-green-100',
-      iconColor: 'text-green-600',
-      title: 'New Earning: $247.50',
-      description: 'Your video "Advanced React Patterns" generated new revenue from premium subscriptions.',
-      unread: true,
-      category: 'Earnings',
-    },
-    {
-      id: 2,
-      time: '5 hours ago',
-      icon: 'video',
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      title: 'Upload Successful',
-      description: 'Your video "TypeScript Best Practices 2024" has been published and is now live.',
-      unread: true,
-      category: 'Uploads',
-    },
-    {
-      id: 3,
-      time: 'Yesterday',
-      icon: 'bell',
-      iconBg: 'bg-purple-100',
-      iconColor: 'text-purple-600',
-      title: 'Platform Update: New Analytics Dashboard',
-      description: "We've launched an enhanced analytics dashboard with real-time metrics and advanced filtering options.",
-      unread: true,
-      category: 'Platform Updates',
-    },
-    {
-      id: 4,
-      time: 'Yesterday',
-      icon: 'earning',
-      iconBg: 'bg-green-100',
-      iconColor: 'text-green-600',
-      title: 'Monthly Payout Processed: $3,421.75',
-      description: 'Your earnings for December have been processed and will arrive in 2-3 business days.',
-      unread: true,
-      category: 'Earnings',
-    },
-    {
-      id: 5,
-      time: '2 days ago',
-      icon: 'warning',
-      iconBg: 'bg-orange-100',
-      iconColor: 'text-orange-600',
-      title: 'Content Review Required',
-      description: 'Your video "Controversial Tech Takes" has been flagged for review. Please check community guidelines.',
-      unread: true,
-      category: 'Warnings / Policy',
-    },
-    {
-      id: 6,
-      time: '3 days ago',
-      icon: 'support',
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      title: 'Support Ticket Resolved',
-      description: 'Your support ticket #4521 regarding payment issues has been resolved. Check your email for details.',
-      unread: true,
-      category: 'Support',
-    },
-    {
-      id: 7,
-      time: '4 days ago',
-      icon: 'milestone',
-      iconBg: 'bg-green-100',
-      iconColor: 'text-green-600',
-      title: 'Milestone Reached: 10K Subscribers!',
-      description: "Congratulations! You've reached 10,000 subscribers. Keep creating amazing content!",
-      unread: true,
-      category: 'Platform Updates',
-    },
-  ];
-
   const filterTabs = ['All', 'Earnings', 'Uploads', 'Platform Updates', 'Warnings / Policy', 'Support'];
 
-  const filteredNotifications = filterTab === 'All'
-    ? notifications
-    : notifications.filter(n => n.category === filterTab);
+  // Map notification types to categories
+  const getCategoryFromType = (type: string): string => {
+    const typeMap: Record<string, string> = {
+      PURCHASE_MADE: 'Earnings',
+      PAYOUT_SENT: 'Earnings',
+      PAYOUT_FAILED: 'Earnings',
+      CONTENT_APPROVED: 'Uploads',
+      CONTENT_REJECTED: 'Uploads',
+      UPLOAD_SUCCESSFUL: 'Uploads',
+      CONTENT_UNDER_REVIEW: 'Uploads',
+      PLATFORM_UPDATE: 'Platform Updates',
+      NEW_FEATURE: 'Platform Updates',
+      SYSTEM_MAINTENANCE: 'Platform Updates',
+      ANNOUNCEMENT: 'Platform Updates',
+      CONTENT_FLAGGED: 'Warnings / Policy',
+      POLICY_WARNING: 'Warnings / Policy',
+      POLICY_UPDATE: 'Warnings / Policy',
+      SUPPORT_TICKET_CREATED: 'Support',
+      SUPPORT_TICKET_RESOLVED: 'Support',
+      SUPPORT_REPLY: 'Support',
+    };
+    return typeMap[type] || 'Platform Updates';
+  };
+
+  // Filter notifications by category
+  const filteredNotifications = useMemo(() => {
+    if (filterTab === 'All') return notifications;
+    return notifications.filter(n => getCategoryFromType(n.type) === filterTab);
+  }, [notifications, filterTab]);
+
+  // Handle mark all as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead().unwrap();
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
+  };
+
+  // Handle clear all read
+  const handleClearAllRead = async () => {
+    try {
+      await clearAllRead().unwrap();
+    } catch (error) {
+      console.error('Failed to clear all read:', error);
+    }
+  };
+
+  // Handle notification click (mark as read)
+  const handleNotificationClick = async (notificationId: string, isRead: boolean) => {
+    if (!isRead) {
+      try {
+        await markAsRead(notificationId).unwrap();
+      } catch (error) {
+        console.error('Failed to mark as read:', error);
+      }
+    }
+  };
+
+  // Handle delete notification
+  const handleDeleteNotification = async (notificationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this notification?')) {
+      try {
+        await deleteNotification(notificationId).unwrap();
+      } catch (error) {
+        console.error('Failed to delete notification:', error);
+      }
+    }
+  };
+
+  // Format time ago
+  const formatTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 172800) return 'Yesterday';
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    return date.toLocaleDateString();
+  };
 
   const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
     const icons: Record<string, JSX.Element> = {
@@ -154,40 +179,62 @@ export default function NotificationsPage() {
     return icons[iconName] || null;
   };
 
-  const renderNotificationIcon = (iconName: string) => {
-    const icons: Record<string, JSX.Element> = {
-      earning: (
+  const renderNotificationIcon = (type: string) => {
+    const isEarning = ['PURCHASE_MADE', 'PAYOUT_SENT', 'PAYOUT_FAILED'].includes(type);
+    const isUpload = ['CONTENT_APPROVED', 'CONTENT_REJECTED', 'UPLOAD_SUCCESSFUL', 'CONTENT_UNDER_REVIEW'].includes(type);
+    const isWarning = ['CONTENT_FLAGGED', 'POLICY_WARNING'].includes(type);
+    const isSupport = ['SUPPORT_TICKET_CREATED', 'SUPPORT_TICKET_RESOLVED', 'SUPPORT_REPLY'].includes(type);
+
+    if (isEarning) {
+      return (
         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
           <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" fontSize="16" fontWeight="bold">$</text>
         </svg>
-      ),
-      video: (
+      );
+    }
+    if (isUpload) {
+      return (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
-      ),
-      bell: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-      ),
-      warning: (
+      );
+    }
+    if (isWarning) {
+      return (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
-      ),
-      support: (
+      );
+    }
+    if (isSupport) {
+      return (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-      ),
-      milestone: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-        </svg>
-      ),
-    };
-    return icons[iconName] || null;
+      );
+    }
+    // Default bell icon
+    return (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+      </svg>
+    );
+  };
+
+  const getIconColor = (type: string): { iconBg: string; iconColor: string } => {
+    if (['PURCHASE_MADE', 'PAYOUT_SENT'].includes(type)) {
+      return { iconBg: 'bg-green-100', iconColor: 'text-green-600' };
+    }
+    if (['CONTENT_APPROVED', 'UPLOAD_SUCCESSFUL'].includes(type)) {
+      return { iconBg: 'bg-blue-100', iconColor: 'text-blue-600' };
+    }
+    if (['CONTENT_FLAGGED', 'POLICY_WARNING', 'PAYOUT_FAILED'].includes(type)) {
+      return { iconBg: 'bg-orange-100', iconColor: 'text-orange-600' };
+    }
+    if (['SUPPORT_TICKET_CREATED', 'SUPPORT_TICKET_RESOLVED', 'SUPPORT_REPLY'].includes(type)) {
+      return { iconBg: 'bg-blue-100', iconColor: 'text-blue-600' };
+    }
+    return { iconBg: 'bg-purple-100', iconColor: 'text-purple-600' };
   };
 
   return (
@@ -256,13 +303,19 @@ export default function NotificationsPage() {
                 </div>
                 {/* Action Buttons */}
                 <div className="flex items-center gap-3">
-                  <button className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                  <button
+                    onClick={handleClearAllRead}
+                    className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                     Clear All Read
                   </button>
-                  <button className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                  >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -292,35 +345,57 @@ export default function NotificationsPage() {
 
               {/* Notifications List */}
               <div className="space-y-4">
-                {filteredNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className="bg-white rounded-xl p-5 border border-gray-200 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 ${notification.iconBg} rounded-full flex items-center justify-center shrink-0 ${notification.iconColor}`}>
-                        {renderNotificationIcon(notification.icon)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4 mb-1">
-                          <div className="flex items-center gap-2">
-                            {notification.unread && (
-                              <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
-                            )}
-                            <span className="text-xs text-gray-500">{notification.time}</span>
-                          </div>
-                          <button className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors">
-                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                        <h3 className="text-base font-semibold text-gray-900 mb-1">{notification.title}</h3>
-                        <p className="text-sm text-gray-600">{notification.description}</p>
-                      </div>
-                    </div>
+                {notificationsLoading ? (
+                  <div className="bg-white rounded-xl p-12 border border-gray-200 text-center">
+                    <p className="text-gray-600">Loading notifications...</p>
                   </div>
-                ))}
+                ) : filteredNotifications.length === 0 ? (
+                  <div className="bg-white rounded-xl p-12 border border-gray-200 text-center">
+                    <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <p className="text-gray-600">No notifications found</p>
+                  </div>
+                ) : (
+                  filteredNotifications.map((notification) => {
+                    const { iconBg, iconColor } = getIconColor(notification.type);
+                    return (
+                      <div
+                        key={notification.id}
+                        onClick={() => handleNotificationClick(notification.id, notification.isRead)}
+                        className={`bg-white rounded-xl p-5 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer ${
+                          !notification.isRead ? 'bg-indigo-50/30' : ''
+                        }`}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`w-12 h-12 ${iconBg} rounded-full flex items-center justify-center shrink-0 ${iconColor}`}>
+                            {renderNotificationIcon(notification.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-4 mb-1">
+                              <div className="flex items-center gap-2">
+                                {!notification.isRead && (
+                                  <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
+                                )}
+                                <span className="text-xs text-gray-500">{formatTimeAgo(notification.createdAt)}</span>
+                              </div>
+                              <button
+                                onClick={(e) => handleDeleteNotification(notification.id, e)}
+                                className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                              >
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                            <h3 className="text-base font-semibold text-gray-900 mb-1">{notification.title}</h3>
+                            <p className="text-sm text-gray-600">{notification.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -336,8 +411,12 @@ export default function NotificationsPage() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-4xl font-bold text-gray-900 mb-2">12</p>
-                <p className="text-sm text-gray-600">4 new since yesterday</p>
+                <p className="text-4xl font-bold text-gray-900 mb-2">
+                  {statsLoading ? '...' : stats?.unreadCount || 0}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {statsLoading ? '...' : stats?.recentUnread || 0} new since yesterday
+                </p>
               </div>
 
               {/* Reports Awaiting Action */}
@@ -350,7 +429,9 @@ export default function NotificationsPage() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-4xl font-bold text-gray-900 mb-2">2</p>
+                <p className="text-4xl font-bold text-gray-900 mb-2">
+                  {statsLoading ? '...' : stats?.reportsAwaiting || 0}
+                </p>
                 <p className="text-sm text-gray-600">Requires your response</p>
               </div>
 
@@ -364,8 +445,10 @@ export default function NotificationsPage() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-4xl font-bold text-gray-900 mb-2">1</p>
-                <p className="text-sm text-gray-600">Payout processed</p>
+                <p className="text-4xl font-bold text-gray-900 mb-2">
+                  {statsLoading ? '...' : stats?.paymentAlerts || 0}
+                </p>
+                <p className="text-sm text-gray-600">Payment notifications</p>
               </div>
 
               {/* System Updates */}
@@ -378,7 +461,9 @@ export default function NotificationsPage() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-4xl font-bold text-gray-900 mb-2">3</p>
+                <p className="text-4xl font-bold text-gray-900 mb-2">
+                  {statsLoading ? '...' : stats?.systemUpdates || 0}
+                </p>
                 <p className="text-sm text-gray-600">New features available</p>
               </div>
 

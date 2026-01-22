@@ -42,7 +42,7 @@ export declare class CreatorsController {
         data: {
             id: string;
             requestedAmount: number;
-            availableBalance: any;
+            availableBalance: number;
             currency: string;
             status: import(".prisma/client").$Enums.PayoutRequestStatus;
             createdAt: Date;

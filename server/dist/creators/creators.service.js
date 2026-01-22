@@ -501,7 +501,22 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             if (!request) {
                 throw new common_1.NotFoundException('Payout request not found');
             }
-            const currentBalance = user.creatorProfile.totalEarnings;
+            const completedPayouts = await this.prisma.payout.aggregate({
+                where: {
+                    creatorId: user.creatorProfile.id,
+                    status: 'COMPLETED',
+                },
+                _sum: {
+                    amount: true,
+                },
+            });
+            const totalPayouts = completedPayouts._sum.amount || 0;
+            let currentBalance = user.creatorProfile.totalEarnings - totalPayouts;
+            if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
+                if (user.creatorProfile.totalPurchases >= 5) {
+                    currentBalance = currentBalance + user.creatorProfile.waitlistBonus;
+                }
+            }
             return {
                 id: request.id,
                 requestedAmount: request.requestedAmount,

@@ -224,7 +224,9 @@ export class EarningsService {
     const purchaseTransactions: Transaction[] = purchases.map((purchase) => ({
       id: purchase.id,
       type: 'purchase' as const,
-      amount: purchase.basePrice ? purchase.basePrice * 0.9 : purchase.amount * 0.85, // 90% of basePrice or 85% for legacy
+      amount: (purchase.basePrice && purchase.basePrice > 0)
+        ? purchase.basePrice * 0.9
+        : (purchase.amount / 1.1) * 0.9, // Derive base price from amount, then take 90%
       currency: purchase.currency,
       status: purchase.status,
       date: purchase.createdAt,

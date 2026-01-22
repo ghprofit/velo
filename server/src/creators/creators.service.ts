@@ -651,8 +651,28 @@ export class CreatorsService {
         throw new NotFoundException('Payout request not found');
       }
 
-      // Calculate current available balance from totalEarnings (Bug #4 fix)
-      const currentBalance = user.creatorProfile.totalEarnings;
+      // Calculate total completed payouts
+      const completedPayouts = await this.prisma.payout.aggregate({
+        where: {
+          creatorId: user.creatorProfile.id,
+          status: 'COMPLETED',
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+
+      const totalPayouts = completedPayouts._sum.amount || 0;
+
+      // Calculate current available balance: totalEarnings - completedPayouts
+      let currentBalance = user.creatorProfile.totalEarnings - totalPayouts;
+
+      // Add unlocked waitlist bonus to available balance if applicable
+      if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
+        if (user.creatorProfile.totalPurchases >= 5) {
+          currentBalance = currentBalance + user.creatorProfile.waitlistBonus;
+        }
+      }
 
       return {
         id: request.id,

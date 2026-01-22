@@ -17,7 +17,7 @@ export declare class CreatorsService {
             totalEarnings: number;
             totalViews: number;
             totalPurchases: number;
-            payoutStatus: string;
+            payoutStatus: import(".prisma/client").$Enums.PayoutStatus;
         }[];
         pagination: {
             total: number;
@@ -50,7 +50,7 @@ export declare class CreatorsService {
             totalEarnings: number;
             totalViews: number;
             totalPurchases: number;
-            payoutStatus: string;
+            payoutStatus: import(".prisma/client").$Enums.PayoutStatus;
             policyStrikes: number;
             recentContent: {
                 id: string;

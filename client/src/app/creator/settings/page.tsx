@@ -116,14 +116,22 @@ export default function SettingsPage() {
       try {
         const bankRes = await payoutApi.getBankAccountInfo();
         setBankAccount(bankRes.data.data);
-      } catch  {
-        // Bank account might not be set up yet
-        console.log('No bank account found');
+      } catch (err: unknown) {
+        // Only log if it's not a 404 (bank account not set up yet)
+        const axiosError = err as { response?: { status?: number } };
+        if (axiosError?.response?.status !== 404) {
+          console.error('Error loading bank account:', err);
+        }
       }
 
       // Load notification preferences
-      const notifRes = await authApi.getNotificationPreferences();
-      setNotifications(notifRes.data.data);
+      try {
+        const notifRes = await authApi.getNotificationPreferences();
+        setNotifications(notifRes.data.data);
+      } catch {
+        // Keep default notification preferences if load fails
+        console.log('Using default notification preferences');
+      }
 
     } catch (err: unknown) {
       console.error('Error loading user data:', err);

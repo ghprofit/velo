@@ -83,6 +83,7 @@ export class PaymentStatsDto {
   totalRevenue: number;
   totalPayouts: number;
   pendingPayouts: number;
+  rejectedPayouts: number;
   failedTransactions: number;
 }
 

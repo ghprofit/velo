@@ -426,12 +426,13 @@ export default function AnalyticsPage() {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Performance Trends */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Performance Trends</h2>
-            <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+      {/* Performance Trends - Full Width */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Performance Trends</h2>
+          <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 p-1 rounded-lg overflow-x-auto">
               <button
                 onClick={() => setChartTab('revenue')}
                 className={`tab-3d px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
@@ -579,15 +580,14 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {/* Performance By Content Item */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 sm:p-6 border-b border-gray-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Performance By Content Item</h2>
-                <input
-                  type="text"
-                  placeholder="Search content..."
+      {/* Performance By Content Item - Full Width */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 sm:p-6 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Performance By Content Item</h2>
+              <input
+                type="text"
+                placeholder="Search content..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
@@ -764,203 +764,6 @@ export default function AnalyticsPage() {
               </div>
             )}
           </div>
-
-          {/* Demographics Distribution */}
-          <div className="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 sm:p-6 border-b border-gray-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Audience Demographics</h2>
-                <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg overflow-x-auto">
-                  <button
-                    onClick={() => setDemographicsTab('geographic')}
-                    className={`tab-3d px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap ${
-                      demographicsTab === 'geographic'
-                        ? 'active bg-indigo-600 text-white'
-                        : 'text-gray-700 hover:text-gray-900'
-                    }`}
-                  >
-                    Countries
-                  </button>
-                  <button
-                    onClick={() => setDemographicsTab('devices')}
-                    className={`tab-3d px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap ${
-                      demographicsTab === 'devices'
-                        ? 'active bg-indigo-600 text-white'
-                        : 'text-gray-700 hover:text-gray-900'
-                    }`}
-                  >
-                    Devices
-                  </button>
-                  <button
-                    onClick={() => setDemographicsTab('browsers')}
-                    className={`tab-3d px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap ${
-                      demographicsTab === 'browsers'
-                        ? 'active bg-indigo-600 text-white'
-                        : 'text-gray-700 hover:text-gray-900'
-                    }`}
-                  >
-                    Browsers
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 sm:p-6">
-              {loadingDemographics ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-gray-500">Loading demographics...</div>
-                </div>
-              ) : !demographics ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-gray-500">No demographics data available</div>
-                </div>
-              ) : (
-                <>
-                  {/* Geographic Tab */}
-                  {demographicsTab === 'geographic' && (
-                    <div className="space-y-4">
-                      {demographics.geographic.countries.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-48 text-gray-500">
-                          <svg className="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <p>No geographic data yet</p>
-                          <p className="text-sm text-gray-400 mt-1">Data will appear as viewers interact with your content</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="text-sm text-gray-500 mb-4">
-                            Total tracked views: {demographics.geographic.totalViews.toLocaleString()}
-                          </div>
-                          {demographics.geographic.countries.map((country) => (
-                            <div key={country.countryCode} className="flex items-center gap-4">
-                              <div className="flex items-center gap-3 w-40">
-                                <span className="text-2xl">{getFlagEmoji(country.countryCode)}</span>
-                                <span className="text-sm font-medium text-gray-900 truncate">{country.country}</span>
-                              </div>
-                              <div className="flex-1">
-                                <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${country.percentage}%` }}
-                                  />
-                                </div>
-                              </div>
-                              <div className="w-20 text-right">
-                                <span className="text-sm font-semibold text-gray-900">{country.percentage}%</span>
-                                <span className="text-xs text-gray-500 ml-1">({country.views.toLocaleString()})</span>
-                              </div>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Devices Tab */}
-                  {demographicsTab === 'devices' && (
-                    <div className="space-y-4">
-                      {demographics.devices.devices.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-48 text-gray-500">
-                          <svg className="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                          <p>No device data yet</p>
-                          <p className="text-sm text-gray-400 mt-1">Data will appear as viewers interact with your content</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="text-sm text-gray-500 mb-4">
-                            Total tracked views: {demographics.devices.totalViews.toLocaleString()}
-                          </div>
-                          <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                            {demographics.devices.devices.map((device) => (
-                              <div
-                                key={device.device}
-                                className="bg-gray-50 rounded-xl p-4 border border-gray-100"
-                              >
-                                <div className="flex items-center gap-3 mb-3">
-                                  {getDeviceIcon(device.device)}
-                                  <span className="text-sm font-medium text-gray-900">{device.device}</span>
-                                </div>
-                                <div className="flex items-end justify-between">
-                                  <div>
-                                    <p className="text-2xl font-bold text-gray-900">{device.percentage}%</p>
-                                    <p className="text-xs text-gray-500">{device.views.toLocaleString()} views</p>
-                                  </div>
-                                  <div className="w-16 h-16">
-                                    <svg viewBox="0 0 36 36" className="w-full h-full">
-                                      <path
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                        fill="none"
-                                        stroke="#e5e7eb"
-                                        strokeWidth="3"
-                                      />
-                                      <path
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                        fill="none"
-                                        stroke="#6366f1"
-                                        strokeWidth="3"
-                                        strokeDasharray={`${device.percentage}, 100`}
-                                        strokeLinecap="round"
-                                      />
-                                    </svg>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Browsers Tab */}
-                  {demographicsTab === 'browsers' && (
-                    <div className="space-y-4">
-                      {demographics.browsers.browsers.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-48 text-gray-500">
-                          <svg className="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                          </svg>
-                          <p>No browser data yet</p>
-                          <p className="text-sm text-gray-400 mt-1">Data will appear as viewers interact with your content</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="text-sm text-gray-500 mb-4">
-                            Total tracked views: {demographics.browsers.totalViews.toLocaleString()}
-                          </div>
-                          {demographics.browsers.browsers.map((browser) => (
-                            <div key={browser.browser} className="flex items-center gap-4">
-                              <div className="flex items-center gap-3 w-32">
-                                {getBrowserIcon(browser.browser)}
-                                <span className="text-sm font-medium text-gray-900 truncate">{browser.browser}</span>
-                              </div>
-                              <div className="flex-1">
-                                <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${browser.percentage}%` }}
-                                  />
-                                </div>
-                              </div>
-                              <div className="w-20 text-right">
-                                <span className="text-sm font-semibold text-gray-900">{browser.percentage}%</span>
-                                <span className="text-xs text-gray-500 ml-1">({browser.views.toLocaleString()})</span>
-                              </div>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
+        </>
+      );
+    }

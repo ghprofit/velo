@@ -15,6 +15,8 @@ export default function PaymentsPage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const { logout } = useLogout();
@@ -106,8 +108,14 @@ export default function PaymentsPage() {
         return 'bg-green-100 text-green-700';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-700';
+      case 'APPROVED':
+        return 'bg-blue-100 text-blue-700';
+      case 'PROCESSING':
+        return 'bg-indigo-100 text-indigo-700';
       case 'FAILED':
         return 'bg-red-100 text-red-700';
+      case 'REJECTED':
+        return 'bg-red-100 text-red-800';
       case 'REFUNDED':
         return 'bg-gray-100 text-gray-700';
       default:
@@ -179,7 +187,7 @@ export default function PaymentsPage() {
                     >
                       All Status
                     </button>
-                    {['COMPLETED', 'PENDING', 'FAILED', 'REFUNDED'].map(status => (
+                    {['COMPLETED', 'PENDING', 'FAILED', 'REJECTED', 'APPROVED', 'PROCESSING', 'REFUNDED'].map(status => (
                       <button
                         key={status}
                         onClick={() => { setStatusFilter(status); setShowFilterDropdown(false); setCurrentPage(1); }}
@@ -259,7 +267,7 @@ export default function PaymentsPage() {
 
         <div className="p-4 sm:p-6 lg:p-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6 mb-6 lg:mb-8">
             {/* Total Revenue */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-3">
@@ -322,6 +330,22 @@ export default function PaymentsPage() {
                 {statsLoading ? 'Loading...' : (statsData?.failedTransactions || 0)}
               </p>
               <div className="h-1 bg-red-500 rounded-full"></div>
+            </div>
+
+            {/* Rejected Payouts */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-orange-50 rounded-lg">
+                  <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                </div>
+                <span className="text-sm text-gray-600">Rejected Payouts</span>
+              </div>
+              <p className="text-3xl font-bold text-orange-600 mb-2">
+                {statsLoading ? 'Loading...' : (statsData?.rejectedPayouts || 0)}
+              </p>
+              <div className="h-1 bg-orange-500 rounded-full"></div>
             </div>
           </div>
 
@@ -507,7 +531,10 @@ export default function PaymentsPage() {
                           <td className="py-4 px-4 text-sm text-gray-900">{formatDate(transaction.createdAt)}</td>
                           <td className="py-4 px-4">
                             <button
-                              onClick={() => alert(`Transaction Details:\n\nID: ${transaction.id}\nCreator: ${transaction.creatorName}\nBuyer: ${transaction.buyerEmail}\nAmount: ${formatCurrency(transaction.amount, transaction.currency)}\nMethod: ${transaction.paymentMethod}\nStatus: ${transaction.status}\nDate: ${formatDate(transaction.createdAt)}`)}
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setShowDetailsModal(true);
+                              }}
                               className="text-indigo-600 hover:text-indigo-700 font-medium text-sm underline"
                             >
                               View Details
@@ -565,6 +592,94 @@ export default function PaymentsPage() {
           </div>
         </div>
       </main>
+
+      {/* Transaction Details Modal */}
+      {showDetailsModal && selectedTransaction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowDetailsModal(false)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">Transaction Details</h3>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Transaction ID</p>
+                    <p className="mt-1 text-sm text-gray-900 font-mono">{selectedTransaction.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Status</p>
+                    <p className="mt-1">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        selectedTransaction.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                        selectedTransaction.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                        selectedTransaction.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' :
+                        selectedTransaction.status === 'PROCESSING' ? 'bg-indigo-100 text-indigo-800' :
+                        selectedTransaction.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {selectedTransaction.status}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Creator</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedTransaction.creatorName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Buyer</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedTransaction.buyerEmail}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Amount</p>
+                    <p className="mt-1 text-lg font-semibold text-gray-900">
+                      {formatCurrency(selectedTransaction.amount, selectedTransaction.currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Payment Method</p>
+                    <p className="mt-1 text-sm text-gray-900 capitalize">{selectedTransaction.paymentMethod}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Content Title</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedTransaction.contentTitle || 'N/A'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Date</p>
+                  <p className="mt-1 text-sm text-gray-900">{formatDate(selectedTransaction.createdAt)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -229,9 +229,12 @@ export class AnalyticsService {
         purchaseCount: true,
         totalRevenue: true,
         thumbnailUrl: true,
+        createdAt: true,
+        status: true,
+        complianceStatus: true,
       },
       orderBy: {
-        totalRevenue: 'desc',
+        createdAt: 'desc',
       },
       skip,
       take: options.limit,
@@ -271,6 +274,9 @@ export class AnalyticsService {
       // Display net creator revenue
       revenue: revenueMap[content.id] ?? 0,
       thumbnailUrl: content.thumbnailUrl,
+      status: content.status,
+      complianceStatus: content.complianceStatus,
+      createdAt: content.createdAt,
     }));
 
     return {

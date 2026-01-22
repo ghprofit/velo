@@ -627,6 +627,7 @@ interface AdminPaymentStats {
     totalRevenue: number;
     totalPayouts: number;
     pendingPayouts: number;
+    rejectedPayouts: number;
     failedTransactions: number;
 }
 
@@ -1254,7 +1255,7 @@ export const api = createApi({
 
         // Admin Payout endpoints
         getPaymentStats: build.query<AdminPaymentStats, void>({
-            query: () => '/api/admin/payouts/stats',
+            query: () => '/api/admin/payments/stats',
             providesTags: ['Dashboard'],
         }),
         getPayouts: build.query<AdminPayoutsResponse, QueryPayoutsParams>({

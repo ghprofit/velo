@@ -73,8 +73,8 @@ export class AdminService {
       const nextDate = new Date(date);
       nextDate.setDate(nextDate.getDate() + 1);
 
-      // Get sum of completed payouts for this day
-      const dayPayouts = await this.prisma.payout.aggregate({
+      // Get sum of completed purchases for this day
+      const dayRevenue = await this.prisma.purchase.aggregate({
         where: {
           createdAt: {
             gte: date,
@@ -89,7 +89,7 @@ export class AdminService {
 
       data.push({
         date: date.toISOString().split('T')[0] as string,
-        amount: dayPayouts._sum?.amount || 0,
+        amount: dayRevenue._sum?.amount || 0,
       });
     }
 

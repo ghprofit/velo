@@ -624,170 +624,172 @@ export default function CreatorDashboardPage() {
                   </div>
                 )}
               </div>
-
-              {/* Content Performance */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Content Performance</h2>
-                  <Link
-                    href="/creator/analytics"
-                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-                  >
-                    View All
-                  </Link>
-                </div>
-
-                {loadingContent ? (
-                  <div className="flex items-center justify-center py-8 sm:py-12">
-                    <div className="text-gray-500 text-sm sm:text-base">Loading content...</div>
-                  </div>
-                ) : contentItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
-                    <div className="text-gray-500 mb-4 text-sm sm:text-base text-center">No content uploaded yet</div>
-                    <Link
-                      href="/creator/upload"
-                      className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      Upload Your First Content
-                    </Link>
-                  </div>
-                ) : (
-                  <>
-                    {/* Mobile Card View */}
-                    <div className="sm:hidden divide-y divide-gray-200">
-                      {contentItems.map((content) => (
-                        <div
-                          key={content.id}
-                          onClick={() => router.push(`/creator/content/${content.id}`)}
-                          className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                        >
-                          <div className="flex items-start gap-3 mb-3">
-                            <Image
-                              src={content.thumbnailUrl || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect fill=%22%23eee%22 width=%2248%22 height=%2248%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E'}
-                              alt={content.title}
-                              width={48}
-                              height={48}
-                              className="rounded-lg object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect fill=%22%23eee%22 width=%2248%22 height=%2248%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E';
-                              }}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-medium text-gray-900 truncate">{content.title}</h3>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                  {content.type}
-                                </span>
-                                {(() => {
-                                  const badge = getStatusBadge(content.status, content.complianceStatus);
-                                  return (
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.bgColor} ${badge.textColor}`}>
-                                      {badge.label}
-                                    </span>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 text-center">
-                            <div className="bg-gray-50 rounded-lg px-2 py-2">
-                              <p className="text-xs text-gray-500">Views</p>
-                              <p className="text-sm font-semibold text-gray-900">{content.views.toLocaleString()}</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg px-2 py-2">
-                              <p className="text-xs text-gray-500">Unlocks</p>
-                              <p className="text-sm font-semibold text-gray-900">{content.unlocks.toLocaleString()}</p>
-                            </div>
-                            <div className="bg-green-50 rounded-lg px-2 py-2">
-                              <p className="text-xs text-gray-500">Revenue</p>
-                              <p className="text-sm font-semibold text-green-600">${content.revenue.toFixed(2)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Desktop Table View */}
-                    <div className="hidden sm:block overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                              Content Title
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                              Type
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                              Status
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                              Views
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                              Unlocks
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                              Revenue
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {contentItems.map((content) => {
-                            const statusBadge = getStatusBadge(content.status, content.complianceStatus);
-                            return (
-                            <tr
-                              key={content.id}
-                              onClick={() => router.push(`/creator/content/${content.id}`)}
-                              className="hover:bg-gray-50 transition-colors cursor-pointer"
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center gap-3">
-                                  <Image
-                                    src={content.thumbnailUrl || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect fill=%22%23eee%22 width=%2248%22 height=%2248%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E'}
-                                    alt={content.title}
-                                    width={48}
-                                    height={48}
-                                    className="rounded-lg object-cover"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect fill=%22%23eee%22 width=%2248%22 height=%2248%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E';
-                                    }}
-                                  />
-                                  <span className="text-sm font-medium text-gray-900">{content.title}</span>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                  {content.type}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.bgColor} ${statusBadge.textColor}`}>
-                                  {statusBadge.label}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-gray-600">{content.views.toLocaleString()}</span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-gray-600">{content.unlocks.toLocaleString()}</span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm font-medium text-gray-900">${content.revenue.toFixed(2)}</span>
-                              </td>
-                            </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-              </div>
             </>
           )}
         </div>
 
+        {/* Content Performance - Full Width */}
+        {!loading && profile && (
+          <div className="bg-white shadow-sm border-t border-gray-200 overflow-hidden">
+            <div className="px-4 sm:px-6 lg:px-8 py-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Content Performance</h2>
+              <Link
+                href="/creator/analytics"
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                View All
+              </Link>
+            </div>
+
+            {loadingContent ? (
+              <div className="flex items-center justify-center py-8 sm:py-12">
+                <div className="text-gray-500 text-sm sm:text-base">Loading content...</div>
+              </div>
+            ) : contentItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+                <div className="text-gray-500 mb-4 text-sm sm:text-base text-center">No content uploaded yet</div>
+                <Link
+                  href="/creator/upload"
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Upload Your First Content
+                </Link>
+              </div>
+            ) : (
+              <>
+                {/* Mobile Card View */}
+                <div className="sm:hidden divide-y divide-gray-200">
+                  {contentItems.map((content) => (
+                    <div
+                      key={content.id}
+                      onClick={() => router.push(`/creator/content/${content.id}`)}
+                      className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <Image
+                          src={content.thumbnailUrl || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect fill=%22%23eee%22 width=%2248%22 height=%2248%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E'}
+                          alt={content.title}
+                          width={48}
+                          height={48}
+                          className="rounded-lg object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect fill=%22%23eee%22 width=%2248%22 height=%2248%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E';
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-gray-900 truncate">{content.title}</h3>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {content.type}
+                            </span>
+                            {(() => {
+                              const badge = getStatusBadge(content.status, content.complianceStatus);
+                              return (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.bgColor} ${badge.textColor}`}>
+                                  {badge.label}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="bg-gray-50 rounded-lg px-2 py-2">
+                          <p className="text-xs text-gray-500">Views</p>
+                          <p className="text-sm font-semibold text-gray-900">{content.views.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg px-2 py-2">
+                          <p className="text-xs text-gray-500">Unlocks</p>
+                          <p className="text-sm font-semibold text-gray-900">{content.unlocks.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-green-50 rounded-lg px-2 py-2">
+                          <p className="text-xs text-gray-500">Revenue</p>
+                          <p className="text-sm font-semibold text-green-600">${content.revenue.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Content Title
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Type
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Views
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Unlocks
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                          Revenue
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {contentItems.map((content) => {
+                        const statusBadge = getStatusBadge(content.status, content.complianceStatus);
+                        return (
+                        <tr
+                          key={content.id}
+                          onClick={() => router.push(`/creator/content/${content.id}`)}
+                          className="hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <Image
+                                src={content.thumbnailUrl || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect fill=%22%23eee%22 width=%2248%22 height=%2248%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E'}
+                                alt={content.title}
+                                width={48}
+                                height={48}
+                                className="rounded-lg object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect fill=%22%23eee%22 width=%2248%22 height=%2248%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E';
+                                }}
+                              />
+                              <span className="text-sm font-medium text-gray-900">{content.title}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {content.type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.bgColor} ${statusBadge.textColor}`}>
+                              {statusBadge.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-600">{content.views.toLocaleString()}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-600">{content.unlocks.toLocaleString()}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-medium text-gray-900">${content.revenue.toFixed(2)}</span>
+                          </td>
+                        </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      
       {/* Cookie Consent Banner */}
       {showCookieBanner && (
         <div className="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">

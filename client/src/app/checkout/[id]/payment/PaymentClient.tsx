@@ -514,7 +514,7 @@ export function PaymentClient({ id }: { id: string }) {
                       <span className="font-medium">{contentPriceAnimated}</span>
                     </div>
                     <div className="flex justify-between text-gray-600 text-sm">
-                      <span>Platform Fee (10%):</span>
+                      <span>Platform Fee:</span>
                       <span className="font-medium">{platformFeeAnimated}</span>
                     </div>
                     <div className="border-t border-gray-200 pt-3 mt-3"></div>

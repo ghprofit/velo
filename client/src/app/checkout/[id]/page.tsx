@@ -378,7 +378,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                       <span className="font-medium">{contentPrice}</span>
                     </div>
                     <div className="flex justify-between text-gray-600 text-sm">
-                      <span>Platform Fee (10%):</span>
+                      <span>Platform Fee:</span>
                       <span className="font-medium">{platformFee}</span>
                     </div>
                     <div className="border-t border-gray-200 pt-3 mt-3"></div>

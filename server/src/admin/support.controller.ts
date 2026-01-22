@@ -25,7 +25,11 @@ export class SupportController {
 
   @Get('stats')
   async getSupportStats() {
-    return this.supportService.getSupportStats();
+    const stats = await this.supportService.getSupportStats();
+    return {
+      success: true,
+      data: stats,
+    };
   }
 
   @Get('tickets')

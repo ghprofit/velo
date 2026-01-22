@@ -36,7 +36,6 @@ export default function UploadContentPage() {
 
   // Success state
   const [shortId, setShortId] = useState('');
-  const [redirectCountdown] = useState(5);
   const [error, setError] = useState('');
 
   // Verification state

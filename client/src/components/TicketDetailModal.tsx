@@ -32,7 +32,7 @@ export default function TicketDetailModal({ ticketId, isOpen, onClose }: TicketD
   const handlePriorityChange = async (newPriority: string) => {
     try {
       await updatePriority({ id: ticketId, priority: newPriority }).unwrap();
-    } catch (error) {
+    } catch {
       alert('Failed to update ticket priority');
     }
   };
@@ -40,7 +40,7 @@ export default function TicketDetailModal({ ticketId, isOpen, onClose }: TicketD
   const handleAssignChange = async (assignedTo: string) => {
     try {
       await assignTicket({ id: ticketId, assignedTo }).unwrap();
-    } catch (error) {
+    } catch {
       alert('Failed to assign ticket');
     }
   };

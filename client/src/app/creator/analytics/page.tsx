@@ -77,7 +77,6 @@ export default function AnalyticsPage() {
   const [chartTab, setChartTab] = useState('revenue');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [demographicsTab, setDemographicsTab] = useState<'geographic' | 'devices' | 'browsers'>('geographic');
 
   // Data states
   const [overviewStats, setOverviewStats] = useState<OverviewStats>({
@@ -89,13 +88,11 @@ export default function AnalyticsPage() {
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [demographics, setDemographics] = useState<DemographicsData | null>(null);
 
   // Loading states
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingTrends, setLoadingTrends] = useState(true);
   const [loadingContent, setLoadingContent] = useState(true);
-  const [loadingDemographics, setLoadingDemographics] = useState(true);
 
   // Fetch overview stats
   useEffect(() => {
@@ -166,111 +163,6 @@ export default function AnalyticsPage() {
 
     return () => clearTimeout(timeoutId);
   }, [currentPage, searchQuery]);
-
-  // Fetch demographics data
-  useEffect(() => {
-    const fetchDemographics = async () => {
-      try {
-        setLoadingDemographics(true);
-        const response = await analyticsApi.getDemographics(timePeriod);
-        const data = response.data?.data || response.data;
-        setDemographics(data);
-      } catch (error) {
-        console.error('Failed to fetch demographics:', error);
-      } finally {
-        setLoadingDemographics(false);
-      }
-    };
-
-    fetchDemographics();
-  }, [timePeriod]);
-
-  // Country code to flag emoji converter
-  const getFlagEmoji = (countryCode: string) => {
-    if (!countryCode || countryCode === 'XX') return '🌍';
-    const codePoints = countryCode
-      .toUpperCase()
-      .split('')
-      .map((char) => 127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
-  };
-
-  // Get device icon with 3D effect
-  const getDeviceIcon = (device: string) => {
-    const deviceLower = device.toLowerCase();
-    const gradientClass =
-      deviceLower === 'desktop' ? 'icon-3d-blue' :
-      deviceLower === 'mobile' ? 'icon-3d-purple' :
-      deviceLower === 'tablet' ? 'icon-3d-cyan' :
-      'icon-3d-indigo';
-
-    let icon;
-    switch (deviceLower) {
-      case 'desktop':
-        icon = (
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
-        );
-        break;
-      case 'mobile':
-        icon = (
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        );
-        break;
-      case 'tablet':
-        icon = (
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        );
-        break;
-      default:
-        icon = (
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
-        );
-    }
-
-    return (
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center icon-3d-container ${gradientClass}`}>
-        {icon}
-      </div>
-    );
-  };
-
-  // Get browser icon with 3D effect
-  const getBrowserIcon = (browser: string) => {
-    const lowerBrowser = browser.toLowerCase();
-    let icon;
-    let gradientClass;
-
-    if (lowerBrowser.includes('chrome')) {
-      icon = <span className="text-lg">🌐</span>;
-      gradientClass = 'icon-3d-blue';
-    } else if (lowerBrowser.includes('firefox')) {
-      icon = <span className="text-lg">🦊</span>;
-      gradientClass = 'icon-3d-pink';
-    } else if (lowerBrowser.includes('safari')) {
-      icon = <span className="text-lg">🧭</span>;
-      gradientClass = 'icon-3d-cyan';
-    } else if (lowerBrowser.includes('edge')) {
-      icon = <span className="text-lg">🔷</span>;
-      gradientClass = 'icon-3d-indigo';
-    } else {
-      icon = <span className="text-lg">🌐</span>;
-      gradientClass = 'icon-3d-blue';
-    }
-
-    return (
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center icon-3d-container ${gradientClass}`}>
-        {icon}
-      </div>
-    );
-  };
 
   const stats = [
     {

@@ -40,7 +40,7 @@ const SelectTrigger = React.forwardRef<
     setCurrentValue?: (value: string) => void;
     onValueChange?: (value: string) => void;
   }
->(({ className = "", children, isOpen, setIsOpen, currentValue, setCurrentValue, onValueChange, ...props }, ref) => {
+>(({ className = "", children, isOpen, setIsOpen, ...props }, ref) => {
   return (
     <button
       ref={ref}

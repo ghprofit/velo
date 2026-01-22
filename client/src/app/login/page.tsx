@@ -8,7 +8,6 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { PageTransition } from '@/components/ui/PageTransition';
 import { staggerContainer, staggerItem } from '@/lib/animations';
-import { useToast } from '@/components/ui/Toast';
 import FloatingLogo from '@/components/FloatingLogo';
 
 export default function LoginPage() {

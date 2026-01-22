@@ -653,7 +653,7 @@ interface AdminPayoutsResponse {
     };
 }
 
-interface AdminTransaction {
+export interface AdminTransaction {
     id: string;
     contentId: string;
     buyerEmail: string;

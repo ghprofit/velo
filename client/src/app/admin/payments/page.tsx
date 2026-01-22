@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
-import { useGetAdminTransactionsQuery, useGetPaymentStatsQuery, useGetRevenueOverTimeQuery } from '@/state/api';
+import { useGetAdminTransactionsQuery, useGetPaymentStatsQuery, useGetRevenueOverTimeQuery, AdminTransaction } from '@/state/api';
 import { useLogout } from '@/hooks/useLogout';
 
 export default function PaymentsPage() {
@@ -15,7 +15,7 @@ export default function PaymentsPage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<AdminTransaction | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
@@ -658,8 +658,8 @@ export default function PaymentsPage() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Content Title</p>
-                  <p className="mt-1 text-sm text-gray-900">{selectedTransaction.contentTitle || 'N/A'}</p>
+                  <p className="text-sm font-medium text-gray-500">Content ID</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedTransaction.contentId || 'N/A'}</p>
                 </div>
 
                 <div>

@@ -21,7 +21,11 @@ export class SupportService {
       this.prisma.supportTicket.count({ where: { status: 'OPEN' } }),
       this.prisma.supportTicket.count({ where: { status: 'IN_PROGRESS' } }),
       this.prisma.supportTicket.count({ where: { status: 'RESOLVED' } }),
-      this.prisma.supportTicket.count({ where: { priority: 'URGENT' } }),
+      this.prisma.supportTicket.count({ 
+        where: { 
+          priority: { in: ['HIGH', 'URGENT'] } 
+        } 
+      }),
     ]);
 
     // Calculate average response time (simplified - time from creation to first status change)

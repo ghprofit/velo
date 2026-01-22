@@ -160,34 +160,6 @@ export default function CreatorDashboardPage() {
     fetchContent();
   }, []);
 
-  // Calculate total earnings from trend data (same source as chart)
-  const totalEarningsFromTrends = chartData.reduce((sum, d) => sum + d.revenue, 0);
-
-  // Stats data from backend
-  const stats = [
-    {
-      label: 'Total Views',
-      value: profile?.creatorProfile?.totalViews?.toLocaleString() || '0',
-      icon: 'eye',
-      bgColor: 'bg-blue-100',
-      iconColor: 'text-blue-600'
-    },
-    {
-      label: 'Total Earnings',
-      value: `$${totalEarningsFromTrends.toFixed(2)}`,
-      icon: 'dollar',
-      bgColor: 'bg-green-100',
-      iconColor: 'text-green-600'
-    },
-    {
-      label: 'Unlocks/Purchases',
-      value: profile?.creatorProfile?.totalPurchases?.toLocaleString() || '0',
-      icon: 'unlock',
-      bgColor: 'bg-purple-100',
-      iconColor: 'text-purple-600'
-    },
-  ];
-
   // Process chart data based on selected period
   const getChartData = () => {
     if (trendData.length === 0) return [];
@@ -237,6 +209,34 @@ export default function CreatorDashboardPage() {
   };
 
   const chartData = getChartData();
+
+  // Calculate total earnings from trend data (same source as chart)
+  const totalEarningsFromTrends = chartData.reduce((sum, d) => sum + d.revenue, 0);
+
+  // Stats data from backend
+  const stats = [
+    {
+      label: 'Total Views',
+      value: profile?.creatorProfile?.totalViews?.toLocaleString() || '0',
+      icon: 'eye',
+      bgColor: 'bg-blue-100',
+      iconColor: 'text-blue-600'
+    },
+    {
+      label: 'Total Earnings (90%)',
+      value: `$${totalEarningsFromTrends.toFixed(2)}`,
+      icon: 'dollar',
+      bgColor: 'bg-green-100',
+      iconColor: 'text-green-600'
+    },
+    {
+      label: 'Unlocks/Purchases',
+      value: profile?.creatorProfile?.totalPurchases?.toLocaleString() || '0',
+      icon: 'unlock',
+      bgColor: 'bg-purple-100',
+      iconColor: 'text-purple-600'
+    },
+  ];
 
   // Calculate max revenue for chart scaling
   const maxRevenue = Math.max(...chartData.map(d => d.revenue), 1);

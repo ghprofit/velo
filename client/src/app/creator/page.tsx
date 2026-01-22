@@ -160,6 +160,9 @@ export default function CreatorDashboardPage() {
     fetchContent();
   }, []);
 
+  // Calculate total earnings from trend data (same source as chart)
+  const totalEarningsFromTrends = chartData.reduce((sum, d) => sum + d.revenue, 0);
+
   // Stats data from backend
   const stats = [
     {
@@ -171,7 +174,7 @@ export default function CreatorDashboardPage() {
     },
     {
       label: 'Total Earnings',
-      value: `$${(profile?.creatorProfile?.totalEarnings || 0).toFixed(2)}`,
+      value: `$${totalEarningsFromTrends.toFixed(2)}`,
       icon: 'dollar',
       bgColor: 'bg-green-100',
       iconColor: 'text-green-600'

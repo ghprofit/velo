@@ -39,19 +39,31 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             where: { status: 'PENDING' },
             _sum: { amount: true },
         });
+        const pendingRequests = await this.prisma.payoutRequest.aggregate({
+            where: { status: 'PENDING' },
+            _sum: { requestedAmount: true },
+        });
+        const rejectedRequests = await this.prisma.payoutRequest.count({
+            where: { status: 'REJECTED' },
+        });
+        const totalPending = (pendingPayouts._sum.amount || 0) + (pendingRequests._sum.requestedAmount || 0);
         const failedTransactions = await this.prisma.purchase.count({
             where: { status: 'FAILED' },
         });
         return {
             totalRevenue: completedPurchases._sum.amount || 0,
             totalPayouts: completedPayouts._sum.amount || 0,
-            pendingPayouts: pendingPayouts._sum.amount || 0,
+            pendingPayouts: totalPending,
+            rejectedPayouts: rejectedRequests,
             failedTransactions,
         };
     }
     async getTransactions(query) {
         const { search, status, paymentMethod, startDate, endDate, page = 1, limit = 10 } = query;
         const skip = (page - 1) * limit;
+        if (status && ['REJECTED', 'APPROVED', 'PROCESSING'].includes(status)) {
+            return this.getPayoutRequestTransactions(query);
+        }
         const where = {};
         if (search) {
             where.OR = [
@@ -115,15 +127,83 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             data: transactions.map((t) => ({
                 id: t.id,
                 transactionId: t.transactionId,
-                creator: t.content.creator.displayName,
+                creatorName: t.content.creator.displayName,
                 creatorEmail: t.content.creator.user.email,
-                buyer: t.buyerSession.email || 'Anonymous',
+                buyerEmail: t.buyerSession.email || 'Anonymous',
                 contentTitle: t.content.title,
                 amount: t.amount,
                 currency: t.currency,
                 paymentMethod: t.paymentProvider,
                 status: t.status,
                 createdAt: t.createdAt,
+            })),
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
+    async getPayoutRequestTransactions(query) {
+        const { search, status, page = 1, limit = 10 } = query;
+        const skip = (page - 1) * limit;
+        const where = {};
+        if (search) {
+            where.OR = [
+                { id: { contains: search, mode: 'insensitive' } },
+                {
+                    creator: {
+                        displayName: { contains: search, mode: 'insensitive' },
+                    },
+                },
+                {
+                    creator: {
+                        user: {
+                            email: { contains: search, mode: 'insensitive' },
+                        },
+                    },
+                },
+            ];
+        }
+        if (status) {
+            where.status = status;
+        }
+        const [payoutRequests, total] = await Promise.all([
+            this.prisma.payoutRequest.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    creator: {
+                        select: {
+                            displayName: true,
+                            user: {
+                                select: {
+                                    email: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+            this.prisma.payoutRequest.count({ where }),
+        ]);
+        return {
+            success: true,
+            data: payoutRequests.map((pr) => ({
+                id: pr.id,
+                transactionId: pr.id,
+                creatorName: pr.creator.displayName,
+                creatorEmail: pr.creator.user.email,
+                buyerEmail: 'Payout Request',
+                contentTitle: 'Withdrawal Request',
+                amount: pr.requestedAmount,
+                currency: pr.currency,
+                paymentMethod: 'Bank Transfer',
+                status: pr.status,
+                createdAt: pr.createdAt,
             })),
             pagination: {
                 page,

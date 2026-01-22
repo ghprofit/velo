@@ -39,6 +39,9 @@ export declare class AnalyticsController {
                 unlocks: number;
                 revenue: number;
                 thumbnailUrl: string;
+                status: import(".prisma/client").$Enums.ContentStatus;
+                complianceStatus: import(".prisma/client").$Enums.ComplianceCheckStatus;
+                createdAt: Date;
             }[];
             total: number;
             page: number;

@@ -54,8 +54,8 @@ export class NotificationsController {
   }
 
   @Put('read-all')
-  async markAllAsRead(@Query('userId') userId?: string) {
-    return this.notificationsService.markAllAsRead(userId);
+  async markAllAsRead(@Body() body?: { userId?: string }) {
+    return this.notificationsService.markAllAsRead(body?.userId);
   }
 
   @Delete(':id')

@@ -30,7 +30,7 @@ export declare class CreatorsService {
     requestPayout(userId: string, requestedAmount: number): Promise<{
         id: string;
         requestedAmount: number;
-        availableBalance: number;
+        availableBalance: any;
         currency: string;
         status: import(".prisma/client").$Enums.PayoutRequestStatus;
         createdAt: Date;

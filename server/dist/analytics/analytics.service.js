@@ -44,9 +44,13 @@ let AnalyticsService = class AnalyticsService {
             where: purchaseWhere,
             select: {
                 amount: true,
+                basePrice: true,
             },
         });
-        const totalRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
+        const totalRevenue = purchases.reduce((sum, p) => {
+            const net = p.basePrice != null ? p.basePrice * 0.9 : p.amount * 0.85;
+            return sum + net;
+        }, 0);
         const totalUnlocks = purchases.length;
         const contents = await this.prisma.content.findMany({
             where: {
@@ -112,6 +116,7 @@ let AnalyticsService = class AnalyticsService {
             },
             select: {
                 amount: true,
+                basePrice: true,
                 createdAt: true,
             },
             orderBy: {
@@ -123,7 +128,10 @@ let AnalyticsService = class AnalyticsService {
                 const purchaseDate = new Date(p.createdAt).toDateString();
                 return purchaseDate === date.toDateString();
             });
-            const revenue = dayPurchases.reduce((sum, p) => sum + p.amount, 0);
+            const revenue = dayPurchases.reduce((sum, p) => {
+                const net = p.basePrice != null ? p.basePrice * 0.9 : p.amount * 0.85;
+                return sum + net;
+            }, 0);
             const unlocks = dayPurchases.length;
             return {
                 date: date.toISOString().split('T')[0],
@@ -173,13 +181,36 @@ let AnalyticsService = class AnalyticsService {
                 purchaseCount: true,
                 totalRevenue: true,
                 thumbnailUrl: true,
+                createdAt: true,
+                status: true,
+                complianceStatus: true,
             },
             orderBy: {
-                totalRevenue: 'desc',
+                createdAt: 'desc',
             },
             skip,
             take: options.limit,
         });
+        const contentIds = contents.map((c) => c.id);
+        let revenueMap = {};
+        if (contentIds.length > 0) {
+            const purchases = await this.prisma.purchase.findMany({
+                where: {
+                    contentId: { in: contentIds },
+                    status: 'COMPLETED',
+                },
+                select: {
+                    contentId: true,
+                    amount: true,
+                    basePrice: true,
+                },
+            });
+            revenueMap = purchases.reduce((acc, p) => {
+                const net = p.basePrice != null ? p.basePrice * 0.9 : p.amount * 0.85;
+                acc[p.contentId] = (acc[p.contentId] || 0) + net;
+                return acc;
+            }, {});
+        }
         const items = contents.map((content) => ({
             id: content.id,
             title: content.title,
@@ -187,8 +218,11 @@ let AnalyticsService = class AnalyticsService {
             size: this.formatFileSize(content.fileSize),
             views: content.viewCount,
             unlocks: content.purchaseCount,
-            revenue: content.totalRevenue,
+            revenue: revenueMap[content.id] ?? 0,
             thumbnailUrl: content.thumbnailUrl,
+            status: content.status,
+            complianceStatus: content.complianceStatus,
+            createdAt: content.createdAt,
         }));
         return {
             items,

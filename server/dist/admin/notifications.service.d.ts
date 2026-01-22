@@ -9,14 +9,17 @@ export declare class AdminNotificationsService {
         data: {
             id: string;
             userId: string;
-            userEmail: string;
-            userRole: import(".prisma/client").$Enums.UserRole;
             type: string;
             title: string;
             message: string;
             isRead: boolean;
             metadata: import("@prisma/client/runtime/client").JsonValue;
             createdAt: Date;
+            user: {
+                id: string;
+                email: string;
+                role: import(".prisma/client").$Enums.UserRole;
+            } | undefined;
         }[];
         pagination: {
             page: number;
@@ -34,14 +37,17 @@ export declare class AdminNotificationsService {
         data: {
             id: string;
             userId: string;
-            userEmail: string;
-            userRole: import(".prisma/client").$Enums.UserRole;
             type: string;
             title: string;
             message: string;
             isRead: boolean;
             metadata: import("@prisma/client/runtime/client").JsonValue;
             createdAt: Date;
+            user: {
+                id: string;
+                email: string;
+                role: import(".prisma/client").$Enums.UserRole;
+            } | undefined;
         };
         message?: undefined;
     }>;

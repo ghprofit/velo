@@ -142,7 +142,7 @@ let EarningsService = class EarningsService {
         const purchaseTransactions = purchases.map((purchase) => ({
             id: purchase.id,
             type: 'purchase',
-            amount: purchase.amount,
+            amount: purchase.basePrice ? purchase.basePrice * 0.9 : purchase.amount * 0.85,
             currency: purchase.currency,
             status: purchase.status,
             date: purchase.createdAt,

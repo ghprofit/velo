@@ -40,8 +40,8 @@ let NotificationsController = class NotificationsController {
     async markAsRead(id) {
         return this.notificationsService.markAsRead(id);
     }
-    async markAllAsRead(userId) {
-        return this.notificationsService.markAllAsRead(userId);
+    async markAllAsRead(body) {
+        return this.notificationsService.markAllAsRead(body?.userId);
     }
     async deleteNotification(id) {
         return this.notificationsService.deleteNotification(id);
@@ -94,9 +94,9 @@ __decorate([
 ], NotificationsController.prototype, "markAsRead", null);
 __decorate([
     (0, common_1.Put)('read-all'),
-    __param(0, (0, common_1.Query)('userId')),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], NotificationsController.prototype, "markAllAsRead", null);
 __decorate([

@@ -31,6 +31,7 @@ export declare class PaymentStatsDto {
     totalRevenue: number;
     totalPayouts: number;
     pendingPayouts: number;
+    rejectedPayouts: number;
     failedTransactions: number;
 }
 export declare class ProcessPayoutDto {

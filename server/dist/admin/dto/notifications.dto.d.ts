@@ -21,12 +21,9 @@ export declare class BroadcastNotificationDto {
     metadata?: any;
 }
 export interface NotificationStatsDto {
-    totalNotifications: number;
-    unreadNotifications: number;
-    notificationsByType: {
-        type: string;
-        count: number;
-    }[];
-    recentNotifications: number;
+    total: number;
+    unread: number;
+    byType: Record<string, number>;
+    recent: number;
 }
 //# sourceMappingURL=notifications.dto.d.ts.map

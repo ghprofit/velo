@@ -16,14 +16,36 @@ export declare class PaymentsService {
         data: {
             id: string;
             transactionId: string | null;
-            creator: string;
+            creatorName: string;
             creatorEmail: string;
-            buyer: string;
+            buyerEmail: string;
             contentTitle: string;
             amount: number;
             currency: string;
             paymentMethod: string;
             status: string;
+            createdAt: Date;
+        }[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+        };
+    }>;
+    getPayoutRequestTransactions(query: QueryPaymentsDto): Promise<{
+        success: boolean;
+        data: {
+            id: string;
+            transactionId: string;
+            creatorName: string;
+            creatorEmail: string;
+            buyerEmail: string;
+            contentTitle: string;
+            amount: number;
+            currency: string;
+            paymentMethod: string;
+            status: import(".prisma/client").$Enums.PayoutRequestStatus;
             createdAt: Date;
         }[];
         pagination: {
@@ -167,8 +189,6 @@ export declare class PaymentsService {
                 totalEarnings: number;
                 totalViews: number;
                 totalPurchases: number;
-                pendingBalance: number;
-                availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
                 userId: string;
@@ -251,8 +271,6 @@ export declare class PaymentsService {
                 totalEarnings: number;
                 totalViews: number;
                 totalPurchases: number;
-                pendingBalance: number;
-                availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
                 userId: string;

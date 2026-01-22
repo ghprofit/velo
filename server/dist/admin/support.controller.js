@@ -23,7 +23,11 @@ let SupportController = class SupportController {
         this.supportService = supportService;
     }
     async getSupportStats() {
-        return this.supportService.getSupportStats();
+        const stats = await this.supportService.getSupportStats();
+        return {
+            success: true,
+            data: stats,
+        };
     }
     async getAllTickets(query) {
         return this.supportService.getAllTickets(query);

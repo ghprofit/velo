@@ -3,7 +3,10 @@ import { QuerySupportTicketsDto, UpdateTicketStatusDto, UpdateTicketPriorityDto,
 export declare class SupportController {
     private readonly supportService;
     constructor(supportService: SupportService);
-    getSupportStats(): Promise<import("./dto/support.dto").SupportStatsDto>;
+    getSupportStats(): Promise<{
+        success: boolean;
+        data: import("./dto/support.dto").SupportStatsDto;
+    }>;
     getAllTickets(query: QuerySupportTicketsDto): Promise<{
         success: boolean;
         data: {

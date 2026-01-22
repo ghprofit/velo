@@ -63,7 +63,7 @@ let AdminService = class AdminService {
             date.setDate(date.getDate() + i);
             const nextDate = new Date(date);
             nextDate.setDate(nextDate.getDate() + 1);
-            const dayPayouts = await this.prisma.payout.aggregate({
+            const dayRevenue = await this.prisma.purchase.aggregate({
                 where: {
                     createdAt: {
                         gte: date,
@@ -77,7 +77,7 @@ let AdminService = class AdminService {
             });
             data.push({
                 date: date.toISOString().split('T')[0],
-                amount: dayPayouts._sum?.amount || 0,
+                amount: dayRevenue._sum?.amount || 0,
             });
         }
         return {

@@ -22,7 +22,11 @@ let SupportService = class SupportService {
             this.prisma.supportTicket.count({ where: { status: 'OPEN' } }),
             this.prisma.supportTicket.count({ where: { status: 'IN_PROGRESS' } }),
             this.prisma.supportTicket.count({ where: { status: 'RESOLVED' } }),
-            this.prisma.supportTicket.count({ where: { priority: 'URGENT' } }),
+            this.prisma.supportTicket.count({
+                where: {
+                    priority: { in: ['HIGH', 'URGENT'] }
+                }
+            }),
         ]);
         const resolvedTicketsWithTime = await this.prisma.supportTicket.findMany({
             where: { status: 'RESOLVED', resolvedAt: { not: null } },

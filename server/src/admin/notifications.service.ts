@@ -30,14 +30,17 @@ export class AdminNotificationsService {
         }),
       ]);
 
+    // Convert byType array to object format as expected by client
+    const byType = notificationsByType.reduce((acc, item) => {
+      acc[item.type] = item._count.type;
+      return acc;
+    }, {} as Record<string, number>);
+
     return {
-      totalNotifications,
-      unreadNotifications,
-      notificationsByType: notificationsByType.map((item) => ({
-        type: item.type,
-        count: item._count.type,
-      })),
-      recentNotifications,
+      total: totalNotifications,
+      unread: unreadNotifications,
+      byType,
+      recent: recentNotifications,
     };
   }
 
@@ -91,14 +94,17 @@ export class AdminNotificationsService {
       data: notifications.map((notification) => ({
         id: notification.id,
         userId: notification.userId,
-        userEmail: notification.user.email,
-        userRole: notification.user.role,
         type: notification.type,
         title: notification.title,
         message: notification.message,
         isRead: notification.isRead,
         metadata: notification.metadata,
         createdAt: notification.createdAt,
+        user: notification.user ? {
+          id: notification.user.id,
+          email: notification.user.email,
+          role: notification.user.role,
+        } : undefined,
       })),
       pagination: {
         page,
@@ -135,14 +141,17 @@ export class AdminNotificationsService {
       data: {
         id: notification.id,
         userId: notification.userId,
-        userEmail: notification.user.email,
-        userRole: notification.user.role,
         type: notification.type,
         title: notification.title,
         message: notification.message,
         isRead: notification.isRead,
         metadata: notification.metadata,
         createdAt: notification.createdAt,
+        user: notification.user ? {
+          id: notification.user.id,
+          email: notification.user.email,
+          role: notification.user.role,
+        } : undefined,
       },
     };
   }

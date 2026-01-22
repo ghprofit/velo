@@ -10,9 +10,9 @@ export declare class PaymentsController {
         data: {
             id: string;
             transactionId: string | null;
-            creator: string;
+            creatorName: string;
             creatorEmail: string;
-            buyer: string;
+            buyerEmail: string;
             contentTitle: string;
             amount: number;
             currency: string;
@@ -156,8 +156,6 @@ export declare class PaymentsController {
                 totalEarnings: number;
                 totalViews: number;
                 totalPurchases: number;
-                pendingBalance: number;
-                availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
                 userId: string;
@@ -240,8 +238,6 @@ export declare class PaymentsController {
                 totalEarnings: number;
                 totalViews: number;
                 totalPurchases: number;
-                pendingBalance: number;
-                availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
                 userId: string;

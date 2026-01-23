@@ -84,8 +84,60 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+async function applySchemaPatches() {
+  console.log('Ensuring schema is up to date for seeding...');
+
+  const statements = [
+    // Enum value for payout status
+    `ALTER TYPE "PayoutStatus" ADD VALUE IF NOT EXISTS 'PENDING';`,
+
+    // User 2FA & profile fields
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "twoFactorEnabled" BOOLEAN NOT NULL DEFAULT false;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "twoFactorSecret" TEXT;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "backupCodes" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "twoFactorVerifiedAt" TIMESTAMP(3);`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "failedLoginAttempts" INTEGER NOT NULL DEFAULT 0;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lockedUntil" TIMESTAMP(3);`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "displayName" TEXT;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "firstName" TEXT;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lastName" TEXT;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profilePicture" TEXT;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "notifyPayoutUpdates" BOOLEAN NOT NULL DEFAULT true;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "notifyContentEngagement" BOOLEAN NOT NULL DEFAULT true;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "notifyPlatformAnnouncements" BOOLEAN NOT NULL DEFAULT true;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "notifyMarketingEmails" BOOLEAN NOT NULL DEFAULT false;`,
+
+    // Creator profile payout/banking fields
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "allowBuyerProfileView" BOOLEAN NOT NULL DEFAULT false;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "bankAccountName" TEXT;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "bankName" TEXT;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "bankAccountNumber" TEXT;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "bankRoutingNumber" TEXT;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "bankSwiftCode" TEXT;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "bankIban" TEXT;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "bankCountry" TEXT;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "bankCurrency" TEXT NOT NULL DEFAULT 'USD';`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "payoutSetupCompleted" BOOLEAN NOT NULL DEFAULT false;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "pendingBalance" DOUBLE PRECISION NOT NULL DEFAULT 0;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "availableBalance" DOUBLE PRECISION NOT NULL DEFAULT 0;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "waitlistBonus" DOUBLE PRECISION NOT NULL DEFAULT 0;`,
+    `ALTER TABLE "creator_profiles" ADD COLUMN IF NOT EXISTS "bonusWithdrawn" BOOLEAN NOT NULL DEFAULT false;`,
+  ];
+
+  for (const stmt of statements) {
+    try {
+      await prisma.$executeRawUnsafe(stmt);
+    } catch (err) {
+      console.warn(`Skipping statement due to error: ${stmt}`, err);
+    }
+  }
+}
+
 async function main() {
   console.log('Seeding database...');
+
+  // Make sure required columns/enum values exist even if migrations lag behind
+  await applySchemaPatches();
 
   // Hash password
   const hashedPassword = await bcrypt.hash('Admin@123', 10);

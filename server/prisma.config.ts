@@ -3,7 +3,12 @@ import { defineConfig, env } from 'prisma/config';
 
 export default defineConfig({
   schema: './prisma/schema.prisma',
+
+  migrations: {
+    seed: 'ts-node ./prisma/seed.ts',
+  },
+
   datasource: {
-    url: env('DATABASE_URL'), // Prisma 7 env helper ensures variables are loaded
+    url: env('DATABASE_URL'),
   },
 });

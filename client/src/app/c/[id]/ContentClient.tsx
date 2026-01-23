@@ -455,12 +455,15 @@ export function ContentClient({ id }: { id: string }) {
                             onContextMenu={(e) => e.preventDefault()}
                           >
                             {itemFileType === 'VIDEO' && item.signedUrl && (
-                              <div className="relative aspect-video">
-                                <video
-                                  className="w-full h-full object-contain pointer-events-none"
-                                  preload="metadata"
-                                  onContextMenu={(e) => e.preventDefault()}
-                                >
+                              <div className="relative aspect-video bg-gray-800">
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                  </div>
+                                </div>
+                                <video className="w-full h-full object-contain opacity-0" preload="none">
                                   <source src={item.signedUrl} type="video/mp4" />
                                 </video>
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

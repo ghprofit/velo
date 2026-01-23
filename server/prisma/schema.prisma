@@ -222,7 +222,7 @@ model CreatorProfile {
   // Payout Info
   paypalEmail          String?
   stripeAccountId      String?
-  payoutStatus         PayoutStatus @default(PENDING)
+  payoutStatus         PayoutStatus @default(ACTIVE)
 
   // Policy
   policyStrikes Int @default(0)

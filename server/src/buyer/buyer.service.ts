@@ -308,6 +308,11 @@ export class BuyerService {
           where: { id: session.id },
           data: { email: dto.email },
         });
+        this.logger.log(`[PURCHASE] ✅ Session email updated successfully`);
+      } else if (session.email) {
+        this.logger.log(`[PURCHASE] Session already has email: ${session.email}`);
+      } else {
+        this.logger.warn(`[PURCHASE] ⚠️ No email provided in purchase request!`);
       }
 
       // Get content
@@ -1046,6 +1051,92 @@ export class BuyerService {
       };
     } catch (error) {
       this.logger.error('Failed to cleanup expired data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resend purchase invoice/receipt email
+   * Used when the initial email wasn't sent or buyer requests a copy
+   */
+  async resendInvoice(purchaseId: string, buyerEmail: string): Promise<any> {
+    this.logger.log(`[INVOICE] Attempting to resend invoice for purchase ${purchaseId} to ${buyerEmail}`);
+
+    try {
+      // Get purchase details with all relationships
+      const purchase = await this.prisma.purchase.findUnique({
+        where: { id: purchaseId },
+        include: {
+          content: {
+            include: {
+              creator: {
+                include: { user: true },
+              },
+            },
+          },
+          buyerSession: true,
+        },
+      });
+
+      if (!purchase) {
+        this.logger.error(`[INVOICE] Purchase not found: ${purchaseId}`);
+        throw new NotFoundException(`Purchase ${purchaseId} not found`);
+      }
+
+      if (purchase.status !== 'COMPLETED') {
+        this.logger.error(
+          `[INVOICE] Cannot resend invoice for incomplete purchase: ${purchaseId} (status: ${purchase.status})`,
+        );
+        throw new BadRequestException(
+          `Cannot send invoice for purchase with status: ${purchase.status}`,
+        );
+      }
+
+      // Verify the email matches either buyer session or provided email
+      const sessionEmail = purchase.buyerSession?.email;
+      if (sessionEmail && sessionEmail !== buyerEmail) {
+        this.logger.warn(
+          `[INVOICE] Email mismatch for purchase ${purchaseId}. Session: ${sessionEmail}, Requested: ${buyerEmail}`,
+        );
+        throw new UnauthorizedException('Email does not match purchase record');
+      }
+
+      const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
+
+      // Send the purchase receipt/invoice
+      const emailResult = await this.emailService.sendPurchaseReceipt(
+        buyerEmail,
+        {
+          buyer_email: buyerEmail,
+          content_title: purchase.content.title,
+          amount: purchase.amount.toFixed(2),
+          date: purchase.createdAt.toLocaleDateString(),
+          access_link: `${clientUrl}/c/${purchase.contentId}?token=${purchase.accessToken}`,
+          transaction_id: purchase.transactionId || purchase.paymentIntentId || 'N/A',
+        },
+      );
+
+      if (!emailResult.success) {
+        this.logger.error(
+          `[INVOICE] Failed to send invoice for purchase ${purchaseId}:`,
+          emailResult.error,
+        );
+        throw new InternalServerErrorException(
+          `Failed to send invoice: ${emailResult.error}`,
+        );
+      }
+
+      this.logger.log(
+        `[INVOICE] ✅ Invoice resent successfully for purchase ${purchaseId} to ${buyerEmail}. MessageId: ${emailResult.messageId}`,
+      );
+
+      return {
+        success: true,
+        message: 'Invoice sent successfully',
+        messageId: emailResult.messageId,
+      };
+    } catch (error) {
+      this.logger.error(`[INVOICE] Failed to resend invoice:`, error);
       throw error;
     }
   }

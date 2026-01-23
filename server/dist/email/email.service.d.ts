@@ -3,11 +3,10 @@ import { HTML_TEMPLATES } from './templates/email-templates';
 export declare class EmailService {
     private readonly logger;
     private readonly config;
-    private readonly sesClient;
+    private readonly transporter;
     private isConfigured;
     constructor();
     sendEmail(options: SendEmailOptions): Promise<EmailSendResult>;
-    private sendEmailWithAttachments;
     sendBulkEmails(recipients: Array<{
         email: string;
         templateData?: Record<string, any>;

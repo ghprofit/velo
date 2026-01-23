@@ -55,13 +55,13 @@ export declare class AdminNotificationsService {
         success: boolean;
         message: string;
         data: {
-            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
             message: string;
             userId: string;
             title: string;
             type: string;
+            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         };
     }>;
@@ -84,13 +84,13 @@ export declare class AdminNotificationsService {
         success: boolean;
         message: string;
         data: {
-            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
             message: string;
             userId: string;
             title: string;
             type: string;
+            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         };
     }>;

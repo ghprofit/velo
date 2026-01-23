@@ -84,6 +84,9 @@ let BuyerController = class BuyerController {
     async verifyDevice(dto) {
         return this.buyerService.verifyDeviceCode(dto.purchaseId, dto.code, dto.fingerprint);
     }
+    async resendInvoice(dto) {
+        return this.buyerService.resendInvoice(dto.purchaseId, dto.email);
+    }
 };
 exports.BuyerController = BuyerController;
 __decorate([
@@ -162,6 +165,15 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], BuyerController.prototype, "verifyDevice", null);
+__decorate([
+    (0, common_1.Post)('invoice/resend'),
+    (0, common_1.UseGuards)(throttler_1.ThrottlerGuard),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 3600000 } }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], BuyerController.prototype, "resendInvoice", null);
 exports.BuyerController = BuyerController = __decorate([
     (0, common_1.Controller)('buyer'),
     __metadata("design:paramtypes", [buyer_service_1.BuyerService])

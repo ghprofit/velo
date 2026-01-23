@@ -151,4 +151,17 @@ export class BuyerController {
       dto.fingerprint,
     );
   }
+
+  /**
+   * Resend purchase invoice/receipt email
+   * Rate limited to prevent spam
+   */
+  @Post('invoice/resend')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 5 requests per hour
+  async resendInvoice(
+    @Body() dto: { purchaseId: string; email: string },
+  ) {
+    return this.buyerService.resendInvoice(dto.purchaseId, dto.email);
+  }
 }

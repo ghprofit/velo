@@ -15,7 +15,6 @@ var EmailService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailService = void 0;
 const common_1 = require("@nestjs/common");
-const client_ses_1 = require("@aws-sdk/client-ses");
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const email_templates_1 = require("./templates/email-templates");
 let EmailService = EmailService_1 = class EmailService {
@@ -23,28 +22,46 @@ let EmailService = EmailService_1 = class EmailService {
         this.logger = new common_1.Logger(EmailService_1.name);
         this.isConfigured = false;
         this.config = {
-            apiKey: process.env.AWS_ACCESS_KEY_ID || '',
-            fromEmail: process.env.SES_FROM_EMAIL || 'noreply@example.com',
-            fromName: process.env.SES_FROM_NAME || 'VeloLink',
-            replyToEmail: process.env.SES_REPLY_TO_EMAIL,
+            apiKey: process.env.ZOHO_PASSWORD || '',
+            fromEmail: process.env.ZOHO_EMAIL || 'noreply@velolink.club',
+            fromName: process.env.ZOHO_FROM_NAME || 'VeloLink',
+            replyToEmail: process.env.ZOHO_REPLY_TO_EMAIL,
         };
-        const awsRegion = process.env.AWS_REGION || 'us-east-1';
-        const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
-        const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-        if (awsAccessKeyId && awsSecretAccessKey) {
-            this.sesClient = new client_ses_1.SESClient({
-                region: awsRegion,
-                credentials: {
-                    accessKeyId: awsAccessKeyId,
-                    secretAccessKey: awsSecretAccessKey,
+        const zohoEmail = process.env.ZOHO_EMAIL;
+        const zohoPassword = process.env.ZOHO_PASSWORD;
+        const zohoHost = process.env.ZOHO_SMTP_HOST || 'smtp.zoho.com';
+        const zohoPort = parseInt(process.env.ZOHO_SMTP_PORT || '465', 10);
+        if (zohoEmail && zohoPassword) {
+            this.transporter = nodemailer_1.default.createTransport({
+                host: zohoHost,
+                port: zohoPort,
+                secure: zohoPort === 465,
+                auth: {
+                    user: zohoEmail,
+                    pass: zohoPassword,
+                },
+                tls: {
+                    rejectUnauthorized: true,
                 },
             });
             this.isConfigured = true;
-            this.logger.log('AWS SES configured successfully');
+            this.logger.log('Zoho Mail SMTP configured successfully');
+            this.transporter.verify((error) => {
+                if (error) {
+                    this.logger.error('Zoho Mail SMTP verification failed:', error);
+                    this.isConfigured = false;
+                }
+                else {
+                    this.logger.log('Zoho Mail SMTP server is ready to send emails');
+                }
+            });
         }
         else {
-            this.sesClient = new client_ses_1.SESClient({ region: awsRegion });
-            this.logger.warn('AWS SES credentials not found. Email sending will be simulated.');
+            this.transporter = nodemailer_1.default.createTransport({
+                streamTransport: true,
+                newline: 'unix',
+            });
+            this.logger.warn('Zoho Mail credentials not found. Email sending will be simulated.');
         }
     }
     async sendEmail(options) {
@@ -56,48 +73,24 @@ let EmailService = EmailService_1 = class EmailService {
             if (!options.subject && !options.html) {
                 throw new common_1.BadRequestException('Either subject or html content is required');
             }
-            if (options.attachments && options.attachments.length > 0) {
-                return this.sendEmailWithAttachments(options);
-            }
-            const toAddresses = Array.isArray(options.to) ? options.to : [options.to];
-            const params = {
-                Source: `${this.config.fromName} <${options.from || this.config.fromEmail}>`,
-                Destination: {
-                    ToAddresses: toAddresses,
-                    CcAddresses: options.cc || [],
-                    BccAddresses: options.bcc || [],
-                },
-                Message: {
-                    Subject: {
-                        Data: options.subject || 'Notification',
-                        Charset: 'UTF-8',
-                    },
-                    Body: {
-                        Html: {
-                            Data: options.html || options.text || '',
-                            Charset: 'UTF-8',
-                        },
-                        ...(options.text && {
-                            Text: {
-                                Data: options.text,
-                                Charset: 'UTF-8',
-                            },
-                        }),
-                    },
-                },
-                ...(options.replyTo || this.config.replyToEmail
-                    ? {
-                        ReplyToAddresses: [options.replyTo || this.config.replyToEmail || ''],
-                    }
-                    : {}),
+            const toAddresses = Array.isArray(options.to) ? options.to.join(', ') : options.to;
+            const mailOptions = {
+                from: `${this.config.fromName} <${options.from || this.config.fromEmail}>`,
+                to: toAddresses,
+                cc: options.cc?.join(', '),
+                bcc: options.bcc?.join(', '),
+                replyTo: options.replyTo || this.config.replyToEmail,
+                subject: options.subject || 'Notification',
+                text: options.text,
+                html: options.html,
+                attachments: options.attachments,
             };
             if (this.isConfigured) {
-                const command = new client_ses_1.SendEmailCommand(params);
-                const response = await this.sesClient.send(command);
-                this.logger.log(`Email sent successfully to ${options.to}. MessageId: ${response.MessageId}`);
+                const info = await this.transporter.sendMail(mailOptions);
+                this.logger.log(`Email sent successfully to ${options.to}. MessageId: ${info.messageId}`);
                 return {
                     success: true,
-                    messageId: response.MessageId || `sent-${Date.now()}`,
+                    messageId: info.messageId || `sent-${Date.now()}`,
                     statusCode: 200,
                 };
             }
@@ -115,60 +108,6 @@ let EmailService = EmailService_1 = class EmailService {
             return {
                 success: false,
                 error: error?.message || 'Failed to send email',
-            };
-        }
-    }
-    async sendEmailWithAttachments(options) {
-        try {
-            this.logger.log(`Sending email with attachments to: ${options.to}`);
-            const transporter = nodemailer_1.default.createTransport({
-                streamTransport: true,
-                newline: 'unix',
-            });
-            const mailOptions = {
-                from: `${this.config.fromName} <${options.from || this.config.fromEmail}>`,
-                to: options.to,
-                cc: options.cc?.join(', '),
-                bcc: options.bcc?.join(', '),
-                replyTo: options.replyTo || this.config.replyToEmail,
-                subject: options.subject,
-                text: options.text,
-                html: options.html,
-                attachments: options.attachments,
-            };
-            const info = await transporter.sendMail(mailOptions);
-            const chunks = [];
-            for await (const chunk of info.message) {
-                chunks.push(chunk);
-            }
-            const rawMessage = Buffer.concat(chunks);
-            if (this.isConfigured) {
-                const command = new client_ses_1.SendRawEmailCommand({
-                    RawMessage: {
-                        Data: rawMessage,
-                    },
-                });
-                const response = await this.sesClient.send(command);
-                this.logger.log(`Email with attachments sent successfully to ${options.to}. MessageId: ${response.MessageId}`);
-                return {
-                    success: true,
-                    messageId: response.MessageId || `sent-${Date.now()}`,
-                    statusCode: 200,
-                };
-            }
-            else {
-                this.logger.warn(`[SIMULATED] Email with attachments would be sent to: ${options.to}`);
-                return {
-                    success: true,
-                    messageId: `simulated-${Date.now()}`,
-                };
-            }
-        }
-        catch (error) {
-            this.logger.error('Failed to send email with attachments:', error);
-            return {
-                success: false,
-                error: error?.message || 'Failed to send email with attachments',
             };
         }
     }
@@ -196,6 +135,7 @@ let EmailService = EmailService_1 = class EmailService {
                     error: emailResult.error || 'Unknown error',
                 });
             }
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
         this.logger.log(`Bulk email completed. Success: ${result.successCount}, Failed: ${result.failureCount}`);
         return result;
@@ -213,7 +153,7 @@ let EmailService = EmailService_1 = class EmailService {
         });
     }
     async scheduleEmail(options, sendAt) {
-        this.logger.warn('AWS SES does not support scheduled emails natively. Sending immediately instead.');
+        this.logger.warn('Zoho SMTP does not support scheduled emails natively. Sending immediately instead.');
         return this.sendEmail(options);
     }
     async sendWelcomeEmail(to, userName) {
@@ -239,7 +179,7 @@ let EmailService = EmailService_1 = class EmailService {
     async getEmailStats(days = 7) {
         this.logger.log(`Getting email stats for last ${days} days`);
         return {
-            message: 'AWS SES stats require CloudWatch integration. Use AWS Console for detailed metrics.',
+            message: 'Email statistics are available in Zoho Mail dashboard.',
         };
     }
     isValidEmail(email) {
@@ -250,9 +190,9 @@ let EmailService = EmailService_1 = class EmailService {
         this.logger.log(`Testing email configuration by sending to ${testEmail}`);
         return this.sendEmail({
             to: testEmail,
-            subject: 'AWS SES Configuration Test',
-            html: '<h1>Test Email</h1><p>If you received this, your AWS SES configuration is working!</p>',
-            text: 'Test Email - If you received this, your AWS SES configuration is working!',
+            subject: 'Zoho Mail Configuration Test',
+            html: '<h1>Test Email</h1><p>If you received this, your Zoho Mail configuration is working!</p>',
+            text: 'Test Email - If you received this, your Zoho Mail configuration is working!',
         });
     }
     async sendPurchaseReceipt(to, data) {

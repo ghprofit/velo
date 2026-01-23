@@ -9,9 +9,9 @@ export class CreatePurchaseDto {
   @IsString()
   sessionToken: string;
 
-  @IsOptional()
+  @IsNotEmpty() // Email is required for invoice sending
   @IsEmail()
-  email?: string;
+  email: string;
 
   @IsNotEmpty() // Bug #13 fix: Make fingerprint REQUIRED
   @IsString()

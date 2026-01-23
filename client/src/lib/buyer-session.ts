@@ -3,6 +3,7 @@ import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
 const SESSION_TOKEN_KEY = 'buyer_session_token';
 const SESSION_EXPIRY_KEY = 'buyer_session_expiry';
+const SESSION_FINGERPRINT_KEY = 'buyer_session_fingerprint';
 
 export interface BuyerSession {
   sessionToken: string;
@@ -27,23 +28,26 @@ export async function getBrowserFingerprint(): Promise<string> {
 }
 
 /**
- * Cache the fingerprint in sessionStorage for the current checkout session
+ * Cache the fingerprint in localStorage for the current checkout session
+ * Using localStorage instead of sessionStorage for persistence across page reloads
  */
 export function cacheBuyerFingerprint(fingerprint: string): void {
+  if (typeof window === 'undefined') return;
   try {
-    sessionStorage.setItem('velo_checkout_fingerprint', fingerprint);
+    localStorage.setItem(SESSION_FINGERPRINT_KEY, fingerprint);
   } catch (error) {
     console.warn('Failed to cache fingerprint:', error);
   }
 }
 
 /**
- * Get the cached fingerprint from sessionStorage
- * Returns null if not found or expired
+ * Get the cached fingerprint from localStorage
+ * Returns null if not found
  */
 export function getCachedBuyerFingerprint(): string | null {
+  if (typeof window === 'undefined') return null;
   try {
-    return sessionStorage.getItem('velo_checkout_fingerprint');
+    return localStorage.getItem(SESSION_FINGERPRINT_KEY);
   } catch (error) {
     console.warn('Failed to get cached fingerprint:', error);
     return null;
@@ -54,8 +58,9 @@ export function getCachedBuyerFingerprint(): string | null {
  * Clear the cached fingerprint (call after successful purchase or checkout timeout)
  */
 export function clearCachedBuyerFingerprint(): void {
+  if (typeof window === 'undefined') return;
   try {
-    sessionStorage.removeItem('velo_checkout_fingerprint');
+    localStorage.removeItem(SESSION_FINGERPRINT_KEY);
   } catch (error) {
     console.warn('Failed to clear cached fingerprint:', error);
   }
@@ -89,6 +94,7 @@ export function getBuyerSession(): BuyerSession | null {
 
   const sessionToken = localStorage.getItem(SESSION_TOKEN_KEY);
   const expiresAt = localStorage.getItem(SESSION_EXPIRY_KEY);
+  const fingerprint = localStorage.getItem(SESSION_FINGERPRINT_KEY);
 
   if (!sessionToken || !expiresAt) {
     return null;
@@ -96,6 +102,14 @@ export function getBuyerSession(): BuyerSession | null {
 
   // Check if session has expired
   if (new Date(expiresAt) < new Date()) {
+    clearBuyerSession();
+    return null;
+  }
+
+  // If session exists but fingerprint is missing, clear session to force re-creation
+  // This ensures fingerprint consistency
+  if (!fingerprint) {
+    console.warn('Session exists but fingerprint missing, clearing session');
     clearBuyerSession();
     return null;
   }
@@ -128,6 +142,7 @@ export function clearBuyerSession(): void {
 
   localStorage.removeItem(SESSION_TOKEN_KEY);
   localStorage.removeItem(SESSION_EXPIRY_KEY);
+  localStorage.removeItem(SESSION_FINGERPRINT_KEY);
   Cookies.remove(SESSION_TOKEN_KEY);
 }
 

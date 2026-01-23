@@ -158,5 +158,6 @@ export declare class BuyerService {
         deletedPurchases: number;
         deletedSessions: number;
     }>;
+    resendInvoice(purchaseId: string, buyerEmail: string): Promise<any>;
 }
 //# sourceMappingURL=buyer.service.d.ts.map

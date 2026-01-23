@@ -529,7 +529,7 @@ export const buyerApi = {
   createPurchase: (data: {
     contentId: string;
     sessionToken: string;
-    email?: string;
+    email: string;  // REQUIRED - for invoice sending
     fingerprint?: string;
   }) =>
     apiClient.post('/buyer/purchase', data),

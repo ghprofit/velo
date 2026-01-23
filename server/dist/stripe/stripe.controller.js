@@ -18,12 +18,15 @@ const common_1 = require("@nestjs/common");
 const stripe_service_1 = require("./stripe.service");
 const prisma_service_1 = require("../prisma/prisma.service");
 const email_service_1 = require("../email/email.service");
+const notifications_service_1 = require("../notifications/notifications.service");
+const create_notification_dto_1 = require("../notifications/dto/create-notification.dto");
 const config_1 = require("@nestjs/config");
 let StripeController = StripeController_1 = class StripeController {
-    constructor(stripeService, prisma, emailService, config) {
+    constructor(stripeService, prisma, emailService, notificationsService, config) {
         this.stripeService = stripeService;
         this.prisma = prisma;
         this.emailService = emailService;
+        this.notificationsService = notificationsService;
         this.config = config;
         this.logger = new common_1.Logger(StripeController_1.name);
     }
@@ -117,6 +120,9 @@ let StripeController = StripeController_1 = class StripeController {
                         if (!content || !buyerSession) {
                             this.logger.error(`Cannot create purchase - content or session not found. Content: ${!!content}, Session: ${!!buyerSession}`);
                             return;
+                        }
+                        if (!buyerSession.email) {
+                            this.logger.warn(`INVOICE EMAIL ISSUE: No email found for buyerSession ${sessionId}. Invoice will NOT be sent! Payment Intent: ${paymentIntent.id}`);
                         }
                         const crypto = require('crypto');
                         const accessToken = crypto.randomBytes(32).toString('hex');
@@ -252,7 +258,8 @@ let StripeController = StripeController_1 = class StripeController {
                 if (purchaseData.buyerEmail) {
                     try {
                         const clientUrl = this.config.get('CLIENT_URL') || 'http://localhost:3000';
-                        await this.emailService.sendPurchaseReceipt(purchaseData.buyerEmail, {
+                        this.logger.log(`[EMAIL] Sending purchase receipt to ${purchaseData.buyerEmail} for purchase ${purchaseData.id}`);
+                        const emailResult = await this.emailService.sendPurchaseReceipt(purchaseData.buyerEmail, {
                             buyer_email: purchaseData.buyerEmail,
                             content_title: purchaseData.contentTitle,
                             amount: purchaseData.amount.toFixed(2),
@@ -260,24 +267,134 @@ let StripeController = StripeController_1 = class StripeController {
                             access_link: `${clientUrl}/c/${purchaseData.contentId}?token=${purchaseData.accessToken}`,
                             transaction_id: paymentIntent.id,
                         });
-                        this.logger.log(`Purchase receipt sent to ${purchaseData.buyerEmail}`);
+                        if (emailResult.success) {
+                            this.logger.log(`[EMAIL] ✅ Purchase receipt sent successfully to ${purchaseData.buyerEmail}. MessageId: ${emailResult.messageId}`);
+                        }
+                        else {
+                            this.logger.error(`[EMAIL] ❌ Failed to send purchase receipt to ${purchaseData.buyerEmail}: ${emailResult.error}`);
+                        }
                     }
                     catch (error) {
-                        this.logger.error('Failed to send purchase receipt:', error);
+                        this.logger.error(`[EMAIL] Exception while sending purchase receipt to ${purchaseData.buyerEmail}:`, error);
                     }
                 }
+                else {
+                    this.logger.warn(`[EMAIL] ⚠️ No buyer email found for purchase ${purchaseData.id}. Invoice NOT sent!`);
+                }
                 try {
-                    await this.emailService.sendCreatorSaleNotification(purchaseData.creatorEmail, {
+                    this.logger.log(`[EMAIL] Sending creator sale notification to ${purchaseData.creatorEmail} for purchase ${purchaseData.id}`);
+                    const creatorEmailResult = await this.emailService.sendCreatorSaleNotification(purchaseData.creatorEmail, {
                         creator_name: purchaseData.creatorName,
                         content_title: purchaseData.contentTitle,
                         amount: purchaseData.creatorEarnings.toFixed(2),
                         date: new Date().toLocaleDateString(),
                     });
-                    this.logger.log(`Sale notification sent to creator ${purchaseData.creatorEmail}`);
+                    if (creatorEmailResult.success) {
+                        this.logger.log(`[EMAIL] ✅ Creator sale notification sent to ${purchaseData.creatorEmail}. MessageId: ${creatorEmailResult.messageId}`);
+                    }
+                    else {
+                        this.logger.error(`[EMAIL] ❌ Failed to send creator sale notification to ${purchaseData.creatorEmail}: ${creatorEmailResult.error}`);
+                    }
                 }
                 catch (error) {
-                    this.logger.error('Failed to send creator sale notification:', error);
+                    this.logger.error(`[EMAIL] Exception while sending creator sale notification to ${purchaseData.creatorEmail}:`, error);
                 }
+                let buyerUser = null;
+                try {
+                    buyerUser = await this.prisma.user.findUnique({
+                        where: { email: purchaseData.buyerEmail },
+                    });
+                }
+                catch (error) {
+                    this.logger.warn(`[NOTIFICATION] Could not find buyer user by email: ${purchaseData.buyerEmail}`);
+                }
+                if (buyerUser) {
+                    try {
+                        this.logger.log(`[NOTIFICATION] Creating purchase notification for buyer: ${buyerUser.id}`);
+                        await this.notificationsService.createNotification({
+                            userId: buyerUser.id,
+                            type: create_notification_dto_1.NotificationType.PURCHASE_MADE,
+                            title: 'Purchase Successful',
+                            message: `You successfully purchased "${purchaseData.contentTitle}" for $${purchaseData.amount.toFixed(2)}`,
+                            metadata: {
+                                purchaseId: purchaseData.id,
+                                contentId: purchaseData.contentId,
+                                amount: purchaseData.amount,
+                            },
+                        });
+                        this.logger.log(`[NOTIFICATION] ✅ Buyer notification created for user: ${buyerUser.id}`);
+                    }
+                    catch (error) {
+                        this.logger.error(`[NOTIFICATION] ❌ Failed to create buyer notification:`, error);
+                    }
+                }
+                else {
+                    this.logger.log(`[NOTIFICATION] ℹ️ Buyer is not a registered user (anonymous purchase with email: ${purchaseData.buyerEmail})`);
+                }
+                try {
+                    const creatorProfile = await this.prisma.creatorProfile.findFirst({
+                        where: { displayName: purchaseData.creatorName },
+                        include: { user: true },
+                    });
+                    if (creatorProfile?.user) {
+                        this.logger.log(`[NOTIFICATION] Creating sale notification for creator: ${creatorProfile.user.id}`);
+                        await this.notificationsService.createNotification({
+                            userId: creatorProfile.user.id,
+                            type: create_notification_dto_1.NotificationType.PURCHASE_MADE,
+                            title: 'Your Content Was Purchased',
+                            message: `Your content "${purchaseData.contentTitle}" was purchased! You earned $${purchaseData.creatorEarnings.toFixed(2)}`,
+                            metadata: {
+                                purchaseId: purchaseData.id,
+                                contentId: purchaseData.contentId,
+                                earnings: purchaseData.creatorEarnings,
+                            },
+                        });
+                        this.logger.log(`[NOTIFICATION] ✅ Creator notification created for user: ${creatorProfile.user.id}`);
+                    }
+                }
+                catch (error) {
+                    this.logger.error(`[NOTIFICATION] ❌ Failed to create creator notification:`, error);
+                }
+                try {
+                    const adminUsers = await this.prisma.user.findMany({
+                        where: {
+                            role: 'ADMIN',
+                        },
+                        select: { id: true },
+                    });
+                    if (adminUsers.length > 0) {
+                        this.logger.log(`[NOTIFICATION] Creating purchase alert for ${adminUsers.length} admin user(s)`);
+                        for (const adminUser of adminUsers) {
+                            try {
+                                await this.notificationsService.createNotification({
+                                    userId: adminUser.id,
+                                    type: create_notification_dto_1.NotificationType.PURCHASE_MADE,
+                                    title: 'New Purchase on Platform',
+                                    message: `A new purchase was made: "${purchaseData.contentTitle}" by ${purchaseData.creatorName} for $${purchaseData.amount.toFixed(2)}`,
+                                    metadata: {
+                                        purchaseId: purchaseData.id,
+                                        contentId: purchaseData.contentId,
+                                        creatorName: purchaseData.creatorName,
+                                        amount: purchaseData.amount,
+                                    },
+                                });
+                                this.logger.log(`[NOTIFICATION] ✅ Admin notification created for admin: ${adminUser.id}`);
+                            }
+                            catch (adminNotifError) {
+                                this.logger.error(`[NOTIFICATION] ❌ Failed to create notification for admin ${adminUser.id}:`, adminNotifError);
+                            }
+                        }
+                    }
+                    else {
+                        this.logger.warn(`[NOTIFICATION] ⚠️ No admin users found to notify about purchase`);
+                    }
+                }
+                catch (error) {
+                    this.logger.error(`[NOTIFICATION] ❌ Failed to create admin notifications:`, error);
+                }
+            }
+            else {
+                this.logger.warn(`[EMAIL] No purchase data available for email notifications`);
             }
         }
         catch (error) {
@@ -421,6 +538,7 @@ exports.StripeController = StripeController = StripeController_1 = __decorate([
     __metadata("design:paramtypes", [stripe_service_1.StripeService,
         prisma_service_1.PrismaService,
         email_service_1.EmailService,
+        notifications_service_1.NotificationsService,
         config_1.ConfigService])
 ], StripeController);
 //# sourceMappingURL=stripe.controller.js.map

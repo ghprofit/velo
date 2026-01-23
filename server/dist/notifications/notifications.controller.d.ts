@@ -14,13 +14,13 @@ export declare class NotificationsController {
     getNotifications(req: AuthenticatedRequest, category?: string): Promise<{
         success: boolean;
         data: {
-            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
             message: string;
             userId: string;
             title: string;
             type: string;
+            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         }[];
     }>;
@@ -37,13 +37,13 @@ export declare class NotificationsController {
     markAsRead(req: AuthenticatedRequest, id: string): Promise<{
         success: boolean;
         data: {
-            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
             message: string;
             userId: string;
             title: string;
             type: string;
+            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         };
     }>;
@@ -68,13 +68,13 @@ export declare class NotificationsController {
                 displayName: string | null;
             };
         } & {
-            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
             message: string;
             userId: string;
             title: string;
             type: string;
+            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         })[];
         pagination: {
@@ -99,13 +99,13 @@ export declare class NotificationsController {
     createNotification(dto: CreateNotificationDto): Promise<{
         success: boolean;
         data: {
-            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
             message: string;
             userId: string;
             title: string;
             type: string;
+            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         };
         message: string;
@@ -148,13 +148,13 @@ export declare class NotificationsController {
     getUserNotifications(userId: string, category?: string): Promise<{
         success: boolean;
         data: {
-            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
             message: string;
             userId: string;
             title: string;
             type: string;
+            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         }[];
     }>;

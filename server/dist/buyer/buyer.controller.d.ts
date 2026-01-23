@@ -146,5 +146,9 @@ export declare class BuyerController {
     }): Promise<{
         success: boolean;
     }>;
+    resendInvoice(dto: {
+        purchaseId: string;
+        email: string;
+    }): Promise<any>;
 }
 //# sourceMappingURL=buyer.controller.d.ts.map

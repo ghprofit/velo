@@ -116,17 +116,24 @@ export function PaymentClient({ id }: { id: string }) {
 
         // Create purchase and get client secret
         console.log('[CHECKOUT] Creating purchase...');
+        
+        if (!email) {
+          setError('Email is required to complete your purchase');
+          setLoading(false);
+          return;
+        }
+
         console.log('[CHECKOUT] Request payload:', {
           contentId: id,
           sessionToken: session.sessionToken.substring(0, 16) + '...',
-          email: email || 'not provided',
+          email: email,
           fingerprint
         });
 
         const purchaseResponse = await buyerApi.createPurchase({
           contentId: id,
           sessionToken: session.sessionToken,
-          email: email || undefined,
+          email: email,
           fingerprint,
         });
 

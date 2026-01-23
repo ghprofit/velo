@@ -110,9 +110,9 @@ export declare class SuperadminController {
         success: boolean;
         data: {
             reason: string | null;
-            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             createdAt: Date;
+            metadata: import("@prisma/client/runtime/client").JsonValue | null;
             action: string;
             adminId: string;
             targetType: string;

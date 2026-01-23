@@ -96,9 +96,9 @@ export declare class SuperadminService {
     }>;
     getAdminActivityLog(id: string): Promise<{
         reason: string | null;
-        metadata: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         createdAt: Date;
+        metadata: import("@prisma/client/runtime/client").JsonValue | null;
         action: string;
         adminId: string;
         targetType: string;

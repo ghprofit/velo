@@ -1,15 +1,38 @@
 import type { EmailTemplate } from '../interfaces/email.interface';
 
 /**
- * VeloLink Logo URL from S3
- * Using hosted S3 URL for reliable display across all email clients
- * Note: Using PNG instead of SVG as Gmail blocks SVG images for security reasons
- * Using black logo for better visibility in email clients
+ * VeloLink Logo URL
+ * Set LOGO_URL in environment variables to use a custom logo
+ * If not set, emails will use a text-based header instead
  */
-const getLogoUrl = (): string => {
-  const bucketName = process.env.AWS_S3_BUCKET_NAME || 'velo-content';
-  const region = process.env.AWS_REGION || 'us-east-1';
-  return `https://${bucketName}.s3.${region}.amazonaws.com/Secondary_Logo_black.png`;
+const getLogoUrl = (): string | null => {
+  // Use environment variable if set, otherwise return null for text-based header
+  return process.env.LOGO_URL || null;
+};
+
+/**
+ * Generate logo HTML or text fallback
+ * If no logo URL is configured, uses a styled text header
+ */
+const getLogoHtml = (): string => {
+  const logoUrl = getLogoUrl();
+  if (logoUrl) {
+    return `
+      <img
+        src="${logoUrl}"
+        alt="VeloLink Logo"
+        width="180"
+        height="auto"
+        style="width: 180px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
+      />
+    `;
+  }
+  // Text-based fallback with styled logo
+  return `
+    <div style="margin-bottom: 16px;">
+      <span style="font-size: 36px; font-weight: 700; color: white; letter-spacing: -1px;">Velo</span><span style="font-size: 36px; font-weight: 300; color: rgba(255,255,255,0.9); letter-spacing: -1px;">Link</span>
+    </div>
+  `;
 };
 
 /**
@@ -227,13 +250,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>🎉 Welcome to Velo!</h1>
     </div>
     <div class="content">
@@ -280,13 +297,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>📧 Verify Your Email</h1>
     </div>
     <div class="content">
@@ -332,13 +343,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>🔐 Reset Your Password</h1>
     </div>
     <div class="content">
@@ -380,13 +385,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>🔒 2FA Enabled</h1>
     </div>
     <div class="content">
@@ -428,13 +427,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>🔓 2FA Disabled</h1>
     </div>
     <div class="content">
@@ -476,13 +469,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>✅ Account Verified!</h1>
     </div>
     <div class="content">
@@ -524,13 +511,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>🔐 Password Changed</h1>
     </div>
     <div class="content">
@@ -572,13 +553,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>⚠️ Security Alert</h1>
     </div>
     <div class="content">
@@ -627,13 +602,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>🎉 Purchase Successful!</h1>
     </div>
     <div class="content">
@@ -694,13 +663,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>💰 New Sale!</h1>
     </div>
     <div class="content">
@@ -758,13 +721,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>💸 Payout Processed</h1>
     </div>
     <div class="content">
@@ -819,13 +776,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>⚡ New Payout Request</h1>
     </div>
     <div class="content">
@@ -885,13 +836,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>✅ Payout Request Approved</h1>
     </div>
     <div class="content">
@@ -948,13 +893,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>Payout Request Status Update</h1>
     </div>
     <div class="content">
@@ -1003,13 +942,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>✅ Content Approved!</h1>
     </div>
     <div class="content">
@@ -1053,13 +986,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>📋 Content Review Update</h1>
     </div>
     <div class="content">
@@ -1104,13 +1031,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>Account Deletion Confirmation</h1>
     </div>
     <div class="content">
@@ -1154,13 +1075,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>📰 Velo Newsletter</h1>
     </div>
     <div class="content">
@@ -1187,13 +1102,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>🎫 Support Ticket Received</h1>
     </div>
     <div class="content">
@@ -1242,13 +1151,7 @@ export const HTML_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img
-        src="${getLogoUrl()}"
-        alt="VeloLink Logo"
-        width="200"
-        height="165"
-        style="width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
+      ${getLogoHtml()}
       <h1>💬 Support Team Reply</h1>
     </div>
     <div class="content">

@@ -92,10 +92,10 @@ async function main() {
 
   // Create Super Admin
   const superAdmin = await prisma.user.upsert({
-    where: { email: 'superadmin@velo.com' },
+    where: { email: 'akwaracyril@gmail.com' },
     update: {},
     create: {
-      email: 'superadmin@velo.com',
+      email: 'akwaracyril@gmail.com',
       password: hashedPassword,
       role: 'SUPER_ADMIN',
       emailVerified: true,
@@ -107,10 +107,10 @@ async function main() {
 
   // Create Admin
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@velo.com' },
+    where: { email: 'mullinsroyyy@gmail.com' },
     update: {},
     create: {
-      email: 'admin@velo.com',
+      email: 'mullinsroyyy@gmail.com',
       password: hashedPassword,
       role: 'ADMIN',
       emailVerified: true,
@@ -120,34 +120,10 @@ async function main() {
 
   console.log('✅ Admin created:', admin.email);
 
-  // Create test creator
-  const creator = await prisma.user.upsert({
-    where: { email: 'creator@velo.com' },
-    update: {},
-    create: {
-      email: 'creator@velo.com',
-      password: hashedPassword,
-      role: 'CREATOR',
-      emailVerified: true,
-      isActive: true,
-      creatorProfile: {
-        create: {
-          displayName: 'Test Creator',
-          firstName: 'Test',
-          lastName: 'Creator',
-          country: 'US',
-        },
-      },
-    },
-  });
-
-  console.log('✅ Creator created:', creator.email);
-
   console.log('\n📝 Login credentials:');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('Super Admin: superadmin@velo.com / Admin@123');
-  console.log('Admin:       admin@velo.com / Admin@123');
-  console.log('Creator:     creator@velo.com / Admin@123');
+  console.log('Super Admin: akwaracyril@gmail.com / Admin@123');
+  console.log('Admin:       mullinsroyyy@gmail.com / Admin@123');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 

@@ -51,7 +51,7 @@ export const EMAIL_TEMPLATES = {
     id: SENDGRID_TEMPLATE_ID,
     name: 'Welcome Email',
     description: 'Welcome new users to the platform',
-    subject: 'Welcome to Velo!',
+    subject: 'Welcome to VeloLink!',
     requiredVariables: ['user_name'],
   } as EmailTemplate,
 
@@ -251,11 +251,11 @@ export const HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       ${getLogoHtml()}
-      <h1>🎉 Welcome to Velo!</h1>
+      <h1>🎉 Welcome to VeloLink!</h1>
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Welcome to Velo! We're thrilled to have you join our community of creators and content enthusiasts.</p>
+      <p>Welcome to VeloLink! We're thrilled to have you join our community of creators and content enthusiasts.</p>
 
       <div class="success-box">
         <p style="margin: 0;"><strong>✨ Your journey starts here!</strong></p>
@@ -272,13 +272,13 @@ export const HTML_TEMPLATES = {
       </ul>
 
       <div class="text-center mt-20">
-        <a href="${process.env.CLIENT_URL || 'https://velo.com'}" class="button">Explore Velo</a>
+        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}" class="button">Explore Velo</a>
       </div>
 
       <p class="text-sm" style="margin-top: 30px;">If you have any questions, our support team is always here to help!</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Secure content marketplace for creators and buyers</p>
     </div>
   </div>
@@ -302,7 +302,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Welcome to Velo! We're excited to see you here. As a valued member from our early waitlist, you have special benefits waiting for you.</p>
+      <p>Welcome to VeloLink! We're excited to see you here. As a valued member from our early waitlist, you have special benefits waiting for you.</p>
 
       <div class="success-box">
         <p style="margin: 0;"><strong>🎁 Waitlist Bonus: $50.00 Unlocked!</strong></p>
@@ -329,13 +329,13 @@ export const HTML_TEMPLATES = {
       </ol>
 
       <div class="text-center mt-20">
-        <a href="${process.env.CLIENT_URL || 'https://velo.com'}/creator/dashboard" class="button">Start Creating</a>
+        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}/creator/dashboard" class="button">Start Creating</a>
       </div>
 
       <p class="text-sm" style="margin-top: 30px;">Questions? Our support team is here to help you succeed!</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Welcome to the Velo creator community!</p>
     </div>
   </div>
@@ -359,7 +359,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Welcome to Velo! We're thrilled to have you join our community of creators and content enthusiasts.</p>
+      <p>Welcome to VeloLink! We're thrilled to have you join our community of creators and content enthusiasts.</p>
 
       <div class="success-box">
         <p style="margin: 0;"><strong>✨ Your creative journey starts here!</strong></p>
@@ -382,7 +382,7 @@ export const HTML_TEMPLATES = {
       </ol>
 
       <div class="text-center mt-20">
-        <a href="${process.env.CLIENT_URL || 'https://velo.com'}/creator/dashboard" class="button">Access Your Dashboard</a>
+        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}/creator/dashboard" class="button">Access Your Dashboard</a>
       </div>
 
       <div class="info-box">
@@ -392,7 +392,7 @@ export const HTML_TEMPLATES = {
       <p class="text-sm" style="margin-top: 30px;">If you have any questions, our support team is always here to help!</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Welcome to the Velo creator community!</p>
     </div>
   </div>
@@ -416,7 +416,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Thank you for signing up with Velo! To complete your registration and start using your account, please use this verification code:</p>
+      <p>Thank you for signing up with VeloLink! To complete your registration and start using your account, please use this verification code:</p>
 
       <div style="text-align: center; margin: 30px 0;">
         <div style="background: #f3f4f6; border: 2px solid #4f46e5; border-radius: 8px; padding: 20px; display: inline-block;">
@@ -438,7 +438,7 @@ export const HTML_TEMPLATES = {
       <p class="text-sm" style="margin-top: 30px; color: #6b7280;">If you didn't create a Velo account, you can safely ignore this email.</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">This is an automated message, please do not reply.</p>
     </div>
   </div>
@@ -480,7 +480,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">This is an automated message, please do not reply.</p>
     </div>
   </div>
@@ -523,7 +523,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -565,7 +565,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -591,7 +591,7 @@ export const HTML_TEMPLATES = {
       <p>Great news! Your Velo account has been successfully verified on ${data.verification_date}.</p>
 
       <div class="success-box">
-        <p style="margin: 0;"><strong>🎊 You're all set to start using Velo!</strong></p>
+        <p style="margin: 0;"><strong>🎊 You're all set to start using VeloLink!</strong></p>
       </div>
 
       <p>You can now:</p>
@@ -607,7 +607,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -649,7 +649,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -698,7 +698,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -720,7 +720,7 @@ export const HTML_TEMPLATES = {
       <h1>🎉 Purchase Successful!</h1>
     </div>
     <div class="content">
-      <p>Thank you for your purchase on Velo!</p>
+      <p>Thank you for your purchase on VeloLink!</p>
 
       <div class="success-box">
         <p style="margin: 0;"><strong>✅ Payment confirmed - Your content is ready!</strong></p>
@@ -758,7 +758,7 @@ export const HTML_TEMPLATES = {
       <p class="text-sm" style="margin-top: 30px;">Questions about your purchase? Contact our support team anytime.</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Receipt ID: ${data.transaction_id || 'N/A'}</p>
     </div>
   </div>
@@ -782,7 +782,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.creator_name}</strong>,</p>
-      <p>Great news! Someone just purchased your content on Velo!</p>
+      <p>Great news! Someone just purchased your content on VeloLink!</p>
 
       <div class="success-box">
         <p style="margin: 0;"><strong>🎊 Congratulations on your sale!</strong></p>
@@ -817,7 +817,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -871,7 +871,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Transaction ID: ${data.transaction_id}</p>
     </div>
   </div>
@@ -931,7 +931,7 @@ export const HTML_TEMPLATES = {
       <p class="text-sm" style="margin-top: 30px; color: #6b7280;">This is an automated notification. Please process payout requests within 2 business days.</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Request ID: ${data.request_id}</p>
     </div>
   </div>
@@ -988,7 +988,7 @@ export const HTML_TEMPLATES = {
       <p class="text-sm" style="margin-top: 30px;">Questions about your payout? Contact our support team anytime.</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Request ID: ${data.request_id}</p>
     </div>
   </div>
@@ -1038,7 +1038,7 @@ export const HTML_TEMPLATES = {
       <p class="text-sm" style="margin-top: 30px;">If you have questions or need assistance, our support team is here to help.</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -1061,7 +1061,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.creator_name}</strong>,</p>
-      <p>Great news! Your content has been approved and is now live on Velo!</p>
+      <p>Great news! Your content has been approved and is now live on VeloLink!</p>
 
       <div class="success-box">
         <p style="margin: 0;"><strong>🎉 "${data.content_title}" is now available for purchase!</strong></p>
@@ -1082,7 +1082,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -1105,7 +1105,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.creator_name}</strong>,</p>
-      <p>Thank you for submitting "${data.content_title}" to Velo. After reviewing your content, we're unable to approve it at this time.</p>
+      <p>Thank you for submitting "${data.content_title}" to VeloLink. After reviewing your content, we're unable to approve it at this time.</p>
 
       <div class="warning-box">
         <p style="margin: 0 0 8px 0;"><strong>Reason for rejection:</strong></p>
@@ -1127,7 +1127,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -1171,7 +1171,7 @@ export const HTML_TEMPLATES = {
       <p class="text-sm" style="margin-top: 30px; color: #6b7280;">We're sorry to see you go. If there's anything we can do to improve your experience, please let us know.</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -1197,7 +1197,7 @@ export const HTML_TEMPLATES = {
       ${data.newsletter_content}
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs"><a href="${process.env.CLIENT_URL}/unsubscribe" style="color: #6b7280;">Unsubscribe from newsletter</a></p>
     </div>
   </div>
@@ -1246,7 +1246,7 @@ export const HTML_TEMPLATES = {
       </div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Ticket ID: ${data.ticket_id}</p>
     </div>
   </div>
@@ -1284,7 +1284,7 @@ export const HTML_TEMPLATES = {
       <p class="text-sm" style="margin-top: 30px;">If you have additional questions, you can reply directly to the ticket.</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Ticket ID: ${data.ticket_id}</p>
     </div>
   </div>

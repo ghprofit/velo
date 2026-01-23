@@ -100,7 +100,7 @@ export default function UploadContentPage() {
   const handleGenerateLink = () => {
     // Simulate link generation
     const randomId = Math.random().toString(36).substring(7);
-    setGeneratedLink(`https://velo.link/${randomId}`);
+    setGeneratedLink(`https://VeloLink.link/${randomId}`);
     setShowSuccess(true);
 
     setTimeout(() => {

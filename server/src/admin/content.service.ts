@@ -258,7 +258,7 @@ export class ContentService {
           creatorEmail,
           creatorName,
           content.title,
-          `${process.env.CLIENT_URL || 'https://velolink.com'}/c/${content.id}`,
+          `${process.env.CLIENT_URL || 'https://velolink.club'}/c/${content.id}`,
         );
       } else if (dto.status === 'REJECTED') {
         this.logger.log(`Sending rejection email for content ${id} to ${creatorEmail}`);

@@ -91,7 +91,7 @@ const htmlMessage = HTML_TEMPLATES.WELCOME({ user_name: 'John' });
 // Send to SendGrid
 await emailService.sendEmail({
   to: 'user@example.com',
-  subject: 'Welcome to Velo!',
+  subject: 'Welcome to VeloLink!',
   templateId: 'd-your-template-id',
   templateData: {
     message: htmlMessage  // Complete HTML goes here
@@ -153,7 +153,7 @@ await emailService.sendPurchaseReceipt(
     content_title: 'Premium Video Course',
     amount: '49.99',
     date: new Date().toLocaleDateString(),
-    access_link: 'https://velo.com/c/123?token=xyz',
+    access_link: 'https://velolink.club/c/123?token=xyz',
     transaction_id: 'txn_123456'
   }
 );
@@ -181,7 +181,7 @@ await emailService.sendTemplateEmail(
   'PASSWORD_RESET',
   {
     user_name: 'John',
-    reset_link: 'https://velo.com/reset?token=xyz',
+    reset_link: 'https://velolink.club/reset?token=xyz',
     expiry_time: '30 minutes'
   }
 );

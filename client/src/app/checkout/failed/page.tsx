@@ -92,8 +92,8 @@ export default function PaymentFailedPage() {
         {/* Support Message */}
         <p className="text-sm text-gray-500 text-center leading-relaxed">
           If the issue persists, contact Velo Support at{' '}
-          <a href="mailto:support@velolink.com" className="text-indigo-600 hover:text-indigo-700 font-medium underline">
-            support@velolink.com
+          <a href="mailto:support@velolink.club" className="text-indigo-600 hover:text-indigo-700 font-medium underline">
+            support@velolink.club
           </a>
         </p>
       </div>

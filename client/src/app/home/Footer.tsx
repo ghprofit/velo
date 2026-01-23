@@ -153,7 +153,7 @@ export default function Footer() {
 
           <div className="border-t border-gray-800 pt-8">
             <p className="text-center text-gray-400 text-xs">
-              © 2025 VELO. All rights reserved.
+              © 2025 VeloLink. All rights reserved.
             </p>
           </div>
         </div>

@@ -24,12 +24,12 @@ export default function AdminSettingsPage() {
   // Profile Settings State
   const [adminName, setAdminName] = useState('Admin User');
   const [adminBio, setAdminBio] = useState('');
-  const [adminEmail, setAdminEmail] = useState('admin@velolink.com');
+  const [adminEmail, setAdminEmail] = useState('admin@velolink.club');
   const [adminRole, setAdminRole] = useState('Super Admin');
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [originalAdminName, setOriginalAdminName] = useState('Admin User');
-  const [originalAdminEmail, setOriginalAdminEmail] = useState('admin@velolink.com');
+  const [originalAdminEmail, setOriginalAdminEmail] = useState('admin@velolink.club');
   const [originalAdminRole, setOriginalAdminRole] = useState('Super Admin');
   const [originalAdminBio, setOriginalAdminBio] = useState('');
 
@@ -58,7 +58,7 @@ export default function AdminSettingsPage() {
 
   // Platform Settings State
   const [platformName, setPlatformName] = useState('VeloLink');
-  const [platformEmail, setPlatformEmail] = useState('support@velolink.com');
+  const [platformEmail, setPlatformEmail] = useState('support@velolink.club');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
 

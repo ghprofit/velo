@@ -236,7 +236,7 @@ let ContentService = ContentService_1 = class ContentService {
             const creatorEmail = content.creator.user.email;
             if (dto.status === 'APPROVED') {
                 this.logger.log(`Sending approval email for content ${id} to ${creatorEmail}`);
-                await this.emailService.sendContentApproval(creatorEmail, creatorName, content.title, `${process.env.CLIENT_URL || 'https://velolink.com'}/c/${content.id}`);
+                await this.emailService.sendContentApproval(creatorEmail, creatorName, content.title, `${process.env.CLIENT_URL || 'https://velolink.club'}/c/${content.id}`);
             }
             else if (dto.status === 'REJECTED') {
                 this.logger.log(`Sending rejection email for content ${id} to ${creatorEmail}`);

@@ -594,7 +594,7 @@ export default function SettingsPage() {
             <div className="max-w-5xl">
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Notifications Preferences</h2>
-                <p className="text-gray-600">Control which emails and in-app alerts you receive from VELO.</p>
+                <p className="text-gray-600">Control which emails and in-app alerts you receive from VeloLink.</p>
               </div>
 
               {/* Earning & Engagement Updates */}

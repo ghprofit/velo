@@ -7,7 +7,7 @@ VeloLink is a content platform with authentication, verification, and anonymous 
 ## Base URL
 ```
 Development: http://localhost:8000
-Production: https://api.velolink.com
+Production: https://api.velolink.club
 ```
 
 ## Authentication
@@ -637,4 +637,4 @@ curl -X GET http://localhost:8000/api/auth/profile \
 
 ## Support
 
-For questions or issues, contact: support@velolink.com
+For questions or issues, contact: support@velolink.club

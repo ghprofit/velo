@@ -7,7 +7,7 @@ import Link from 'next/link';
 const mockAdminData = {
   id: '1',
   name: 'Sarah Johnson',
-  email: 'sarah.johnson@velo.com',
+  email: 'sarah.johnson@velolink.club',
   role: 'Financial Admin',
   status: 'Active',
   twoFactorEnabled: true,

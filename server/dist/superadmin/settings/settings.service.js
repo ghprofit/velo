@@ -84,7 +84,7 @@ let SettingsService = class SettingsService {
             },
             {
                 key: 'support_email',
-                value: 'support@velo.com',
+                value: 'support@velolink.club',
                 description: 'Support email address',
                 category: settings_dto_1.SettingCategory.GENERAL,
                 isPublic: true,

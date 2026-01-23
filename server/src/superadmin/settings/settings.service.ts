@@ -81,7 +81,7 @@ export class SettingsService {
       },
       {
         key: 'support_email',
-        value: 'support@velo.com',
+        value: 'support@velolink.club',
         description: 'Support email address',
         category: SettingCategory.GENERAL,
         isPublic: true,

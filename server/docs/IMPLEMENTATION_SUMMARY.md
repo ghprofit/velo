@@ -260,7 +260,7 @@ REDIS_PORT=6379
 
 # SendGrid (for emails)
 SENDGRID_API_KEY=SG.xxx
-SENDGRID_FROM_EMAIL=noreply@velolink.com
+SENDGRID_FROM_EMAIL=noreply@velolink.club
 
 # Other required variables...
 ```

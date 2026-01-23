@@ -235,6 +235,42 @@ export class EmailService {
   }
 
   /**
+   * Send welcome email to creator from waitlist
+   * Includes information about the $50 waitlist bonus
+   */
+  async sendWelcomeCreatorWaitlistEmail(
+    to: string,
+    userName: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'WELCOME_CREATOR_WAITLIST',
+      {
+        user_name: userName,
+      },
+      'Welcome to Velo - Your $50 Waitlist Bonus Awaits!',
+    );
+  }
+
+  /**
+   * Send welcome email to regular creator (non-waitlist)
+   * Standard creator welcome without bonus information
+   */
+  async sendWelcomeCreatorEmail(
+    to: string,
+    userName: string,
+  ): Promise<EmailSendResult> {
+    return this.sendHTMLTemplateEmail(
+      to,
+      'WELCOME_CREATOR',
+      {
+        user_name: userName,
+      },
+      'Welcome to Velo - Start Creating Today!',
+    );
+  }
+
+  /**
    * Send email verification
    */
   async sendEmailVerification(

@@ -129,6 +129,28 @@ export class AuthService {
         // Don't fail registration if email fails
       }
 
+      // Send welcome email based on waitlist status
+      try {
+        if (hasWaitlistBonus) {
+          // Send waitlist-specific welcome with bonus information
+          await this.emailService.sendWelcomeCreatorWaitlistEmail(
+            user.email,
+            dto.displayName,
+          );
+          this.logger.log(`Waitlist welcome email sent to: ${user.email}`);
+        } else {
+          // Send regular creator welcome
+          await this.emailService.sendWelcomeCreatorEmail(
+            user.email,
+            dto.displayName,
+          );
+          this.logger.log(`Creator welcome email sent to: ${user.email}`);
+        }
+      } catch (error) {
+        this.logger.error(`Failed to send welcome email:`, error);
+        // Don't fail registration if welcome email fails
+      }
+
       // Delete waitlist entry after successful registration
       if (waitlistEntry) {
         await this.prisma.waitlist.delete({

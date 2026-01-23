@@ -1,36 +1,14 @@
 import type { EmailTemplate } from '../interfaces/email.interface';
 
 /**
- * VeloLink Logo URL
- * Set LOGO_URL in environment variables to use a custom logo
- * If not set, emails will use a text-based header instead
- */
-const getLogoUrl = (): string | null => {
-  // Use environment variable if set, otherwise return null for text-based header
-  return process.env.LOGO_URL || null;
-};
-
-/**
- * Generate logo HTML or text fallback
- * If no logo URL is configured, uses a styled text header
+ * Generate text-based velo logo
+ * Always uses text to avoid email spam filters flagging images
  */
 const getLogoHtml = (): string => {
-  const logoUrl = getLogoUrl();
-  if (logoUrl) {
-    return `
-      <img
-        src="${logoUrl}"
-        alt="VeloLink Logo"
-        width="180"
-        height="auto"
-        style="width: 180px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
-    `;
-  }
-  // Text-based fallback with styled logo
+  // Text-based velo logo - simple and elegant
   return `
-    <div style="margin-bottom: 16px;">
-      <span style="font-size: 36px; font-weight: 700; color: white; letter-spacing: -1px;">Velo</span><span style="font-size: 36px; font-weight: 300; color: rgba(255,255,255,0.9); letter-spacing: -1px;">Link</span>
+    <div style="margin-bottom: 20px; text-align: center;">
+      <span style="font-size: 42px; font-weight: 700; color: white; letter-spacing: -1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">velo</span>
     </div>
   `;
 };

@@ -57,10 +57,10 @@ export declare class AdminNotificationsService {
         data: {
             id: string;
             createdAt: Date;
-            message: string;
             userId: string;
-            title: string;
             type: string;
+            title: string;
+            message: string;
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         };
@@ -86,10 +86,10 @@ export declare class AdminNotificationsService {
         data: {
             id: string;
             createdAt: Date;
-            message: string;
             userId: string;
-            title: string;
             type: string;
+            title: string;
+            message: string;
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         };

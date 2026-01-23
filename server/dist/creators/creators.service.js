@@ -73,6 +73,18 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 },
             });
             this.logger.log(`Verification session created: ${session.verification.id} for user ${userId}`);
+            try {
+                await this.notificationsService.notifyAdmins(create_notification_dto_1.NotificationType.VERIFICATION_PENDING, 'New Verification Request', `${user.creatorProfile.displayName} has started identity verification`, {
+                    userId: user.id,
+                    creatorId: user.creatorProfile.id,
+                    displayName: user.creatorProfile.displayName,
+                    sessionId: session.verification.id,
+                });
+                this.logger.log(`Admin notification sent for verification: ${session.verification.id}`);
+            }
+            catch (notifError) {
+                this.logger.error(`Failed to notify admins about verification:`, notifError);
+            }
             return {
                 sessionId: session.verification.id,
                 verificationUrl: session.verification.url,
@@ -160,6 +172,40 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             }
             catch (error) {
                 this.logger.error('Failed to send verification email:', error);
+            }
+            try {
+                const creatorNotificationType = verificationStatus === client_1.VerificationStatus.VERIFIED
+                    ? create_notification_dto_1.NotificationType.VERIFICATION_APPROVED
+                    : create_notification_dto_1.NotificationType.VERIFICATION_REJECTED;
+                const creatorNotificationTitle = verificationStatus === client_1.VerificationStatus.VERIFIED
+                    ? 'Identity Verified!'
+                    : 'Verification Update';
+                const creatorNotificationMessage = verificationStatus === client_1.VerificationStatus.VERIFIED
+                    ? 'Congratulations! Your identity has been verified. You can now upload content and receive payouts.'
+                    : `Your identity verification status: ${verificationStatus}`;
+                await this.notificationsService.notify(creatorProfile.user.id, creatorNotificationType, creatorNotificationTitle, creatorNotificationMessage, {
+                    verificationStatus,
+                    sessionId,
+                });
+                this.logger.log(`Creator notification sent for verification: ${sessionId}`);
+            }
+            catch (notifError) {
+                this.logger.error(`Failed to send creator verification notification:`, notifError);
+            }
+            try {
+                const adminNotificationType = verificationStatus === client_1.VerificationStatus.VERIFIED
+                    ? create_notification_dto_1.NotificationType.VERIFICATION_APPROVED
+                    : create_notification_dto_1.NotificationType.VERIFICATION_REJECTED;
+                await this.notificationsService.notifyAdmins(adminNotificationType, `Verification ${verificationStatus}`, `${creatorProfile.displayName}'s verification ${verificationStatus.toLowerCase()}`, {
+                    creatorId: creatorProfile.id,
+                    displayName: creatorProfile.displayName,
+                    verificationStatus,
+                    sessionId,
+                });
+                this.logger.log(`Admin notification sent for verification completion: ${sessionId}`);
+            }
+            catch (notifError) {
+                this.logger.error(`Failed to notify admins about verification completion:`, notifError);
             }
         }
         catch (error) {

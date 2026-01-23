@@ -15,11 +15,14 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const email_service_1 = require("../email/email.service");
 const s3_service_1 = require("../s3/s3.service");
+const notifications_service_1 = require("../notifications/notifications.service");
+const create_notification_dto_1 = require("../notifications/dto/create-notification.dto");
 let ContentService = ContentService_1 = class ContentService {
-    constructor(prisma, emailService, s3Service) {
+    constructor(prisma, emailService, s3Service, notificationsService) {
         this.prisma = prisma;
         this.emailService = emailService;
         this.s3Service = s3Service;
+        this.notificationsService = notificationsService;
         this.logger = new common_1.Logger(ContentService_1.name);
     }
     async getContent(query) {
@@ -204,6 +207,7 @@ let ContentService = ContentService_1 = class ContentService {
                     include: {
                         user: {
                             select: {
+                                id: true,
                                 email: true,
                                 displayName: true,
                             },
@@ -243,6 +247,28 @@ let ContentService = ContentService_1 = class ContentService {
             const error = emailError;
             this.logger.error(`Failed to send email notification: ${error.message}`);
         }
+        try {
+            const creatorUserId = content.creator.user.id;
+            const notificationType = dto.status === 'APPROVED'
+                ? create_notification_dto_1.NotificationType.CONTENT_APPROVED
+                : create_notification_dto_1.NotificationType.CONTENT_REJECTED;
+            const notificationTitle = dto.status === 'APPROVED'
+                ? 'Content Approved!'
+                : 'Content Requires Changes';
+            const notificationMessage = dto.status === 'APPROVED'
+                ? `Your content "${content.title}" has been approved and is now live!`
+                : `Your content "${content.title}" was not approved. Please review our guidelines.`;
+            await this.notificationsService.notify(creatorUserId, notificationType, notificationTitle, notificationMessage, {
+                contentId: content.id,
+                contentTitle: content.title,
+                status: dto.status,
+            });
+            this.logger.log(`Creator notification created for content review: ${id}`);
+        }
+        catch (notifError) {
+            const error = notifError;
+            this.logger.error(`Failed to create creator notification: ${error.message}`);
+        }
         return {
             success: true,
             message: `Content ${dto.status.toLowerCase()} successfully`,
@@ -255,6 +281,14 @@ let ContentService = ContentService_1 = class ContentService {
     async flagContent(id, reason) {
         const content = await this.prisma.content.findUnique({
             where: { id },
+            include: {
+                creator: {
+                    select: {
+                        id: true,
+                        displayName: true,
+                    },
+                },
+            },
         });
         if (!content) {
             return {
@@ -269,6 +303,18 @@ let ContentService = ContentService_1 = class ContentService {
                 updatedAt: new Date(),
             },
         });
+        try {
+            await this.notificationsService.notifyAdmins(create_notification_dto_1.NotificationType.FLAGGED_CONTENT_ALERT, 'Content Flagged', `Content "${content.title}" by ${content.creator?.displayName || 'Unknown'} has been flagged. Reason: ${reason}`, {
+                contentId: content.id,
+                contentTitle: content.title,
+                creatorId: content.creatorId,
+                reason,
+            });
+            this.logger.log(`Admin notification sent for flagged content: ${id}`);
+        }
+        catch (error) {
+            this.logger.error(`Failed to notify admins about flagged content:`, error);
+        }
         return {
             success: true,
             message: 'Content flagged successfully',
@@ -310,6 +356,7 @@ exports.ContentService = ContentService = ContentService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         email_service_1.EmailService,
-        s3_service_1.S3Service])
+        s3_service_1.S3Service,
+        notifications_service_1.NotificationsService])
 ], ContentService);
 //# sourceMappingURL=content.service.js.map

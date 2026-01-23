@@ -16,6 +16,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { TwofactorService } from '../twofactor/twofactor.service';
 import { RedisService } from '../redis/redis.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/create-notification.dto';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -53,6 +55,7 @@ export class AuthService {
     private emailService: EmailService,
     private twofactorService: TwofactorService,
     private redisService: RedisService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -133,6 +136,26 @@ export class AuthService {
         }).catch(() => {
           // Ignore errors - don't fail registration if deletion fails
         });
+      }
+
+      // Notify admins about new creator signup
+      try {
+        await this.notificationsService.notifyAdmins(
+          NotificationType.NEW_CREATOR_SIGNUP,
+          'New Creator Signed Up',
+          `${dto.displayName} (${dto.email}) has registered as a new creator${hasWaitlistBonus ? ' (from waitlist)' : ''}`,
+          {
+            userId: user.id,
+            email: user.email,
+            displayName: dto.displayName,
+            creatorProfileId: user.creatorProfile?.id,
+            hasWaitlistBonus,
+          },
+        );
+        this.logger.log(`Admin notification sent for new creator: ${user.email}`);
+      } catch (error) {
+        this.logger.error(`Failed to notify admins about new signup:`, error);
+        // Don't fail registration if notification fails
       }
 
       return {

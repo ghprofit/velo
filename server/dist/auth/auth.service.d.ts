@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { TwofactorService } from '../twofactor/twofactor.service';
 import { RedisService } from '../redis/redis.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -22,10 +23,11 @@ export declare class AuthService {
     private emailService;
     private twofactorService;
     private redisService;
+    private notificationsService;
     private readonly logger;
     private readonly MAX_LOGIN_ATTEMPTS;
     private readonly LOCKOUT_DURATION;
-    constructor(prisma: PrismaService, jwtService: JwtService, config: ConfigService, emailService: EmailService, twofactorService: TwofactorService, redisService: RedisService);
+    constructor(prisma: PrismaService, jwtService: JwtService, config: ConfigService, emailService: EmailService, twofactorService: TwofactorService, redisService: RedisService, notificationsService: NotificationsService);
     register(dto: RegisterDto): Promise<{
         user: {
             id: string;
@@ -99,6 +101,7 @@ export declare class AuthService {
             displayName: string;
             firstName: string | null;
             lastName: string | null;
+            userId: string;
             country: string | null;
             bio: string | null;
             profileImage: string | null;
@@ -127,7 +130,6 @@ export declare class AuthService {
             availableBalance: number;
             waitlistBonus: number;
             bonusWithdrawn: boolean;
-            userId: string;
         } | null;
     }>;
     private hashPassword;

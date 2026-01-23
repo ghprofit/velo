@@ -4,6 +4,7 @@ import { StripeService } from '../stripe/stripe.service';
 import { EmailService } from '../email/email.service';
 import { S3Service } from '../s3/s3.service';
 import { RedisService } from '../redis/redis.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 export declare class BuyerService {
@@ -13,6 +14,7 @@ export declare class BuyerService {
     private s3Service;
     private redisService;
     private config;
+    private notificationsService;
     private readonly logger;
     private readonly SESSION_EXPIRY_MS;
     private readonly MAX_TRUSTED_DEVICES;
@@ -20,7 +22,7 @@ export declare class BuyerService {
     private readonly ACCESS_BUFFER_MINUTES;
     private readonly VIEW_COOLDOWN_MS;
     private readonly VERIFICATION_CODE_EXPIRY_MINUTES;
-    constructor(prisma: PrismaService, stripeService: StripeService, emailService: EmailService, s3Service: S3Service, redisService: RedisService, config: ConfigService);
+    constructor(prisma: PrismaService, stripeService: StripeService, emailService: EmailService, s3Service: S3Service, redisService: RedisService, config: ConfigService, notificationsService: NotificationsService);
     createOrGetSession(dto: CreateSessionDto, ipAddress?: string, userAgent?: string): Promise<{
         id: string;
         sessionToken: string;

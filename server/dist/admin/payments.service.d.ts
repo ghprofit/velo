@@ -162,6 +162,7 @@ export declare class PaymentsService {
                 displayName: string;
                 firstName: string | null;
                 lastName: string | null;
+                userId: string;
                 country: string | null;
                 bio: string | null;
                 profileImage: string | null;
@@ -193,7 +194,6 @@ export declare class PaymentsService {
                 availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
-                userId: string;
             };
         } & {
             id: string;
@@ -246,6 +246,7 @@ export declare class PaymentsService {
                 displayName: string;
                 firstName: string | null;
                 lastName: string | null;
+                userId: string;
                 country: string | null;
                 bio: string | null;
                 profileImage: string | null;
@@ -277,7 +278,6 @@ export declare class PaymentsService {
                 availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
-                userId: string;
             };
         } & {
             id: string;

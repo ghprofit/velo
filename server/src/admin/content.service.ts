@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { S3Service } from '../s3/s3.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/create-notification.dto';
 import { QueryContentDto, ReviewContentDto, ContentStatsDto } from './dto/content.dto';
 
 @Injectable()
@@ -12,6 +14,7 @@ export class ContentService {
     private prisma: PrismaService,
     private emailService: EmailService,
     private s3Service: S3Service,
+    private notificationsService: NotificationsService,
   ) {}
 
   async getContent(query: QueryContentDto) {
@@ -217,6 +220,7 @@ export class ContentService {
           include: {
             user: {
               select: {
+                id: true,
                 email: true,
                 displayName: true,
               },
@@ -271,6 +275,39 @@ export class ContentService {
       this.logger.error(`Failed to send email notification: ${error.message}`);
     }
 
+    // Create in-app notification for creator
+    try {
+      const creatorUserId = content.creator.user.id;
+      const notificationType = dto.status === 'APPROVED'
+        ? NotificationType.CONTENT_APPROVED
+        : NotificationType.CONTENT_REJECTED;
+
+      const notificationTitle = dto.status === 'APPROVED'
+        ? 'Content Approved!'
+        : 'Content Requires Changes';
+
+      const notificationMessage = dto.status === 'APPROVED'
+        ? `Your content "${content.title}" has been approved and is now live!`
+        : `Your content "${content.title}" was not approved. Please review our guidelines.`;
+
+      await this.notificationsService.notify(
+        creatorUserId,
+        notificationType,
+        notificationTitle,
+        notificationMessage,
+        {
+          contentId: content.id,
+          contentTitle: content.title,
+          status: dto.status,
+        },
+      );
+      this.logger.log(`Creator notification created for content review: ${id}`);
+    } catch (notifError) {
+      const error = notifError as Error;
+      this.logger.error(`Failed to create creator notification: ${error.message}`);
+      // Don't fail the review if notification fails
+    }
+
     return {
       success: true,
       message: `Content ${dto.status.toLowerCase()} successfully`,
@@ -284,6 +321,14 @@ export class ContentService {
   async flagContent(id: string, reason: string) {
     const content = await this.prisma.content.findUnique({
       where: { id },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            displayName: true,
+          },
+        },
+      },
     });
 
     if (!content) {
@@ -300,6 +345,25 @@ export class ContentService {
         updatedAt: new Date(),
       },
     });
+
+    // Notify admins about flagged content
+    try {
+      await this.notificationsService.notifyAdmins(
+        NotificationType.FLAGGED_CONTENT_ALERT,
+        'Content Flagged',
+        `Content "${content.title}" by ${content.creator?.displayName || 'Unknown'} has been flagged. Reason: ${reason}`,
+        {
+          contentId: content.id,
+          contentTitle: content.title,
+          creatorId: content.creatorId,
+          reason,
+        },
+      );
+      this.logger.log(`Admin notification sent for flagged content: ${id}`);
+    } catch (error) {
+      this.logger.error(`Failed to notify admins about flagged content:`, error);
+      // Don't fail the flag operation if notification fails
+    }
 
     return {
       success: true,

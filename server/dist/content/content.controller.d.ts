@@ -47,6 +47,7 @@ export declare class ContentController {
                     displayName: string;
                     firstName: string | null;
                     lastName: string | null;
+                    userId: string;
                     country: string | null;
                     bio: string | null;
                     profileImage: string | null;
@@ -78,7 +79,6 @@ export declare class ContentController {
                     availableBalance: number;
                     waitlistBonus: number;
                     bonusWithdrawn: boolean;
-                    userId: string;
                 };
                 contentItems: {
                     id: string;
@@ -93,10 +93,10 @@ export declare class ContentController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
+                title: string;
                 status: import(".prisma/client").$Enums.ContentStatus;
                 viewCount: number;
                 creatorId: string;
-                title: string;
                 description: string | null;
                 price: number;
                 thumbnailUrl: string;
@@ -142,6 +142,7 @@ export declare class ContentController {
                     displayName: string;
                     firstName: string | null;
                     lastName: string | null;
+                    userId: string;
                     country: string | null;
                     bio: string | null;
                     profileImage: string | null;
@@ -173,7 +174,6 @@ export declare class ContentController {
                     availableBalance: number;
                     waitlistBonus: number;
                     bonusWithdrawn: boolean;
-                    userId: string;
                 };
                 contentItems: {
                     id: string;
@@ -188,10 +188,10 @@ export declare class ContentController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
+                title: string;
                 status: import(".prisma/client").$Enums.ContentStatus;
                 viewCount: number;
                 creatorId: string;
-                title: string;
                 description: string | null;
                 price: number;
                 thumbnailUrl: string;
@@ -241,6 +241,7 @@ export declare class ContentController {
                     displayName: string;
                     firstName: string | null;
                     lastName: string | null;
+                    userId: string;
                     country: string | null;
                     bio: string | null;
                     profileImage: string | null;
@@ -272,7 +273,6 @@ export declare class ContentController {
                     availableBalance: number;
                     waitlistBonus: number;
                     bonusWithdrawn: boolean;
-                    userId: string;
                 };
                 contentItems: {
                     id: string;
@@ -287,10 +287,10 @@ export declare class ContentController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
+                title: string;
                 status: import(".prisma/client").$Enums.ContentStatus;
                 viewCount: number;
                 creatorId: string;
-                title: string;
                 description: string | null;
                 price: number;
                 thumbnailUrl: string;
@@ -337,10 +337,10 @@ export declare class ContentController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            title: string;
             status: import(".prisma/client").$Enums.ContentStatus;
             viewCount: number;
             creatorId: string;
-            title: string;
             description: string | null;
             price: number;
             thumbnailUrl: string;
@@ -388,6 +388,7 @@ export declare class ContentController {
                 displayName: string;
                 firstName: string | null;
                 lastName: string | null;
+                userId: string;
                 country: string | null;
                 bio: string | null;
                 profileImage: string | null;
@@ -419,7 +420,6 @@ export declare class ContentController {
                 availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
-                userId: string;
             };
             contentItems: {
                 id: string;
@@ -434,10 +434,10 @@ export declare class ContentController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            title: string;
             status: import(".prisma/client").$Enums.ContentStatus;
             viewCount: number;
             creatorId: string;
-            title: string;
             description: string | null;
             price: number;
             thumbnailUrl: string;

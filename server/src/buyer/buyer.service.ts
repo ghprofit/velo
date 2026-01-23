@@ -13,6 +13,8 @@ import { StripeService } from '../stripe/stripe.service';
 import { EmailService } from '../email/email.service';
 import { S3Service } from '../s3/s3.service';
 import { RedisService } from '../redis/redis.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/create-notification.dto';
 import * as crypto from 'crypto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
@@ -36,6 +38,7 @@ export class BuyerService {
     private s3Service: S3Service,
     private redisService: RedisService,
     private config: ConfigService,
+    private notificationsService: NotificationsService,
   ) {
     // Load configuration from environment with defaults
     this.SESSION_EXPIRY_MS =
@@ -690,7 +693,7 @@ export class BuyerService {
 
     const idempotencyKey = `client_${paymentIntentId}_${Date.now()}`;
 
-    return await this.prisma.$transaction(
+    const result = await this.prisma.$transaction(
       async (tx) => {
         const purchase = await tx.purchase.findUnique({
           where: { id: purchaseId },
@@ -827,10 +830,138 @@ export class BuyerService {
           purchaseId: purchase.id,
           accessToken: purchase.accessToken,
           status: 'COMPLETED',
+          // Additional data for email/notification sending
+          _internal: {
+            contentId: purchase.contentId,
+            creatorId: purchase.content.creatorId,
+            creatorEarnings,
+            amount: purchase.amount,
+          },
         };
       },
       { maxWait: 5000, timeout: 10000 },
     );
+
+    // Send emails and notifications AFTER transaction completes
+    // This ensures purchase is finalized before sending communications
+    // NOTE: Always check for COMPLETED status, regardless of whether we have _internal data
+    // This handles both: (1) first-time completion and (2) idempotent returns
+    if (result.status === 'COMPLETED') {
+      this.logger.log(`[EMAIL] Processing emails for completed purchase ${result.purchaseId}`);
+
+      // Fetch full data for emails (outside transaction for safety)
+      const purchaseWithRelations = await this.prisma.purchase.findUnique({
+        where: { id: result.purchaseId },
+        include: {
+          content: {
+            include: {
+              creator: {
+                include: { user: true },
+              },
+            },
+          },
+          buyerSession: true,
+        },
+      });
+
+      if (!purchaseWithRelations) {
+        this.logger.error(`[EMAIL] ❌ Could not fetch purchase ${result.purchaseId} for email sending`);
+      } else if (!purchaseWithRelations.content) {
+        this.logger.error(`[EMAIL] ❌ Purchase ${result.purchaseId} has no content`);
+      } else {
+        const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
+        const content = purchaseWithRelations.content;
+        const creator = content.creator;
+
+        // Calculate creator earnings from purchase data
+        const creatorEarnings = purchaseWithRelations.basePrice
+          ? purchaseWithRelations.basePrice * 0.9
+          : purchaseWithRelations.amount * 0.85;
+
+        // 1. Send purchase receipt to buyer
+        const buyerEmail = purchaseWithRelations.buyerSession?.email;
+        if (buyerEmail) {
+          try {
+            await this.emailService.sendPurchaseReceipt(buyerEmail, {
+              buyer_email: buyerEmail,
+              content_title: content.title,
+              amount: purchaseWithRelations.amount.toFixed(2),
+              date: new Date().toLocaleDateString(),
+              access_link: `${clientUrl}/c/${purchaseWithRelations.contentId}?token=${purchaseWithRelations.accessToken}`,
+              transaction_id: paymentIntentId,
+            });
+            this.logger.log(`[EMAIL] ✅ Purchase receipt sent to ${buyerEmail}`);
+          } catch (error) {
+            this.logger.error(`[EMAIL] ❌ Failed to send purchase receipt:`, error);
+          }
+        } else {
+          this.logger.warn(`[EMAIL] ⚠️ No buyer email found for purchase ${result.purchaseId}`);
+        }
+
+        // 2. Send sale notification to creator
+        if (creator && creator.user) {
+          const creatorUser = creator.user;
+          const creatorEmail = creatorUser.email;
+          const creatorName = creator.displayName;
+          try {
+            await this.emailService.sendCreatorSaleNotification(creatorEmail, {
+              creator_name: creatorName,
+              content_title: content.title,
+              amount: creatorEarnings.toFixed(2),
+              date: new Date().toLocaleDateString(),
+            });
+            this.logger.log(`[EMAIL] ✅ Creator sale notification sent to ${creatorEmail}`);
+          } catch (error) {
+            this.logger.error(`[EMAIL] ❌ Failed to send creator sale notification:`, error);
+          }
+
+          // 3. Create in-app notification for creator
+          try {
+            await this.notificationsService.notify(
+              creatorUser.id,
+              NotificationType.PURCHASE_MADE,
+              'Your Content Was Purchased!',
+              `Your content "${content.title}" was purchased! You earned $${creatorEarnings.toFixed(2)}`,
+              {
+                purchaseId: result.purchaseId,
+                contentId: purchaseWithRelations.contentId,
+                earnings: creatorEarnings,
+              },
+            );
+            this.logger.log(`[NOTIFICATION] ✅ Creator notification created`);
+          } catch (error) {
+            this.logger.error(`[NOTIFICATION] ❌ Failed to create creator notification:`, error);
+          }
+
+          // 4. Notify admins about purchase
+          try {
+            await this.notificationsService.notifyAdmins(
+              NotificationType.PURCHASE_MADE,
+              'New Purchase on Platform',
+              `A new purchase was made: "${content.title}" by ${creatorName} for $${purchaseWithRelations.amount.toFixed(2)}`,
+              {
+                purchaseId: result.purchaseId,
+                contentId: purchaseWithRelations.contentId,
+                creatorName,
+                amount: purchaseWithRelations.amount,
+              },
+            );
+            this.logger.log(`[NOTIFICATION] ✅ Admin notifications created`);
+          } catch (error) {
+            this.logger.error(`[NOTIFICATION] ❌ Failed to notify admins:`, error);
+          }
+        } else {
+          this.logger.warn(`[EMAIL] ⚠️ No creator found for purchase ${result.purchaseId}`);
+        }
+      }
+    }
+
+    // Return clean result (without internal data)
+    return {
+      purchaseId: result.purchaseId,
+      accessToken: result.accessToken,
+      status: result.status,
+    };
   }
 
   /**

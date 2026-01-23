@@ -6,6 +6,7 @@ import { StripeModule } from '../stripe/stripe.module';
 import { EmailModule } from '../email/email.module';
 import { S3Module } from '../s3/s3.module';
 import { RedisModule } from '../redis/redis.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { RedisModule } from '../redis/redis.module';
     EmailModule,
     S3Module,
     RedisModule,
+    NotificationsModule,
   ],
   controllers: [BuyerController],
   providers: [BuyerService],

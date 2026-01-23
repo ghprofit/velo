@@ -12,8 +12,8 @@ export declare class SettingsController {
             createdAt: Date;
             updatedAt: Date;
             description: string | null;
-            key: string;
             category: string;
+            key: string;
             value: string;
             isPublic: boolean;
             updatedBy: string | null;
@@ -26,8 +26,8 @@ export declare class SettingsController {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
-        key: string;
         category: string;
+        key: string;
         value: string;
         isPublic: boolean;
         updatedBy: string | null;
@@ -37,8 +37,8 @@ export declare class SettingsController {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
-        key: string;
         category: string;
+        key: string;
         value: string;
         isPublic: boolean;
         updatedBy: string | null;
@@ -49,8 +49,8 @@ export declare class SettingsController {
             createdAt: Date;
             updatedAt: Date;
             description: string | null;
-            key: string;
             category: string;
+            key: string;
             value: string;
             isPublic: boolean;
             updatedBy: string | null;
@@ -62,8 +62,8 @@ export declare class SettingsController {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
-        key: string;
         category: string;
+        key: string;
         value: string;
         isPublic: boolean;
         updatedBy: string | null;
@@ -73,8 +73,8 @@ export declare class SettingsController {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
-        key: string;
         category: string;
+        key: string;
         value: string;
         isPublic: boolean;
         updatedBy: string | null;
@@ -85,8 +85,8 @@ export declare class SettingsController {
             createdAt: Date;
             updatedAt: Date;
             description: string | null;
-            key: string;
             category: string;
+            key: string;
             value: string;
             isPublic: boolean;
             updatedBy: string | null;

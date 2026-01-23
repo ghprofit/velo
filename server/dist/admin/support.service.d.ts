@@ -73,8 +73,8 @@ export declare class SupportService {
             email: string;
             createdAt: Date;
             updatedAt: Date;
-            message: string;
             userId: string | null;
+            message: string;
             status: string;
             assignedTo: string | null;
             resolvedAt: Date | null;
@@ -94,8 +94,8 @@ export declare class SupportService {
             email: string;
             createdAt: Date;
             updatedAt: Date;
-            message: string;
             userId: string | null;
+            message: string;
             status: string;
             assignedTo: string | null;
             resolvedAt: Date | null;
@@ -115,8 +115,8 @@ export declare class SupportService {
             email: string;
             createdAt: Date;
             updatedAt: Date;
-            message: string;
             userId: string | null;
+            message: string;
             status: string;
             assignedTo: string | null;
             resolvedAt: Date | null;

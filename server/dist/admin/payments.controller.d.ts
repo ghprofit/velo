@@ -129,6 +129,7 @@ export declare class PaymentsController {
                 displayName: string;
                 firstName: string | null;
                 lastName: string | null;
+                userId: string;
                 country: string | null;
                 bio: string | null;
                 profileImage: string | null;
@@ -160,7 +161,6 @@ export declare class PaymentsController {
                 availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
-                userId: string;
             };
         } & {
             id: string;
@@ -213,6 +213,7 @@ export declare class PaymentsController {
                 displayName: string;
                 firstName: string | null;
                 lastName: string | null;
+                userId: string;
                 country: string | null;
                 bio: string | null;
                 profileImage: string | null;
@@ -244,7 +245,6 @@ export declare class PaymentsController {
                 availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
-                userId: string;
             };
         } & {
             id: string;

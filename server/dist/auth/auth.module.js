@@ -17,6 +17,7 @@ const jwt_strategy_1 = require("./strategies/jwt.strategy");
 const prisma_module_1 = require("../prisma/prisma.module");
 const email_module_1 = require("../email/email.module");
 const twofactor_module_1 = require("../twofactor/twofactor.module");
+const notifications_module_1 = require("../notifications/notifications.module");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -26,6 +27,7 @@ exports.AuthModule = AuthModule = __decorate([
             prisma_module_1.PrismaModule,
             email_module_1.EmailModule,
             twofactor_module_1.TwofactorModule,
+            notifications_module_1.NotificationsModule,
             passport_1.PassportModule,
             jwt_1.JwtModule.registerAsync({
                 imports: [config_1.ConfigModule],

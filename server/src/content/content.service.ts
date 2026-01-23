@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { RecognitionService } from '../recognition/recognition.service';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/create-notification.dto';
 import { CreateContentDto } from './dto/create-content.dto';
 import { CreateContentMultipartDto } from './dto/create-content-multipart.dto';
 import { GetUploadUrlDto } from './dto/get-upload-url.dto';
@@ -19,6 +21,7 @@ export class ContentService {
     private s3Service: S3Service,
     private recognitionService: RecognitionService,
     private emailService: EmailService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async createContent(userId: string, createContentDto: CreateContentDto) {
@@ -167,6 +170,28 @@ export class ContentService {
       this.logger.error(`Immediate review failed for ${content.id}:`, err.message);
     });
 
+    // Notify admins about content pending review
+    try {
+      const creatorName = content.creator?.user?.displayName || content.creator?.displayName || 'Unknown Creator';
+      await this.notificationsService.notifyAdmins(
+        NotificationType.CONTENT_PENDING_REVIEW,
+        'New Content Pending Review',
+        `New content "${content.title}" uploaded by ${creatorName} requires review`,
+        {
+          contentId: content.id,
+          contentTitle: content.title,
+          creatorId: creatorProfile.id,
+          creatorName,
+          contentType: createContentDto.contentType,
+          price: createContentDto.price,
+        },
+      );
+      this.logger.log(`Admin notification sent for new content: ${content.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to notify admins about new content:`, error);
+      // Don't fail content creation if notification fails
+    }
+
     return {
       content,
       link: `https://${contentLink}`,
@@ -298,6 +323,28 @@ export class ContentService {
     this.reviewContentImmediately(content.id).catch(err => {
       this.logger.error(`Immediate review failed for ${content.id}:`, err.message);
     });
+
+    // Notify admins about content pending review
+    try {
+      const creatorName = content.creator?.user?.displayName || content.creator?.displayName || 'Unknown Creator';
+      await this.notificationsService.notifyAdmins(
+        NotificationType.CONTENT_PENDING_REVIEW,
+        'New Content Pending Review',
+        `New content "${content.title}" uploaded by ${creatorName} requires review`,
+        {
+          contentId: content.id,
+          contentTitle: content.title,
+          creatorId: creatorProfile.id,
+          creatorName,
+          contentType: createContentDto.contentType,
+          price: createContentDto.price,
+        },
+      );
+      this.logger.log(`Admin notification sent for new multipart content: ${content.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to notify admins about new content:`, error);
+      // Don't fail content creation if notification fails
+    }
 
     // Return response - content is now in review status
     return {
@@ -1128,6 +1175,31 @@ export class ContentService {
     this.reviewContentImmediately(content.id).catch(err => {
       this.logger.error(`Immediate review failed for ${content.id}:`, err.message);
     });
+
+    // Notify admins about content pending review
+    try {
+      const creatorName = content.creator?.user?.displayName || content.creator?.displayName || creatorProfile?.user?.displayName || 'Unknown Creator';
+      const contentType = dto.items.length === 1
+        ? (dto.items[0]?.type === 'IMAGE' ? 'IMAGE' : 'VIDEO')
+        : 'GALLERY';
+      await this.notificationsService.notifyAdmins(
+        NotificationType.CONTENT_PENDING_REVIEW,
+        'New Content Pending Review',
+        `New content "${dto.title}" uploaded by ${creatorName} requires review`,
+        {
+          contentId: content.id,
+          contentTitle: dto.title,
+          creatorId: creatorProfile.id,
+          creatorName,
+          contentType,
+          price: dto.price,
+        },
+      );
+      this.logger.log(`Admin notification sent for direct upload content: ${content.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to notify admins about new content:`, error);
+      // Don't fail content creation if notification fails
+    }
 
     return {
       content,

@@ -10,8 +10,8 @@ export declare class SettingsService {
             createdAt: Date;
             updatedAt: Date;
             description: string | null;
-            key: string;
             category: string;
+            key: string;
             value: string;
             isPublic: boolean;
             updatedBy: string | null;
@@ -24,8 +24,8 @@ export declare class SettingsService {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
-        key: string;
         category: string;
+        key: string;
         value: string;
         isPublic: boolean;
         updatedBy: string | null;
@@ -36,8 +36,8 @@ export declare class SettingsService {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
-        key: string;
         category: string;
+        key: string;
         value: string;
         isPublic: boolean;
         updatedBy: string | null;
@@ -47,8 +47,8 @@ export declare class SettingsService {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
-        key: string;
         category: string;
+        key: string;
         value: string;
         isPublic: boolean;
         updatedBy: string | null;
@@ -59,8 +59,8 @@ export declare class SettingsService {
             createdAt: Date;
             updatedAt: Date;
             description: string | null;
-            key: string;
             category: string;
+            key: string;
             value: string;
             isPublic: boolean;
             updatedBy: string | null;
@@ -72,8 +72,8 @@ export declare class SettingsService {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
-        key: string;
         category: string;
+        key: string;
         value: string;
         isPublic: boolean;
         updatedBy: string | null;
@@ -84,8 +84,8 @@ export declare class SettingsService {
             createdAt: Date;
             updatedAt: Date;
             description: string | null;
-            key: string;
             category: string;
+            key: string;
             value: string;
             isPublic: boolean;
             updatedBy: string | null;

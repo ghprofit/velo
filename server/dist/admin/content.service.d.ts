@@ -1,13 +1,15 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { S3Service } from '../s3/s3.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { QueryContentDto, ReviewContentDto, ContentStatsDto } from './dto/content.dto';
 export declare class ContentService {
     private prisma;
     private emailService;
     private s3Service;
+    private notificationsService;
     private readonly logger;
-    constructor(prisma: PrismaService, emailService: EmailService, s3Service: S3Service);
+    constructor(prisma: PrismaService, emailService: EmailService, s3Service: S3Service, notificationsService: NotificationsService);
     getContent(query: QueryContentDto): Promise<{
         success: boolean;
         data: {

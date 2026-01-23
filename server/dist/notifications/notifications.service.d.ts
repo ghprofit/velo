@@ -8,10 +8,10 @@ export declare class NotificationsService {
     getNotifications(userId: string, category?: string): Promise<{
         id: string;
         createdAt: Date;
-        message: string;
         userId: string;
-        title: string;
         type: string;
+        title: string;
+        message: string;
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         isRead: boolean;
     }[]>;
@@ -25,10 +25,10 @@ export declare class NotificationsService {
     markAsRead(userId: string, notificationId: string): Promise<{
         id: string;
         createdAt: Date;
-        message: string;
         userId: string;
-        title: string;
         type: string;
+        title: string;
+        message: string;
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         isRead: boolean;
     }>;
@@ -36,10 +36,10 @@ export declare class NotificationsService {
     deleteNotification(userId: string, notificationId: string): Promise<{
         id: string;
         createdAt: Date;
-        message: string;
         userId: string;
-        title: string;
         type: string;
+        title: string;
+        message: string;
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         isRead: boolean;
     }>;
@@ -47,10 +47,10 @@ export declare class NotificationsService {
     createNotification(dto: CreateNotificationDto): Promise<{
         id: string;
         createdAt: Date;
-        message: string;
         userId: string;
-        title: string;
         type: string;
+        title: string;
+        message: string;
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         isRead: boolean;
     }>;
@@ -82,10 +82,10 @@ export declare class NotificationsService {
         } & {
             id: string;
             createdAt: Date;
-            message: string;
             userId: string;
-            title: string;
             type: string;
+            title: string;
+            message: string;
             metadata: import("@prisma/client/runtime/client").JsonValue | null;
             isRead: boolean;
         })[];
@@ -107,10 +107,10 @@ export declare class NotificationsService {
     adminDeleteNotification(notificationId: string): Promise<{
         id: string;
         createdAt: Date;
-        message: string;
         userId: string;
-        title: string;
         type: string;
+        title: string;
+        message: string;
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         isRead: boolean;
     }>;
@@ -123,10 +123,10 @@ export declare class NotificationsService {
     notify(userId: string, type: NotificationType, title: string, message: string, metadata?: Record<string, any>): Promise<{
         id: string;
         createdAt: Date;
-        message: string;
         userId: string;
-        title: string;
         type: string;
+        title: string;
+        message: string;
         metadata: import("@prisma/client/runtime/client").JsonValue | null;
         isRead: boolean;
     }>;

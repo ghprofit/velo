@@ -53,14 +53,17 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const email_service_1 = require("../email/email.service");
 const twofactor_service_1 = require("../twofactor/twofactor.service");
 const redis_service_1 = require("../redis/redis.service");
+const notifications_service_1 = require("../notifications/notifications.service");
+const create_notification_dto_1 = require("../notifications/dto/create-notification.dto");
 let AuthService = AuthService_1 = class AuthService {
-    constructor(prisma, jwtService, config, emailService, twofactorService, redisService) {
+    constructor(prisma, jwtService, config, emailService, twofactorService, redisService, notificationsService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
         this.config = config;
         this.emailService = emailService;
         this.twofactorService = twofactorService;
         this.redisService = redisService;
+        this.notificationsService = notificationsService;
         this.logger = new common_1.Logger(AuthService_1.name);
         this.MAX_LOGIN_ATTEMPTS = 5;
         this.LOCKOUT_DURATION = 1800;
@@ -125,6 +128,19 @@ let AuthService = AuthService_1 = class AuthService {
                     where: { id: waitlistEntry.id },
                 }).catch(() => {
                 });
+            }
+            try {
+                await this.notificationsService.notifyAdmins(create_notification_dto_1.NotificationType.NEW_CREATOR_SIGNUP, 'New Creator Signed Up', `${dto.displayName} (${dto.email}) has registered as a new creator${hasWaitlistBonus ? ' (from waitlist)' : ''}`, {
+                    userId: user.id,
+                    email: user.email,
+                    displayName: dto.displayName,
+                    creatorProfileId: user.creatorProfile?.id,
+                    hasWaitlistBonus,
+                });
+                this.logger.log(`Admin notification sent for new creator: ${user.email}`);
+            }
+            catch (error) {
+                this.logger.error(`Failed to notify admins about new signup:`, error);
             }
             return {
                 user: {
@@ -871,6 +887,7 @@ exports.AuthService = AuthService = AuthService_1 = __decorate([
         config_1.ConfigService,
         email_service_1.EmailService,
         twofactor_service_1.TwofactorService,
-        redis_service_1.RedisService])
+        redis_service_1.RedisService,
+        notifications_service_1.NotificationsService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

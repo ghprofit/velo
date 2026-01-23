@@ -52,15 +52,18 @@ const stripe_service_1 = require("../stripe/stripe.service");
 const email_service_1 = require("../email/email.service");
 const s3_service_1 = require("../s3/s3.service");
 const redis_service_1 = require("../redis/redis.service");
+const notifications_service_1 = require("../notifications/notifications.service");
+const create_notification_dto_1 = require("../notifications/dto/create-notification.dto");
 const crypto = __importStar(require("crypto"));
 let BuyerService = BuyerService_1 = class BuyerService {
-    constructor(prisma, stripeService, emailService, s3Service, redisService, config) {
+    constructor(prisma, stripeService, emailService, s3Service, redisService, config, notificationsService) {
         this.prisma = prisma;
         this.stripeService = stripeService;
         this.emailService = emailService;
         this.s3Service = s3Service;
         this.redisService = redisService;
         this.config = config;
+        this.notificationsService = notificationsService;
         this.logger = new common_1.Logger(BuyerService_1.name);
         this.VERIFICATION_CODE_EXPIRY_MINUTES = 15;
         this.SESSION_EXPIRY_MS =
@@ -533,7 +536,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
     async confirmPurchase(purchaseId, paymentIntentId) {
         this.logger.log(`Confirming purchase ${purchaseId} with payment intent ${paymentIntentId}`);
         const idempotencyKey = `client_${paymentIntentId}_${Date.now()}`;
-        return await this.prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
             const purchase = await tx.purchase.findUnique({
                 where: { id: purchaseId },
                 include: {
@@ -617,8 +620,112 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 purchaseId: purchase.id,
                 accessToken: purchase.accessToken,
                 status: 'COMPLETED',
+                _internal: {
+                    contentId: purchase.contentId,
+                    creatorId: purchase.content.creatorId,
+                    creatorEarnings,
+                    amount: purchase.amount,
+                },
             };
         }, { maxWait: 5000, timeout: 10000 });
+        if (result.status === 'COMPLETED') {
+            this.logger.log(`[EMAIL] Processing emails for completed purchase ${result.purchaseId}`);
+            const purchaseWithRelations = await this.prisma.purchase.findUnique({
+                where: { id: result.purchaseId },
+                include: {
+                    content: {
+                        include: {
+                            creator: {
+                                include: { user: true },
+                            },
+                        },
+                    },
+                    buyerSession: true,
+                },
+            });
+            if (!purchaseWithRelations) {
+                this.logger.error(`[EMAIL] ❌ Could not fetch purchase ${result.purchaseId} for email sending`);
+            }
+            else if (!purchaseWithRelations.content) {
+                this.logger.error(`[EMAIL] ❌ Purchase ${result.purchaseId} has no content`);
+            }
+            else {
+                const clientUrl = this.config.get('CLIENT_URL') || 'http://localhost:3000';
+                const content = purchaseWithRelations.content;
+                const creator = content.creator;
+                const creatorEarnings = purchaseWithRelations.basePrice
+                    ? purchaseWithRelations.basePrice * 0.9
+                    : purchaseWithRelations.amount * 0.85;
+                const buyerEmail = purchaseWithRelations.buyerSession?.email;
+                if (buyerEmail) {
+                    try {
+                        await this.emailService.sendPurchaseReceipt(buyerEmail, {
+                            buyer_email: buyerEmail,
+                            content_title: content.title,
+                            amount: purchaseWithRelations.amount.toFixed(2),
+                            date: new Date().toLocaleDateString(),
+                            access_link: `${clientUrl}/c/${purchaseWithRelations.contentId}?token=${purchaseWithRelations.accessToken}`,
+                            transaction_id: paymentIntentId,
+                        });
+                        this.logger.log(`[EMAIL] ✅ Purchase receipt sent to ${buyerEmail}`);
+                    }
+                    catch (error) {
+                        this.logger.error(`[EMAIL] ❌ Failed to send purchase receipt:`, error);
+                    }
+                }
+                else {
+                    this.logger.warn(`[EMAIL] ⚠️ No buyer email found for purchase ${result.purchaseId}`);
+                }
+                if (creator && creator.user) {
+                    const creatorUser = creator.user;
+                    const creatorEmail = creatorUser.email;
+                    const creatorName = creator.displayName;
+                    try {
+                        await this.emailService.sendCreatorSaleNotification(creatorEmail, {
+                            creator_name: creatorName,
+                            content_title: content.title,
+                            amount: creatorEarnings.toFixed(2),
+                            date: new Date().toLocaleDateString(),
+                        });
+                        this.logger.log(`[EMAIL] ✅ Creator sale notification sent to ${creatorEmail}`);
+                    }
+                    catch (error) {
+                        this.logger.error(`[EMAIL] ❌ Failed to send creator sale notification:`, error);
+                    }
+                    try {
+                        await this.notificationsService.notify(creatorUser.id, create_notification_dto_1.NotificationType.PURCHASE_MADE, 'Your Content Was Purchased!', `Your content "${content.title}" was purchased! You earned $${creatorEarnings.toFixed(2)}`, {
+                            purchaseId: result.purchaseId,
+                            contentId: purchaseWithRelations.contentId,
+                            earnings: creatorEarnings,
+                        });
+                        this.logger.log(`[NOTIFICATION] ✅ Creator notification created`);
+                    }
+                    catch (error) {
+                        this.logger.error(`[NOTIFICATION] ❌ Failed to create creator notification:`, error);
+                    }
+                    try {
+                        await this.notificationsService.notifyAdmins(create_notification_dto_1.NotificationType.PURCHASE_MADE, 'New Purchase on Platform', `A new purchase was made: "${content.title}" by ${creatorName} for $${purchaseWithRelations.amount.toFixed(2)}`, {
+                            purchaseId: result.purchaseId,
+                            contentId: purchaseWithRelations.contentId,
+                            creatorName,
+                            amount: purchaseWithRelations.amount,
+                        });
+                        this.logger.log(`[NOTIFICATION] ✅ Admin notifications created`);
+                    }
+                    catch (error) {
+                        this.logger.error(`[NOTIFICATION] ❌ Failed to notify admins:`, error);
+                    }
+                }
+                else {
+                    this.logger.warn(`[EMAIL] ⚠️ No creator found for purchase ${result.purchaseId}`);
+                }
+            }
+        }
+        return {
+            purchaseId: result.purchaseId,
+            accessToken: result.accessToken,
+            status: result.status,
+        };
     }
     async checkAccessEligibility(accessToken, fingerprint) {
         this.logger.log(`Checking access eligibility for token: ${accessToken?.substring(0, 10)}...`);
@@ -839,6 +946,7 @@ exports.BuyerService = BuyerService = BuyerService_1 = __decorate([
         email_service_1.EmailService,
         s3_service_1.S3Service,
         redis_service_1.RedisService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        notifications_service_1.NotificationsService])
 ], BuyerService);
 //# sourceMappingURL=buyer.service.js.map

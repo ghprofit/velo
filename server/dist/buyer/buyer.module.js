@@ -15,6 +15,7 @@ const stripe_module_1 = require("../stripe/stripe.module");
 const email_module_1 = require("../email/email.module");
 const s3_module_1 = require("../s3/s3.module");
 const redis_module_1 = require("../redis/redis.module");
+const notifications_module_1 = require("../notifications/notifications.module");
 let BuyerModule = class BuyerModule {
 };
 exports.BuyerModule = BuyerModule;
@@ -26,6 +27,7 @@ exports.BuyerModule = BuyerModule = __decorate([
             email_module_1.EmailModule,
             s3_module_1.S3Module,
             redis_module_1.RedisModule,
+            notifications_module_1.NotificationsModule,
         ],
         controllers: [buyer_controller_1.BuyerController],
         providers: [buyer_service_1.BuyerService],

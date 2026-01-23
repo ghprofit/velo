@@ -2,6 +2,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { RecognitionService } from '../recognition/recognition.service';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateContentDto } from './dto/create-content.dto';
 import { CreateContentMultipartDto } from './dto/create-content-multipart.dto';
 import { GetUploadUrlDto } from './dto/get-upload-url.dto';
@@ -11,8 +12,9 @@ export declare class ContentService {
     private s3Service;
     private recognitionService;
     private emailService;
+    private notificationsService;
     private readonly logger;
-    constructor(prisma: PrismaService, s3Service: S3Service, recognitionService: RecognitionService, emailService: EmailService);
+    constructor(prisma: PrismaService, s3Service: S3Service, recognitionService: RecognitionService, emailService: EmailService, notificationsService: NotificationsService);
     createContent(userId: string, createContentDto: CreateContentDto): Promise<{
         content: {
             creator: {
@@ -28,6 +30,7 @@ export declare class ContentService {
                 displayName: string;
                 firstName: string | null;
                 lastName: string | null;
+                userId: string;
                 country: string | null;
                 bio: string | null;
                 profileImage: string | null;
@@ -59,7 +62,6 @@ export declare class ContentService {
                 availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
-                userId: string;
             };
             contentItems: {
                 id: string;
@@ -74,10 +76,10 @@ export declare class ContentService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            title: string;
             status: import(".prisma/client").$Enums.ContentStatus;
             viewCount: number;
             creatorId: string;
-            title: string;
             description: string | null;
             price: number;
             thumbnailUrl: string;
@@ -125,6 +127,7 @@ export declare class ContentService {
                 displayName: string;
                 firstName: string | null;
                 lastName: string | null;
+                userId: string;
                 country: string | null;
                 bio: string | null;
                 profileImage: string | null;
@@ -156,7 +159,6 @@ export declare class ContentService {
                 availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
-                userId: string;
             };
             contentItems: {
                 id: string;
@@ -171,10 +173,10 @@ export declare class ContentService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            title: string;
             status: import(".prisma/client").$Enums.ContentStatus;
             viewCount: number;
             creatorId: string;
-            title: string;
             description: string | null;
             price: number;
             thumbnailUrl: string;
@@ -222,10 +224,10 @@ export declare class ContentService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        title: string;
         status: import(".prisma/client").$Enums.ContentStatus;
         viewCount: number;
         creatorId: string;
-        title: string;
         description: string | null;
         price: number;
         thumbnailUrl: string;
@@ -261,6 +263,7 @@ export declare class ContentService {
             displayName: string;
             firstName: string | null;
             lastName: string | null;
+            userId: string;
             country: string | null;
             bio: string | null;
             profileImage: string | null;
@@ -292,7 +295,6 @@ export declare class ContentService {
             availableBalance: number;
             waitlistBonus: number;
             bonusWithdrawn: boolean;
-            userId: string;
         };
         contentItems: {
             id: string;
@@ -307,10 +309,10 @@ export declare class ContentService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        title: string;
         status: import(".prisma/client").$Enums.ContentStatus;
         viewCount: number;
         creatorId: string;
-        title: string;
         description: string | null;
         price: number;
         thumbnailUrl: string;
@@ -407,6 +409,7 @@ export declare class ContentService {
                 displayName: string;
                 firstName: string | null;
                 lastName: string | null;
+                userId: string;
                 country: string | null;
                 bio: string | null;
                 profileImage: string | null;
@@ -438,7 +441,6 @@ export declare class ContentService {
                 availableBalance: number;
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
-                userId: string;
             };
             contentItems: {
                 id: string;
@@ -453,10 +455,10 @@ export declare class ContentService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            title: string;
             status: import(".prisma/client").$Enums.ContentStatus;
             viewCount: number;
             creatorId: string;
-            title: string;
             description: string | null;
             price: number;
             thumbnailUrl: string;

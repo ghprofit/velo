@@ -3,7 +3,7 @@
 export interface User {
   id: string;
   email: string;
-  role: 'USER' | 'ADMIN' | 'CREATOR';
+  role: 'USER' | 'ADMIN' | 'CREATOR' | 'SUPPORT' | 'SUPER_ADMIN';
   emailVerified: boolean;
   adminRole?: 'FINANCIAL_ADMIN' | 'CONTENT_ADMIN' | 'SUPPORT_SPECIALIST' | 'ANALYTICS_ADMIN' | null;
   creatorProfile?: CreatorProfile;

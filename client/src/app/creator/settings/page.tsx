@@ -811,7 +811,7 @@ export default function SettingsPage() {
                   {bankFormData.bankCountry && bankFormData.bankCountry !== 'US' && (
                     <div>
                       <label htmlFor="bankSwiftCode" className="block text-sm font-medium text-gray-900 mb-2">
-                        SWIFT/BIC Code
+                        SWIFT/BIC Code/Sort Code
                       </label>
                       <input
                         id="bankSwiftCode"

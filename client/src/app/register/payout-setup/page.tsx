@@ -309,7 +309,7 @@ export default function PayoutSetupPage() {
               {formData.bankCountry && formData.bankCountry !== 'US' && (
                 <div>
                   <label htmlFor="bankSwiftCode" className="block text-sm font-medium text-gray-700 mb-2">
-                    SWIFT/BIC Code
+                    SWIFT/BIC Code/Sort Code
                   </label>
                   <input
                     id="bankSwiftCode"

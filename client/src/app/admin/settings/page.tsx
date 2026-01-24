@@ -100,17 +100,13 @@ export default function AdminSettingsPage() {
   // API Functions
   const loadNotificationSettings = async () => {
     try {
-      const response = await fetch('/api/admin/notifications', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setEmailNotifications(data.emailNotifications ?? true);
-        setPushNotifications(data.pushNotifications ?? true);
-        setNewCreatorAlert(data.newCreatorAlert ?? true);
-        setPaymentAlert(data.paymentAlert ?? true);
-        setReportAlert(data.reportAlert ?? true);
-      }
+      // TODO: Implement backend endpoint for user notification preferences
+      // For now, use default values
+      setEmailNotifications(true);
+      setPushNotifications(true);
+      setNewCreatorAlert(true);
+      setPaymentAlert(true);
+      setReportAlert(true);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     }
@@ -119,13 +115,9 @@ export default function AdminSettingsPage() {
   const loadActiveSessions = async () => {
     try {
       setSessionsLoading(true);
-      const response = await fetch('/api/admin/sessions', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setActiveSessions(data.sessions);
-      }
+      // TODO: Implement backend endpoint for active sessions
+      // For now, set empty array
+      setActiveSessions([]);
     } catch (error) {
       console.error('Failed to load sessions:', error);
     } finally {

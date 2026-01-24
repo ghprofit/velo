@@ -1,10 +1,11 @@
 'use client';
 
-import { JSX, useState } from 'react';
+import { JSX, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLogout } from '@/hooks/useLogout';
 import LogoutModal from './LogoutModal';
+import { useAuth } from '@/context/auth-context';
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -14,19 +15,104 @@ export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { logout, isLoggingOut } = useLogout();
+  const { user } = useAuth();
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/admin/dashboard' },
-    { id: 'creator-management', label: 'Creator Management', icon: 'users', hasSubmenu: true },
-    { id: 'creators', label: 'Creators', icon: 'creator', href: '/admin/creators', isSubmenu: true },
-    { id: 'content', label: 'Content', icon: 'content', href: '/admin/content', isSubmenu: true },
-    { id: 'payments', label: 'Payments', icon: 'payments', href: '/admin/payments', isSubmenu: true },
-    { id: 'payouts', label: 'Payout Requests', icon: 'payouts', href: '/admin/payouts', isSubmenu: true },
-    { id: 'reports', label: 'Reports & Analytics', icon: 'reports', href: '/admin/reports', isSubmenu: true },
-    { id: 'support', label: 'Support', icon: 'support', href: '/admin/support' },
-    { id: 'notifications', label: 'Notifications', icon: 'notifications', href: '/admin/notifications' },
-    { id: 'settings', label: 'Settings', icon: 'settings', href: '/admin/settings' },
+  // Define menu items with role-based access
+  const allMenuItems = [
+    { 
+      id: 'dashboard', 
+      label: 'Dashboard', 
+      icon: 'dashboard', 
+      href: '/admin/dashboard',
+      roles: ['FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'],
+    },
+    { 
+      id: 'creator-management', 
+      label: 'Creator Management', 
+      icon: 'users', 
+      hasSubmenu: true,
+      roles: ['CONTENT_ADMIN'],
+    },
+    { 
+      id: 'creators', 
+      label: 'Creators', 
+      icon: 'creator', 
+      href: '/admin/creators', 
+      isSubmenu: true,
+      roles: ['CONTENT_ADMIN'],
+    },
+    { 
+      id: 'content', 
+      label: 'Content', 
+      icon: 'content', 
+      href: '/admin/content', 
+      isSubmenu: true,
+      roles: ['CONTENT_ADMIN'],
+    },
+    { 
+      id: 'payments', 
+      label: 'Payments', 
+      icon: 'payments', 
+      href: '/admin/payments', 
+      isSubmenu: true,
+      roles: ['FINANCIAL_ADMIN'],
+    },
+    { 
+      id: 'payouts', 
+      label: 'Payout Requests', 
+      icon: 'payouts', 
+      href: '/admin/payouts', 
+      isSubmenu: true,
+      roles: ['FINANCIAL_ADMIN'],
+    },
+    { 
+      id: 'reports', 
+      label: 'Reports & Analytics', 
+      icon: 'reports', 
+      href: '/admin/reports', 
+      isSubmenu: true,
+      roles: ['ANALYTICS_ADMIN', 'FINANCIAL_ADMIN'],
+    },
+    { 
+      id: 'support', 
+      label: 'Support', 
+      icon: 'support', 
+      href: '/admin/support',
+      roles: ['SUPPORT_SPECIALIST'],
+    },
+    { 
+      id: 'notifications', 
+      label: 'Notifications', 
+      icon: 'notifications', 
+      href: '/admin/notifications',
+      roles: ['FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'],
+    },
+    { 
+      id: 'settings', 
+      label: 'Settings', 
+      icon: 'settings', 
+      href: '/admin/settings',
+      roles: ['FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'],
+    },
   ];
+
+  // Filter menu items based on user's admin role
+  const menuItems = useMemo(() => {
+    const adminRole = user?.adminRole;
+    
+    if (!adminRole) {
+      // If no adminRole (e.g., SUPER_ADMIN), show all items
+      return allMenuItems;
+    }
+
+    return allMenuItems.filter(item => {
+      // If item has no roles defined, show it to everyone
+      if (!item.roles) return true;
+      
+      // Otherwise, check if user's role is in the allowed roles
+      return item.roles.includes(adminRole);
+    });
+  }, [user?.adminRole]);
 
   const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
     const icons: Record<string, JSX.Element> = {

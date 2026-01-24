@@ -2,6 +2,8 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { AdminRoleGuard } from '../auth/guards/admin-role.guard';
+import { AdminRoles } from '../auth/decorators/admin-roles.decorator';
 
 export interface CreatorPerformanceDto {
   creatorId: string;
@@ -76,7 +78,8 @@ export interface GeographicDistributionResponse {
 }
 
 @Controller('admin/reports')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard, AdminRoleGuard)
+@AdminRoles('ANALYTICS_ADMIN', 'FINANCIAL_ADMIN')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 

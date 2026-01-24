@@ -9,8 +9,10 @@ import {
 } from '@/state/api';
 import AdminSidebar from '@/components/AdminSidebar';
 import { useLogout } from '@/hooks/useLogout';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 export default function ContentManagementPage() {
+  const { hasAccess, loading: accessLoading } = useAdminAccess({ allowedRoles: ['CONTENT_ADMIN'] });
   const router = useRouter();
   const [reviewContent] = useReviewContentMutation();
 
@@ -37,6 +39,29 @@ export default function ContentManagementPage() {
   });
 
   const { data: statsData } = useGetAdminContentStatsQuery();
+
+  // Click outside to close profile dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setShowProfileDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  if (accessLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   const content = contentData?.data || [];
   const pagination = contentData?.pagination;
@@ -118,17 +143,6 @@ export default function ContentManagementPage() {
       currency: 'USD',
     }).format(amount);
   };
-
-  // Click outside to close profile dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
-        setShowProfileDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Export content data to CSV
   const handleExportReport = () => {

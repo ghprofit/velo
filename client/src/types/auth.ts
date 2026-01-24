@@ -5,6 +5,7 @@ export interface User {
   email: string;
   role: 'USER' | 'ADMIN' | 'CREATOR';
   emailVerified: boolean;
+  adminRole?: 'FINANCIAL_ADMIN' | 'CONTENT_ADMIN' | 'SUPPORT_SPECIALIST' | 'ANALYTICS_ADMIN' | null;
   creatorProfile?: CreatorProfile;
 }
 

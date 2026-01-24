@@ -2,6 +2,8 @@ import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { AdminRoleGuard } from '../auth/guards/admin-role.guard';
+import { AdminRoles } from '../auth/decorators/admin-roles.decorator';
 import {
   QueryPaymentsDto,
   QueryPayoutsDto,
@@ -10,7 +12,8 @@ import {
 import { ApprovePayoutRequestDto, RejectPayoutRequestDto } from './dto/approve-payout-request.dto';
 
 @Controller('admin/payments')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard, AdminRoleGuard)
+@AdminRoles('FINANCIAL_ADMIN')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 

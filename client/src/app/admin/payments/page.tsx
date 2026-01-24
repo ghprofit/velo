@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
 import { useGetAdminTransactionsQuery, useGetPaymentStatsQuery, useGetRevenueOverTimeQuery, AdminTransaction } from '@/state/api';
 import { useLogout } from '@/hooks/useLogout';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 export default function PaymentsPage() {
+  const { hasAccess, loading: accessLoading } = useAdminAccess({ allowedRoles: ['FINANCIAL_ADMIN'] });
   const router = useRouter();
   const [activeTab] = useState('payments');
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +54,18 @@ export default function PaymentsPage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  if (accessLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   // Export CSV function
   const handleExportCSV = () => {

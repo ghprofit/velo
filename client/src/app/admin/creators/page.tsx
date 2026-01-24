@@ -8,8 +8,10 @@ import {
 } from '@/state/api';
 import AdminSidebar from '@/components/AdminSidebar';
 import { useLogout } from '@/hooks/useLogout';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 export default function CreatorManagementPage() {
+  const { hasAccess, loading: accessLoading } = useAdminAccess({ allowedRoles: ['CONTENT_ADMIN'] });
   const router = useRouter();
   const activeTab = 'creators';
   const [kycFilter, setKycFilter] = useState('all');
@@ -31,6 +33,29 @@ export default function CreatorManagementPage() {
   });
 
   const { data: statsData } = useGetAdminCreatorStatsQuery();
+
+  // Click outside to close profile dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setShowProfileDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  if (accessLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   const creators = creatorsData?.data || [];
   const pagination = creatorsData?.pagination;
@@ -110,17 +135,6 @@ export default function CreatorManagementPage() {
       .toUpperCase()
       .slice(0, 2);
   };
-
-  // Click outside to close profile dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
-        setShowProfileDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Export creators data to CSV
   const handleExportData = () => {

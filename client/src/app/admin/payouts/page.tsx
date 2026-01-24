@@ -6,6 +6,7 @@ import { Bell, Settings, LogOut } from 'lucide-react';
 import AdminSidebar from '@/components/AdminSidebar';
 import { adminApi } from '@/lib/api-client';
 import { useLogout } from '@/hooks/useLogout';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 interface PayoutRequest {
   id: string;
@@ -26,6 +27,7 @@ interface PayoutRequest {
 }
 
 export default function AdminPayoutsPage() {
+  const { hasAccess, loading: accessLoading } = useAdminAccess({ allowedRoles: ['FINANCIAL_ADMIN'] });
   const [requests, setRequests] = useState<PayoutRequest[]>([]);
   const [filter, setFilter] = useState('PENDING');
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,18 @@ export default function AdminPayoutsPage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  if (accessLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   const handleApprove = (request: PayoutRequest) => {
     setSelectedRequest(request);

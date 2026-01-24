@@ -27,8 +27,10 @@ import {
   Legend
 } from 'recharts';
 import { exportToCSV, exportToPDF } from '@/utils/export-utils';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 export default function ReportsAnalyticsPage() {
+  const { hasAccess, loading: accessLoading } = useAdminAccess({ allowedRoles: ['ANALYTICS_ADMIN', 'FINANCIAL_ADMIN'] });
   const router = useRouter();
   const [activeTab] = useState('reports');
   const [timeRange, setTimeRange] = useState('This Month');
@@ -59,6 +61,18 @@ export default function ReportsAnalyticsPage() {
   const reportData = performanceData?.data || [];
   const revenueChartData = revenueTrendsData?.data || [];
   const userGrowthChartData = userGrowthData?.data || [];
+
+  if (accessLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
   const contentPerfData = contentPerformanceData?.data || [];
   const geoData = geographicData?.data || [];
 

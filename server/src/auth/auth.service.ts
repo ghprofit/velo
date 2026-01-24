@@ -384,6 +384,7 @@ export class AuthService {
         where: { id: userId },
         include: {
           creatorProfile: true,
+          adminProfile: true,
         },
       });
 
@@ -451,6 +452,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         profilePicture: user.profilePicture,
+        adminRole: user.adminProfile?.adminRole || null,
         creatorProfile: user.creatorProfile
           ? {
               ...user.creatorProfile,

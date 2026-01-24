@@ -2,10 +2,13 @@ import { Controller, Get, Post, Param, Query, Body, UseGuards } from '@nestjs/co
 import { ContentService } from './content.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { AdminRoleGuard } from '../auth/guards/admin-role.guard';
+import { AdminRoles } from '../auth/decorators/admin-roles.decorator';
 import { QueryContentDto, ReviewContentDto } from './dto/content.dto';
 
 @Controller('admin/content')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard, AdminRoleGuard)
+@AdminRoles('CONTENT_ADMIN')
 export class ContentController {
   constructor(private readonly contentService: ContentService) {}
 

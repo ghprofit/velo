@@ -10,8 +10,10 @@ import {
   useUpdateTicketStatusMutation,
 } from '@/state/api';
 import { exportToCSV } from '@/utils/export-utils';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 export default function SupportReportsPage() {
+  const { hasAccess, loading: accessLoading } = useAdminAccess({ allowedRoles: ['SUPPORT_SPECIALIST'] });
   const [activeTab] = useState('support-reports');
   const [searchQuery, setSearchQuery] = useState('');
   const [issueType, setIssueType] = useState('All Types');
@@ -62,6 +64,18 @@ export default function SupportReportsPage() {
       return { day: `Day ${dayNum}`, tickets: Math.max(0, ticketCount) };
     });
   }, [stats]);
+
+  if (accessLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   // Handler for status change
   const handleStatusChange = async (ticketId: string, newStatus: string) => {

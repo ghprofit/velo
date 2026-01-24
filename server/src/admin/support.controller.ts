@@ -11,6 +11,8 @@ import {
 import { SupportService } from './support.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { AdminRoleGuard } from '../auth/guards/admin-role.guard';
+import { AdminRoles } from '../auth/decorators/admin-roles.decorator';
 import {
   QuerySupportTicketsDto,
   UpdateTicketStatusDto,
@@ -19,7 +21,8 @@ import {
 } from './dto/support.dto';
 
 @Controller('admin/support')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard, AdminRoleGuard)
+@AdminRoles('SUPPORT_SPECIALIST')
 export class SupportController {
   constructor(private readonly supportService: SupportService) {}
 

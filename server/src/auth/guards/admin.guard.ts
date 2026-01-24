@@ -10,10 +10,11 @@ export class AdminGuard implements CanActivate {
       throw new ForbiddenException('Authentication required');
     }
 
-    // Allow SUPER_ADMIN and ADMIN from UserRole, plus specific AdminRole types
-    const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'];
+    // Allow SUPER_ADMIN, ADMIN, and SUPPORT from UserRole
+    // SUPPORT role is for admin users with specific AdminRole (SUPPORT_SPECIALIST, etc.)
+    const allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'];
 
-    if (!adminRoles.includes(user.role)) {
+    if (!allowedRoles.includes(user.role)) {
       throw new ForbiddenException('Admin access required');
     }
 

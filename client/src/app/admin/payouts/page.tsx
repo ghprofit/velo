@@ -23,6 +23,15 @@ interface PayoutRequest {
     user: {
       email: string;
     };
+    // Bank details for manual payout
+    bankAccountName?: string;
+    bankName?: string;
+    bankAccountNumber?: string;
+    bankRoutingNumber?: string;
+    bankSwiftCode?: string;
+    bankIban?: string;
+    bankCountry?: string;
+    bankCurrency?: string;
   };
 }
 
@@ -33,6 +42,7 @@ export default function AdminPayoutsPage() {
   const [loading, setLoading] = useState(true);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<PayoutRequest | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -89,6 +99,11 @@ export default function AdminPayoutsPage() {
     return null;
   }
 
+  const handleViewDetails = (request: PayoutRequest) => {
+    setSelectedRequest(request);
+    setShowDetailsModal(true);
+  };
+
   const handleApprove = (request: PayoutRequest) => {
     setSelectedRequest(request);
     setShowApproveModal(true);
@@ -101,19 +116,19 @@ export default function AdminPayoutsPage() {
       setSubmitting(true);
       await adminApi.approvePayoutRequest({
         requestId: selectedRequest.id,
-        reviewNotes: 'Approved for processing',
+        reviewNotes: 'Payout completed via manual bank transfer',
       });
 
       setShowApproveModal(false);
       setSelectedRequest(null);
       fetchRequests();
-      alert('Payout request approved successfully!');
+      alert('Payout marked as completed! The creator has been notified.');
     } catch (error: unknown) {
-      console.error('Failed to approve payout request:', error);
+      console.error('Failed to complete payout:', error);
       const errorMessage = error && typeof error === 'object' && 'response' in error
         ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
         : undefined;
-      alert(errorMessage || 'Failed to approve payout request');
+      alert(errorMessage || 'Failed to complete payout');
     } finally {
       setSubmitting(false);
     }
@@ -181,7 +196,7 @@ export default function AdminPayoutsPage() {
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Payout Requests</h1>
-              <p className="text-gray-600 mt-2">Review and manage creator payout requests</p>
+              <p className="text-gray-600 mt-2">Review payout requests and send payments manually to creators</p>
             </div>
             <div className="flex items-center gap-4">
               {/* Notification Button */}
@@ -321,24 +336,32 @@ export default function AdminPayoutsPage() {
                           })}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {request.status === 'PENDING' && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleApprove(request)}
-                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium transition-colors"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleReject(request)}
-                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium transition-colors"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          )}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleViewDetails(request)}
+                              className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium transition-colors"
+                            >
+                              View Details
+                            </button>
+                            {request.status === 'PENDING' && (
+                              <>
+                                <button
+                                  onClick={() => handleApprove(request)}
+                                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium transition-colors"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleReject(request)}
+                                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                          </div>
                           {request.status !== 'PENDING' && request.reviewNotes && (
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-gray-500 mt-2">
                               <div className="font-medium">Notes:</div>
                               <div className="truncate max-w-xs">{request.reviewNotes}</div>
                             </div>
@@ -355,15 +378,61 @@ export default function AdminPayoutsPage() {
           {/* Approve Modal */}
           {showApproveModal && selectedRequest && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-bold mb-4 text-gray-900">Approve Payout Request</h3>
-                <p className="text-gray-600 mb-6">
-                  Approve payout of <span className="font-semibold">${selectedRequest.requestedAmount.toFixed(2)}</span> for{' '}
-                  <span className="font-semibold">{selectedRequest.creator.displayName}</span>?
+                <p className="text-gray-600 mb-4">
+                  Payout of <span className="font-semibold">${selectedRequest.requestedAmount.toFixed(2)}</span> for{' '}
+                  <span className="font-semibold">{selectedRequest.creator.displayName}</span>
                 </p>
-                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-6">
-                  <p className="text-sm text-blue-800">
-                    This will create a payout for Stripe to process. The creator will be notified via email and in-app notification.
+
+                {/* Bank Details Section */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Bank Details</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Account Name:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankAccountName || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Bank Name:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankName || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Account Number:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankAccountNumber || 'N/A'}</span>
+                    </div>
+                    {selectedRequest.creator.bankRoutingNumber && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Routing Number:</span>
+                        <span className="font-medium text-gray-900">{selectedRequest.creator.bankRoutingNumber}</span>
+                      </div>
+                    )}
+                    {selectedRequest.creator.bankSwiftCode && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">SWIFT Code:</span>
+                        <span className="font-medium text-gray-900">{selectedRequest.creator.bankSwiftCode}</span>
+                      </div>
+                    )}
+                    {selectedRequest.creator.bankIban && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">IBAN:</span>
+                        <span className="font-medium text-gray-900">{selectedRequest.creator.bankIban}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Country:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankCountry || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Currency:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankCurrency || 'USD'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-6">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Important:</strong> Please send <span className="font-semibold">${selectedRequest.requestedAmount.toFixed(2)}</span> to the bank account above manually before clicking Approve. Clicking Approve will notify the creator that their payout has been sent.
                   </p>
                 </div>
                 <div className="flex gap-3 justify-end">
@@ -382,7 +451,7 @@ export default function AdminPayoutsPage() {
                     disabled={submitting}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium disabled:opacity-50"
                   >
-                    {submitting ? 'Approving...' : 'Approve'}
+                    {submitting ? 'Confirming...' : 'Confirm Payment Sent'}
                   </button>
                 </div>
               </div>
@@ -435,6 +504,133 @@ export default function AdminPayoutsPage() {
                   >
                     {submitting ? 'Rejecting...' : 'Reject'}
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* View Details Modal */}
+          {showDetailsModal && selectedRequest && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <h3 className="text-lg font-bold mb-4 text-gray-900">Payout Request Details</h3>
+
+                {/* Creator Info */}
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">Creator</h4>
+                  <div className="text-sm">
+                    <p className="text-gray-900 font-medium">{selectedRequest.creator.displayName}</p>
+                    <p className="text-gray-500">{selectedRequest.creator.user.email}</p>
+                  </div>
+                </div>
+
+                {/* Payout Info */}
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Requested Amount:</span>
+                    <span className="text-xl font-bold text-indigo-600">${selectedRequest.requestedAmount.toFixed(2)} {selectedRequest.currency}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-gray-600">Status:</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(selectedRequest.status)}`}>
+                      {selectedRequest.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-gray-600">Request Date:</span>
+                    <span className="text-gray-900">{new Date(selectedRequest.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}</span>
+                  </div>
+                </div>
+
+                {/* Bank Details Section */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Bank Details</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Account Name:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankAccountName || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Bank Name:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankName || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Account Number:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankAccountNumber || 'N/A'}</span>
+                    </div>
+                    {selectedRequest.creator.bankRoutingNumber && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Routing Number:</span>
+                        <span className="font-medium text-gray-900">{selectedRequest.creator.bankRoutingNumber}</span>
+                      </div>
+                    )}
+                    {selectedRequest.creator.bankSwiftCode && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">SWIFT Code:</span>
+                        <span className="font-medium text-gray-900">{selectedRequest.creator.bankSwiftCode}</span>
+                      </div>
+                    )}
+                    {selectedRequest.creator.bankIban && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">IBAN:</span>
+                        <span className="font-medium text-gray-900">{selectedRequest.creator.bankIban}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Country:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankCountry || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Currency:</span>
+                      <span className="font-medium text-gray-900">{selectedRequest.creator.bankCurrency || 'USD'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Review Notes if any */}
+                {selectedRequest.reviewNotes && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">Review Notes</h4>
+                    <p className="text-sm text-gray-600">{selectedRequest.reviewNotes}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      setSelectedRequest(null);
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-medium"
+                  >
+                    Close
+                  </button>
+                  {selectedRequest.status === 'PENDING' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowDetailsModal(false);
+                          setShowApproveModal(true);
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowDetailsModal(false);
+                          setShowRejectModal(true);
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

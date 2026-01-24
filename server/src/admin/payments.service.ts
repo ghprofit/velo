@@ -658,9 +658,26 @@ export class PaymentsService {
       this.prisma.payoutRequest.count({ where }),
     ]);
 
+    // Map requests to include bank details for admin viewing
+    const requestsWithBankDetails = requests.map((request) => ({
+      ...request,
+      creator: {
+        ...request.creator,
+        // Include bank details for manual payout processing
+        bankAccountName: request.creator.bankAccountName,
+        bankName: request.creator.bankName,
+        bankAccountNumber: request.creator.bankAccountNumber,
+        bankRoutingNumber: request.creator.bankRoutingNumber,
+        bankSwiftCode: request.creator.bankSwiftCode,
+        bankIban: request.creator.bankIban,
+        bankCountry: request.creator.bankCountry,
+        bankCurrency: request.creator.bankCurrency,
+      },
+    }));
+
     return {
       success: true,
-      data: requests,
+      data: requestsWithBankDetails,
       pagination: {
         page,
         limit,
@@ -702,7 +719,7 @@ export class PaymentsService {
   }
 
   /**
-   * Approve payout request - creates Payout for Stripe processing
+   * Approve payout request - marks as COMPLETED (manual bank transfer by admin)
    */
   async approvePayoutRequest(
     requestId: string,
@@ -730,35 +747,36 @@ export class PaymentsService {
       );
     }
 
-    // Validate creator still has sufficient available balance (after 24hr period)
+    // Validate creator still has sufficient available balance
     if (request.creator.availableBalance < request.requestedAmount) {
       throw new BadRequestException(
         'Creator no longer has sufficient available balance',
       );
     }
 
-    // Create transaction: Update PayoutRequest + Create Payout
+    // Create transaction: Update PayoutRequest + Create Payout + Deduct balance
     const result = await this.prisma.$transaction(async (tx) => {
-      // Update payout request
+      // Update payout request to COMPLETED (manual payout done by admin)
       const updatedRequest = await tx.payoutRequest.update({
         where: { id: requestId },
         data: {
-          status: 'PROCESSING',
+          status: 'COMPLETED',
           reviewedBy: adminUserId,
           reviewedAt: new Date(),
-          reviewNotes: reviewNotes || 'Approved for processing',
+          reviewNotes: reviewNotes || 'Payout completed manually',
         },
       });
 
-      // Create Payout object for Stripe processing
+      // Create Payout record marked as COMPLETED
       const payout = await tx.payout.create({
         data: {
           creatorId: request.creatorId,
           amount: request.requestedAmount,
           currency: request.currency,
-          status: 'PROCESSING', // Approved and ready for Stripe processing
-          paymentMethod: 'STRIPE',
-          notes: `Approved by admin - Request ID: ${requestId}`,
+          status: 'COMPLETED',
+          paymentMethod: 'BANK_TRANSFER',
+          processedAt: new Date(),
+          notes: `Manual bank transfer by admin - Request ID: ${requestId}`,
         },
       });
 
@@ -768,15 +786,38 @@ export class PaymentsService {
         data: { payoutId: payout.id },
       });
 
+      // Deduct from creator's available balance
+      await tx.creatorProfile.update({
+        where: { id: request.creatorId },
+        data: {
+          availableBalance: {
+            decrement: request.requestedAmount,
+          },
+        },
+      });
+
+      // If creator has waitlist bonus and hasn't withdrawn it yet, and has 5+ sales
+      if (
+        request.creator.waitlistBonus > 0 &&
+        !request.creator.bonusWithdrawn &&
+        request.creator.totalPurchases >= 5
+      ) {
+        // Mark bonus as withdrawn
+        await tx.creatorProfile.update({
+          where: { id: request.creatorId },
+          data: { bonusWithdrawn: true },
+        });
+      }
+
       return { request: updatedRequest, payout };
     });
 
-    // Notify creator
+    // Notify creator that payout was successful
     await this.notificationsService.createNotification({
       userId: request.creator.userId,
-      type: NotificationType.PAYOUT_APPROVED,
-      title: 'Payout Request Approved',
-      message: `Your payout request for $${request.requestedAmount.toFixed(2)} has been approved and will be processed shortly.`,
+      type: NotificationType.PAYOUT_SENT,
+      title: 'Payout Successful',
+      message: `Your payout of $${request.requestedAmount.toFixed(2)} has been sent to your bank account.`,
       metadata: {
         requestId: requestId,
         payoutId: result.payout.id,
@@ -785,15 +826,16 @@ export class PaymentsService {
     });
 
     // Send email
-    await this.emailService.sendPayoutApproved(request.creator.user.email, {
+    await this.emailService.sendPayoutProcessed(request.creator.user.email, {
       creator_name: request.creator.displayName,
-      amount: `$${request.requestedAmount.toFixed(2)}`,
-      request_id: requestId,
+      amount: request.requestedAmount.toFixed(2),
+      payout_date: new Date().toLocaleDateString(),
+      transaction_id: result.payout.id,
     });
 
     return {
       success: true,
-      message: 'Payout request approved',
+      message: 'Payout completed successfully',
       data: result,
     };
   }

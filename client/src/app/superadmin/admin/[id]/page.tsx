@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useGetAdminByIdQuery, useGetAdminActivityQuery } from '@/state/api';
+import { useGetAdminByIdQuery, useGetAdminActivityQuery, useUpdateAdminMutation } from '@/state/api';
 
 interface AdminActivity {
   id: string;
@@ -21,6 +21,12 @@ export default function AdminAuditPage() {
   const [dateFilter, setDateFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editRole, setEditRole] = useState('');
+  const [editStatus, setEditStatus] = useState('');
+
+  // Mutations
+  const [updateAdmin, { isLoading: isUpdating }] = useUpdateAdminMutation();
 
   // Fetch admin data
   const { data: adminResponse, isLoading: isLoadingAdmin, error: adminError } = useGetAdminByIdQuery(adminId || '', {
@@ -84,6 +90,31 @@ export default function AdminAuditPage() {
     { name: 'Support Tickets', enabled: admin.permissions.supportTickets },
   ];
 
+  const handleEditAdmin = async () => {
+    if (!editRole && !editStatus) return;
+
+    try {
+      await updateAdmin({
+        id: adminId,
+        data: {
+          ...(editRole && { role: editRole as any }),
+          ...(editStatus && { status: editStatus as any }),
+        },
+      }).unwrap();
+      setShowEditModal(false);
+      setEditRole('');
+      setEditStatus('');
+    } catch (error) {
+      console.error('Failed to update admin:', error);
+    }
+  };
+
+  const openEditModal = () => {
+    setEditRole(admin.role);
+    setEditStatus(admin.status);
+    setShowEditModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       {/* Header */}
@@ -118,7 +149,10 @@ export default function AdminAuditPage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <button className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={openEditModal}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          >
             Edit Admin Role
           </button>
 
@@ -199,9 +233,12 @@ export default function AdminAuditPage() {
             <h3 className="text-sm font-semibold text-orange-600 mb-3">Security Information</h3>
             <div className="space-y-2 text-sm">
               <div className="text-orange-600">
-                <span className="font-medium">Last Login:</span> {admin.lastLogin ? new Date(admin.lastLogin).toLocaleString() : 'Never'}
+                <span className="font-medium">Last Login:</span>{' '}
+                {admin.lastLogin && !isNaN(new Date(admin.lastLogin).getTime())
+                  ? new Date(admin.lastLogin).toLocaleString()
+                  : 'Never'}
               </div>
-              {admin.lastPasswordReset && (
+              {admin.lastPasswordReset && !isNaN(new Date(admin.lastPasswordReset).getTime()) && (
                 <div className="text-orange-600">
                   <span className="font-medium">Last Password Reset:</span> {new Date(admin.lastPasswordReset).toLocaleDateString()}
                 </div>
@@ -413,6 +450,64 @@ export default function AdminAuditPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Admin Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Edit Admin Details</h3>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                <select
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                  <option value="FINANCIAL_ADMIN">Financial Admin</option>
+                  <option value="CONTENT_ADMIN">Content Admin</option>
+                  <option value="SUPPORT_SPECIALIST">Support Specialist</option>
+                  <option value="ANALYTICS_ADMIN">Analytics Admin</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                  <option value="ACTIVE">Active</option>
+                  <option value="SUSPENDED">Suspended</option>
+                  <option value="INVITED">Invited</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditRole('');
+                  setEditStatus('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditAdmin}
+                disabled={isUpdating}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUpdating ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

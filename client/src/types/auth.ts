@@ -7,6 +7,15 @@ export interface User {
   emailVerified: boolean;
   adminRole?: 'FINANCIAL_ADMIN' | 'CONTENT_ADMIN' | 'SUPPORT_SPECIALIST' | 'ANALYTICS_ADMIN' | null;
   creatorProfile?: CreatorProfile;
+  adminProfile?: AdminProfile;
+}
+
+export interface AdminProfile {
+  id: string;
+  fullName: string;
+  adminRole: 'FINANCIAL_ADMIN' | 'CONTENT_ADMIN' | 'SUPPORT_SPECIALIST' | 'ANALYTICS_ADMIN';
+  status: 'ACTIVE' | 'SUSPENDED' | 'INVITED';
+  twoFactorEnabled?: boolean;
 }
 
 export interface CreatorProfile {

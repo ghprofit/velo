@@ -67,7 +67,11 @@ export default function AdminSettingsPage() {
   // Initialize profile data from user context
   useEffect(() => {
     if (user) {
-      const displayName = user.creatorProfile?.displayName || user.email.split('@')[0];
+      // Use adminProfile.fullName for admin users, or creatorProfile.displayName for creators
+      const displayName = user.adminProfile?.fullName 
+        || user.creatorProfile?.displayName 
+        || user.email.split('@')[0];
+      
       const roleDisplay = user.adminRole 
         ? user.adminRole.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
         : user.role;
@@ -489,16 +493,13 @@ export default function AdminSettingsPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                      <select
+                      <input
+                        type="text"
                         value={adminRole}
-                        onChange={(e) => setAdminRole(e.target.value)}
-                        disabled={profileLoading}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white disabled:bg-gray-50"
-                      >
-                        <option>Super Admin</option>
-                        <option>Admin</option>
-                        <option>Moderator</option>
-                      </select>
+                        disabled={true}
+                        readOnly
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                      />
                     </div>
 
                     <div>

@@ -100,6 +100,13 @@ export declare class AuthController {
             lastName: string | null;
             profilePicture: string | null;
             adminRole: import(".prisma/client").$Enums.AdminRole | null;
+            adminProfile: {
+                id: string;
+                fullName: string;
+                adminRole: import(".prisma/client").$Enums.AdminRole;
+                status: import(".prisma/client").$Enums.AdminStatus;
+                twoFactorEnabled: boolean;
+            } | null;
             creatorProfile: {
                 totalEarnings: number;
                 totalViews: number;

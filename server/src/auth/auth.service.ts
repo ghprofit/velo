@@ -460,6 +460,13 @@ export class AuthService {
         lastName: user.lastName,
         profilePicture: user.profilePicture,
         adminRole: user.adminProfile?.adminRole || null,
+        adminProfile: user.adminProfile ? {
+          id: user.adminProfile.id,
+          fullName: user.adminProfile.fullName,
+          adminRole: user.adminProfile.adminRole,
+          status: user.adminProfile.status,
+          twoFactorEnabled: user.adminProfile.twoFactorEnabled,
+        } : null,
         creatorProfile: user.creatorProfile
           ? {
               ...user.creatorProfile,

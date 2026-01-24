@@ -145,6 +145,47 @@ interface Creator {
     createdAt: string;
 }
 
+interface CreatorDetail extends Creator {
+    profile: {
+        displayName?: string;
+        bio?: string;
+        profileImage?: string;
+        coverImage?: string;
+        firstName?: string;
+        lastName?: string;
+        dateOfBirth?: string;
+        country?: string;
+    };
+    verification: {
+        status?: string;
+        verifiedAt?: string;
+        notes?: string;
+    };
+    payout: {
+        status?: string;
+        paypalEmail?: string;
+        stripeAccountId?: string;
+    };
+    stats: {
+        totalEarnings: number;
+        totalViews: number;
+        totalPurchases: number;
+        contentCount: number;
+    };
+    recentContent: Array<{
+        id: string;
+        title: string;
+        status: string;
+        createdAt: string;
+    }>;
+    recentPayouts: Array<{
+        id: string;
+        amount: number;
+        status: string;
+        createdAt: string;
+    }>;
+}
+
 interface CreatorListResponse {
     success: boolean;
     data: Creator[];
@@ -1036,7 +1077,7 @@ export const api = createApi({
             query: () => '/api/superadmin/creators/stats',
             providesTags: ['Creator'],
         }),
-        getCreatorById: build.query<{ success: boolean; data: Creator & { profile: unknown; stats: unknown } }, string>({
+        getCreatorById: build.query<{ success: boolean; data: CreatorDetail }, string>({
             query: (id) => `/api/superadmin/creators/${id}`,
             providesTags: ['Creator'],
         }),

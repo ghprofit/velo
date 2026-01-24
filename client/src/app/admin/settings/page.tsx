@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
+import { useAuth } from '@/context/auth-context';
 
 interface Toast {
   message: string;
@@ -17,20 +18,21 @@ interface Session {
 }
 
 export default function AdminSettingsPage() {
+  const { user } = useAuth();
   const [activeTab] = useState('settings');
   const [settingsTab, setSettingsTab] = useState('profile');
   const [toast, setToast] = useState<Toast | null>(null);
 
-  // Profile Settings State
-  const [adminName, setAdminName] = useState('Admin User');
+  // Profile Settings State - Initialize from user context
+  const [adminName, setAdminName] = useState('');
   const [adminBio, setAdminBio] = useState('');
-  const [adminEmail, setAdminEmail] = useState('admin@velolink.club');
-  const [adminRole, setAdminRole] = useState('Super Admin');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminRole, setAdminRole] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState('');
-  const [originalAdminName, setOriginalAdminName] = useState('Admin User');
-  const [originalAdminEmail, setOriginalAdminEmail] = useState('admin@velolink.club');
-  const [originalAdminRole, setOriginalAdminRole] = useState('Super Admin');
+  const [originalAdminName, setOriginalAdminName] = useState('');
+  const [originalAdminEmail, setOriginalAdminEmail] = useState('');
+  const [originalAdminRole, setOriginalAdminRole] = useState('');
   const [originalAdminBio, setOriginalAdminBio] = useState('');
 
   // Security Settings State
@@ -62,9 +64,25 @@ export default function AdminSettingsPage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
 
+  // Initialize profile data from user context
+  useEffect(() => {
+    if (user) {
+      const displayName = user.creatorProfile?.displayName || user.email.split('@')[0];
+      const roleDisplay = user.adminRole 
+        ? user.adminRole.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+        : user.role;
+      
+      setAdminName(displayName);
+      setAdminEmail(user.email);
+      setAdminRole(roleDisplay);
+      setOriginalAdminName(displayName);
+      setOriginalAdminEmail(user.email);
+      setOriginalAdminRole(roleDisplay);
+    }
+  }, [user]);
+
   // Load data on mount
   useEffect(() => {
-    loadProfileData();
     loadNotificationSettings();
     loadActiveSessions();
   }, []);
@@ -76,27 +94,6 @@ export default function AdminSettingsPage() {
   };
 
   // API Functions
-  const loadProfileData = async () => {
-    try {
-      const response = await fetch('/api/admin/profile', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAdminName(data.name);
-        setAdminEmail(data.email);
-        setAdminRole(data.role);
-        setAdminBio(data.bio || '');
-        setOriginalAdminName(data.name);
-        setOriginalAdminEmail(data.email);
-        setOriginalAdminRole(data.role);
-        setOriginalAdminBio(data.bio || '');
-      }
-    } catch (error) {
-      console.error('Failed to load profile:', error);
-    }
-  };
-
   const loadNotificationSettings = async () => {
     try {
       const response = await fetch('/api/admin/notifications', {

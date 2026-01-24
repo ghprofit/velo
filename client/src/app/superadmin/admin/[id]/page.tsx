@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useGetAdminByIdQuery, useGetAdminActivityQuery, useUpdateAdminMutation } from '@/state/api';
+import { useGetAdminByIdQuery, useGetAdminActivityQuery, useUpdateAdminMutation, useForcePasswordResetMutation } from '@/state/api';
 
 interface AdminActivity {
   id: string;
@@ -24,9 +24,12 @@ export default function AdminAuditPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editRole, setEditRole] = useState('');
   const [editStatus, setEditStatus] = useState('');
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageModalContent, setMessageModalContent] = useState({ title: '', message: '', type: 'success' as 'success' | 'error' });
 
   // Mutations
   const [updateAdmin, { isLoading: isUpdating }] = useUpdateAdminMutation();
+  const [forcePasswordReset, { isLoading: isResettingPassword }] = useForcePasswordResetMutation();
 
   // Fetch admin data
   const { data: adminResponse, isLoading: isLoadingAdmin, error: adminError } = useGetAdminByIdQuery(adminId || '', {
@@ -104,8 +107,20 @@ export default function AdminAuditPage() {
       setShowEditModal(false);
       setEditRole('');
       setEditStatus('');
+      setMessageModalContent({
+        title: 'Success',
+        message: 'Admin details updated successfully.',
+        type: 'success',
+      });
+      setShowMessageModal(true);
     } catch (error) {
       console.error('Failed to update admin:', error);
+      setMessageModalContent({
+        title: 'Error',
+        message: 'Failed to update admin. Please try again.',
+        type: 'error',
+      });
+      setShowMessageModal(true);
     }
   };
 
@@ -113,6 +128,84 @@ export default function AdminAuditPage() {
     setEditRole(admin.role);
     setEditStatus(admin.status);
     setShowEditModal(true);
+  };
+
+  const handleForce2FAResetClick = async () => {
+    if (!confirm('Are you sure you want to reset 2FA for this admin? They will need to set it up again.')) {
+      return;
+    }
+
+    try {
+      await updateAdmin({
+        id: adminId,
+        data: {
+          twoFactorEnabled: false,
+        },
+      }).unwrap();
+      setMessageModalContent({
+        title: 'Success',
+        message: '2FA has been reset successfully.',
+        type: 'success',
+      });
+      setShowMessageModal(true);
+    } catch (error) {
+      console.error('Failed to reset 2FA:', error);
+      setMessageModalContent({
+        title: 'Error',
+        message: 'Failed to reset 2FA. Please try again.',
+        type: 'error',
+      });
+      setShowMessageModal(true);
+    }
+  };
+
+  const handleForcePasswordResetClick = async () => {
+    if (!confirm('Are you sure you want to force a password reset for this admin? They will need to reset their password on next login.')) {
+      return;
+    }
+
+    try {
+      await forcePasswordReset(adminId).unwrap();
+      setMessageModalContent({
+        title: 'Success',
+        message: 'Password reset has been initiated successfully.',
+        type: 'success',
+      });
+      setShowMessageModal(true);
+    } catch (error) {
+      console.error('Failed to force password reset:', error);
+      setMessageModalContent({
+        title: 'Error',
+        message: 'Failed to force password reset. Please try again.',
+        type: 'error',
+      });
+      setShowMessageModal(true);
+    }
+  };
+
+  const handleRevokeAllSessionsClick = async () => {
+    if (!confirm('Are you sure you want to revoke all active sessions for this admin? They will be logged out from all devices.')) {
+      return;
+    }
+
+    try {
+      // Revoke sessions by forcing password reset which invalidates all tokens
+      await forcePasswordReset(adminId).unwrap();
+      setMessageModalContent({
+        title: 'Success',
+        message: 'All sessions have been revoked successfully. The admin has been logged out from all devices.',
+        type: 'success',
+      });
+      setShowMessageModal(true);
+    } catch (error) {
+      console.error('Failed to revoke sessions:', error);
+      setMessageModalContent({
+        title: 'Error',
+        message: 'Failed to revoke sessions. Please try again.',
+        type: 'error',
+      });
+      setShowMessageModal(true);
+    }
   };
 
   return (
@@ -295,7 +388,10 @@ export default function AdminAuditPage() {
                 Active
               </span>
             </div>
-            <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-200 transition-colors">
+            <button 
+              onClick={handleForce2FAResetClick}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-200 transition-colors"
+            >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
@@ -311,11 +407,15 @@ export default function AdminAuditPage() {
                 Secure
               </span>
             </div>
-            <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-200 transition-colors">
+            <button 
+              onClick={handleForcePasswordResetClick}
+              disabled={isResettingPassword}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
               </svg>
-              Force Password Reset
+              {isResettingPassword ? 'Resetting...' : 'Force Password Reset'}
             </button>
           </div>
 
@@ -327,11 +427,15 @@ export default function AdminAuditPage() {
                 N/A
               </span>
             </div>
-            <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-600 font-medium hover:bg-red-100 transition-colors">
+            <button 
+              onClick={handleRevokeAllSessionsClick}
+              disabled={isResettingPassword}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-600 font-medium hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              Revoke All Sessions
+              {isResettingPassword ? 'Revoking...' : 'Revoke All Sessions'}
             </button>
           </div>
         </div>
@@ -505,6 +609,39 @@ export default function AdminAuditPage() {
                 {isUpdating ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Message Modal */}
+      {showMessageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              {messageModalContent.type === 'success' ? (
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+              )}
+              <h3 className="text-xl font-bold text-gray-900">{messageModalContent.title}</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">{messageModalContent.message}</p>
+
+            <button
+              onClick={() => setShowMessageModal(false)}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              OK
+            </button>
           </div>
         </div>
       )}

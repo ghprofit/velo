@@ -129,6 +129,7 @@ interface UpdateAdminRequest {
     status?: 'ACTIVE' | 'SUSPENDED' | 'INVITED';
     isActive?: boolean;
     permissions?: Partial<AdminPermissions>;
+    twoFactorEnabled?: boolean;
 }
 
 // Creator Management Types

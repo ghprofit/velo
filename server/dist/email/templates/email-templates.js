@@ -627,7 +627,7 @@ exports.HTML_TEMPLATES = {
           <td class="amount">$${data.amount}</td>
         </tr>
         <tr>
-          <th>Your Earnings (85%)</th>
+          <th>Your Earnings (90%)</th>
           <td class="amount" style="color: #10b981;">$${(parseFloat(data.amount) * 0.85).toFixed(2)}</td>
         </tr>
         <tr>

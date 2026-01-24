@@ -107,10 +107,10 @@ export class FinancialReportsService {
       _count: true,
     });
 
-    // Platform Revenue (revenue - payouts)
+    // Platform Commission (20% of total revenue)
     const totalRevenue = revenueData._sum.amount || 0;
     const totalPayouts = payoutData._sum.amount || 0;
-    const platformRevenue = totalRevenue - totalPayouts;
+    const platformRevenue = totalRevenue * 0.20;
 
     // Average transaction value
     const avgTransactionValue =

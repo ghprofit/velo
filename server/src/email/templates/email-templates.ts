@@ -8,7 +8,7 @@ const getLogoHtml = (): string => {
   // Text-based velo logo - simple and elegant
   return `
     <div style="margin-bottom: 20px; text-align: center;">
-      <span style="font-size: 42px; font-weight: 700; color: white; letter-spacing: -1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">velo</span>
+      <span style="font-size: 42px; font-weight: 700; color: white; letter-spacing: -1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">VeloLink</span>
     </div>
   `;
 };
@@ -777,7 +777,7 @@ export const HTML_TEMPLATES = {
           <td class="amount">$${data.amount}</td>
         </tr>
         <tr>
-          <th>Your Earnings (85%)</th>
+          <th>Your Earnings (90%)</th>
           <td class="amount" style="color: #10b981;">$${(parseFloat(data.amount) * 0.85).toFixed(2)}</td>
         </tr>
         <tr>

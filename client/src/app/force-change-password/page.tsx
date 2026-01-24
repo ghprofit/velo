@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import FloatingLogo from '@/components/FloatingLogo';
+import { apiClient } from '@/lib/api-client';
 
 export default function ForceChangePasswordPage() {
   const router = useRouter();
@@ -66,29 +67,18 @@ export default function ForceChangePasswordPage() {
 
     try {
       setLoading(true);
-      const response = await fetch('/api/auth/force-change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          newPassword,
-        }),
+      await apiClient.post('/auth/force-change-password', {
+        userId,
+        newPassword,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess('Password changed successfully. Redirecting to login...');
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-      } else {
-        setError(data.message || 'Failed to change password');
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+      setSuccess('Password changed successfully. Redirecting to login...');
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } } };
+      setError(err.response?.data?.message || 'Failed to change password');
     } finally {
       setLoading(false);
     }

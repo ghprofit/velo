@@ -2,6 +2,7 @@ import type { EmailTemplate } from '../interfaces/email.interface';
 export declare const SENDGRID_TEMPLATE_ID: string;
 export declare const EMAIL_TEMPLATES: {
     WELCOME: EmailTemplate;
+    CREATOR_WELCOME: EmailTemplate;
     EMAIL_VERIFICATION: EmailTemplate;
     PASSWORD_RESET: EmailTemplate;
     TWO_FACTOR_ENABLED: EmailTemplate;
@@ -25,6 +26,12 @@ export declare const EMAIL_TEMPLATES: {
 export declare const HTML_TEMPLATES: {
     WELCOME: (data: {
         user_name: string;
+    }) => string;
+    CREATOR_WELCOME: (data: {
+        creator_name: string;
+        has_waitlist_bonus: boolean;
+        bonus_amount: string;
+        sales_required: number;
     }) => string;
     WELCOME_CREATOR_WAITLIST: (data: {
         user_name: string;

@@ -551,9 +551,23 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             }),
             this.prisma.payoutRequest.count({ where }),
         ]);
+        const requestsWithBankDetails = requests.map((request) => ({
+            ...request,
+            creator: {
+                ...request.creator,
+                bankAccountName: request.creator.bankAccountName,
+                bankName: request.creator.bankName,
+                bankAccountNumber: request.creator.bankAccountNumber,
+                bankRoutingNumber: request.creator.bankRoutingNumber,
+                bankSwiftCode: request.creator.bankSwiftCode,
+                bankIban: request.creator.bankIban,
+                bankCountry: request.creator.bankCountry,
+                bankCurrency: request.creator.bankCurrency,
+            },
+        }));
         return {
             success: true,
-            data: requests,
+            data: requestsWithBankDetails,
             pagination: {
                 page,
                 limit,
@@ -611,10 +625,10 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             const updatedRequest = await tx.payoutRequest.update({
                 where: { id: requestId },
                 data: {
-                    status: 'PROCESSING',
+                    status: 'COMPLETED',
                     reviewedBy: adminUserId,
                     reviewedAt: new Date(),
-                    reviewNotes: reviewNotes || 'Approved for processing',
+                    reviewNotes: reviewNotes || 'Payout completed manually',
                 },
             });
             const payout = await tx.payout.create({
@@ -622,36 +636,54 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
                     creatorId: request.creatorId,
                     amount: request.requestedAmount,
                     currency: request.currency,
-                    status: 'PROCESSING',
-                    paymentMethod: 'STRIPE',
-                    notes: `Approved by admin - Request ID: ${requestId}`,
+                    status: 'COMPLETED',
+                    paymentMethod: 'BANK_TRANSFER',
+                    processedAt: new Date(),
+                    notes: `Manual bank transfer by admin - Request ID: ${requestId}`,
                 },
             });
             await tx.payoutRequest.update({
                 where: { id: requestId },
                 data: { payoutId: payout.id },
             });
+            await tx.creatorProfile.update({
+                where: { id: request.creatorId },
+                data: {
+                    availableBalance: {
+                        decrement: request.requestedAmount,
+                    },
+                },
+            });
+            if (request.creator.waitlistBonus > 0 &&
+                !request.creator.bonusWithdrawn &&
+                request.creator.totalPurchases >= 5) {
+                await tx.creatorProfile.update({
+                    where: { id: request.creatorId },
+                    data: { bonusWithdrawn: true },
+                });
+            }
             return { request: updatedRequest, payout };
         });
         await this.notificationsService.createNotification({
             userId: request.creator.userId,
-            type: create_notification_dto_1.NotificationType.PAYOUT_APPROVED,
-            title: 'Payout Request Approved',
-            message: `Your payout request for $${request.requestedAmount.toFixed(2)} has been approved and will be processed shortly.`,
+            type: create_notification_dto_1.NotificationType.PAYOUT_SENT,
+            title: 'Payout Successful',
+            message: `Your payout of $${request.requestedAmount.toFixed(2)} has been sent to your bank account.`,
             metadata: {
                 requestId: requestId,
                 payoutId: result.payout.id,
                 amount: request.requestedAmount,
             },
         });
-        await this.emailService.sendPayoutApproved(request.creator.user.email, {
+        await this.emailService.sendPayoutProcessed(request.creator.user.email, {
             creator_name: request.creator.displayName,
-            amount: `$${request.requestedAmount.toFixed(2)}`,
-            request_id: requestId,
+            amount: request.requestedAmount.toFixed(2),
+            payout_date: new Date().toLocaleDateString(),
+            transaction_id: result.payout.id,
         });
         return {
             success: true,
-            message: 'Payout request approved',
+            message: 'Payout completed successfully',
             data: result,
         };
     }

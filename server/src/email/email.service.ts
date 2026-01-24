@@ -235,38 +235,28 @@ export class EmailService {
   }
 
   /**
-   * Send welcome email to creator from waitlist
-   * Includes information about the $50 waitlist bonus
+   * Send creator welcome email with optional waitlist bonus info
    */
-  async sendWelcomeCreatorWaitlistEmail(
+  async sendCreatorWelcomeEmail(
     to: string,
-    userName: string,
+    creatorName: string,
+    hasWaitlistBonus: boolean = false,
+    bonusAmount: number = 0,
   ): Promise<EmailSendResult> {
-    return this.sendHTMLTemplateEmail(
-      to,
-      'WELCOME_CREATOR_WAITLIST',
-      {
-        user_name: userName,
-      },
-      'Welcome to Velo - Your $50 Waitlist Bonus Awaits!',
-    );
-  }
+    const salesRequired = 5; // Sales needed to unlock bonus
 
-  /**
-   * Send welcome email to regular creator (non-waitlist)
-   * Standard creator welcome without bonus information
-   */
-  async sendWelcomeCreatorEmail(
-    to: string,
-    userName: string,
-  ): Promise<EmailSendResult> {
     return this.sendHTMLTemplateEmail(
       to,
-      'WELCOME_CREATOR',
+      'CREATOR_WELCOME',
       {
-        user_name: userName,
+        creator_name: creatorName,
+        has_waitlist_bonus: hasWaitlistBonus,
+        bonus_amount: bonusAmount.toFixed(2),
+        sales_required: salesRequired,
       },
-      'Welcome to Velo - Start Creating Today!',
+      hasWaitlistBonus
+        ? `Welcome to Velo - Your $${bonusAmount.toFixed(0)} Bonus Awaits!`
+        : `Welcome to Velo, ${creatorName}!`,
     );
   }
 

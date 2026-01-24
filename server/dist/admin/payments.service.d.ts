@@ -136,26 +136,20 @@ export declare class PaymentsService {
         limit?: number;
     }): Promise<{
         success: boolean;
-        data: ({
-            payout: {
-                amount: number;
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                status: string;
-                currency: string;
-                creatorId: string;
-                processedAt: Date | null;
-                paymentMethod: string;
-                paymentId: string | null;
-                notes: string | null;
-            } | null;
+        data: {
             creator: {
+                bankAccountName: string | null;
+                bankName: string | null;
+                bankAccountNumber: string | null;
+                bankRoutingNumber: string | null;
+                bankSwiftCode: string | null;
+                bankIban: string | null;
+                bankCountry: string | null;
+                bankCurrency: string | null;
                 user: {
                     email: string;
                     displayName: string | null;
                 };
-            } & {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
@@ -174,14 +168,6 @@ export declare class PaymentsService {
                 verifiedAt: Date | null;
                 verificationNotes: string | null;
                 dateOfBirth: Date | null;
-                bankAccountName: string | null;
-                bankName: string | null;
-                bankAccountNumber: string | null;
-                bankRoutingNumber: string | null;
-                bankSwiftCode: string | null;
-                bankIban: string | null;
-                bankCountry: string | null;
-                bankCurrency: string | null;
                 payoutSetupCompleted: boolean;
                 paypalEmail: string | null;
                 stripeAccountId: string | null;
@@ -195,7 +181,19 @@ export declare class PaymentsService {
                 waitlistBonus: number;
                 bonusWithdrawn: boolean;
             };
-        } & {
+            payout: {
+                amount: number;
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                status: string;
+                currency: string;
+                creatorId: string;
+                processedAt: Date | null;
+                paymentMethod: string;
+                paymentId: string | null;
+                notes: string | null;
+            } | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
@@ -210,7 +208,7 @@ export declare class PaymentsService {
             reviewedAt: Date | null;
             reviewNotes: string | null;
             payoutId: string | null;
-        })[];
+        }[];
         pagination: {
             page: number;
             limit: number;

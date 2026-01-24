@@ -14,8 +14,7 @@ export declare class EmailService {
     sendHTMLTemplateEmail(to: string, templateKey: keyof typeof HTML_TEMPLATES, templateData: Record<string, any>, subject?: string): Promise<EmailSendResult>;
     scheduleEmail(options: SendEmailOptions, sendAt: Date): Promise<EmailSendResult>;
     sendWelcomeEmail(to: string, userName: string): Promise<EmailSendResult>;
-    sendWelcomeCreatorWaitlistEmail(to: string, userName: string): Promise<EmailSendResult>;
-    sendWelcomeCreatorEmail(to: string, userName: string): Promise<EmailSendResult>;
+    sendCreatorWelcomeEmail(to: string, creatorName: string, hasWaitlistBonus?: boolean, bonusAmount?: number): Promise<EmailSendResult>;
     sendEmailVerification(to: string, userName: string, verificationCode: string, expiryMinutes?: number): Promise<EmailSendResult>;
     sendPasswordReset(to: string, userName: string, resetLink: string, expiryMinutes?: number): Promise<EmailSendResult>;
     getEmailStats(days?: number): Promise<any>;

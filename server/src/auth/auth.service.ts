@@ -129,26 +129,18 @@ export class AuthService {
         // Don't fail registration if email fails
       }
 
-      // Send welcome email based on waitlist status
+      // Send creator welcome email with waitlist bonus info if applicable
       try {
-        if (hasWaitlistBonus) {
-          // Send waitlist-specific welcome with bonus information
-          await this.emailService.sendWelcomeCreatorWaitlistEmail(
-            user.email,
-            dto.displayName,
-          );
-          this.logger.log(`Waitlist welcome email sent to: ${user.email}`);
-        } else {
-          // Send regular creator welcome
-          await this.emailService.sendWelcomeCreatorEmail(
-            user.email,
-            dto.displayName,
-          );
-          this.logger.log(`Creator welcome email sent to: ${user.email}`);
-        }
+        await this.emailService.sendCreatorWelcomeEmail(
+          user.email,
+          dto.displayName,
+          hasWaitlistBonus,
+          bonusAmount,
+        );
+        this.logger.log(`Creator welcome email sent to: ${user.email}${hasWaitlistBonus ? ' (with waitlist bonus)' : ''}`);
       } catch (error) {
-        this.logger.error(`Failed to send welcome email:`, error);
-        // Don't fail registration if welcome email fails
+        this.logger.error(`Failed to send creator welcome email:`, error);
+        // Don't fail registration if email fails
       }
 
       // Delete waitlist entry after successful registration
@@ -237,6 +229,7 @@ export class AuthService {
             id: true,
             adminRole: true,
             mustChangePassword: true,
+            twoFactorEnabled: true,
           },
         },
       },
@@ -275,8 +268,9 @@ export class AuthService {
       };
     }
 
-    // Check if 2FA is enabled
-    if (user.twoFactorEnabled) {
+    // Check if 2FA is enabled (check both User and AdminProfile)
+    const is2FAEnabled = user.adminProfile?.twoFactorEnabled || user.twoFactorEnabled;
+    if (is2FAEnabled) {
       // Generate temporary token for 2FA verification (expires in 5 minutes)
       const tempToken = this.jwtService.sign(
         {

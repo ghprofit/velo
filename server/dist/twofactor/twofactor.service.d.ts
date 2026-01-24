@@ -6,6 +6,7 @@ export declare class TwofactorService {
     private readonly logger;
     private readonly config;
     constructor(prisma: PrismaService, configService: ConfigService);
+    private getUserProfile;
     generateSecret(userId: string, userEmail?: string): Promise<{
         secret: string;
         qrCodeUrl: string;

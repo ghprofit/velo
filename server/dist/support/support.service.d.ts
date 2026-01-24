@@ -36,8 +36,8 @@ export declare class SupportService {
         createdAt: Date;
         updatedAt: Date;
         userId: string | null;
-        message: string;
         status: string;
+        message: string;
         assignedTo: string | null;
         resolvedAt: Date | null;
     })[]>;
@@ -61,8 +61,8 @@ export declare class SupportService {
         createdAt: Date;
         updatedAt: Date;
         userId: string | null;
-        message: string;
         status: string;
+        message: string;
         assignedTo: string | null;
         resolvedAt: Date | null;
     }) | null>;

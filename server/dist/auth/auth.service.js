@@ -124,17 +124,11 @@ let AuthService = AuthService_1 = class AuthService {
                 console.error('Failed to generate verification token:', error);
             }
             try {
-                if (hasWaitlistBonus) {
-                    await this.emailService.sendWelcomeCreatorWaitlistEmail(user.email, dto.displayName);
-                    this.logger.log(`Waitlist welcome email sent to: ${user.email}`);
-                }
-                else {
-                    await this.emailService.sendWelcomeCreatorEmail(user.email, dto.displayName);
-                    this.logger.log(`Creator welcome email sent to: ${user.email}`);
-                }
+                await this.emailService.sendCreatorWelcomeEmail(user.email, dto.displayName, hasWaitlistBonus, bonusAmount);
+                this.logger.log(`Creator welcome email sent to: ${user.email}${hasWaitlistBonus ? ' (with waitlist bonus)' : ''}`);
             }
             catch (error) {
-                this.logger.error(`Failed to send welcome email:`, error);
+                this.logger.error(`Failed to send creator welcome email:`, error);
             }
             if (waitlistEntry) {
                 await this.prisma.waitlist.delete({
@@ -204,6 +198,7 @@ let AuthService = AuthService_1 = class AuthService {
                         id: true,
                         adminRole: true,
                         mustChangePassword: true,
+                        twoFactorEnabled: true,
                     },
                 },
             },
@@ -229,7 +224,8 @@ let AuthService = AuthService_1 = class AuthService {
                 message: 'You must change your password before continuing.',
             };
         }
-        if (user.twoFactorEnabled) {
+        const is2FAEnabled = user.adminProfile?.twoFactorEnabled || user.twoFactorEnabled;
+        if (is2FAEnabled) {
             const tempToken = this.jwtService.sign({
                 userId: user.id,
                 email: user.email,

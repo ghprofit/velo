@@ -17,6 +17,13 @@ exports.EMAIL_TEMPLATES = {
         subject: 'Welcome to VeloLink!',
         requiredVariables: ['user_name'],
     },
+    CREATOR_WELCOME: {
+        id: exports.SENDGRID_TEMPLATE_ID,
+        name: 'Creator Welcome Email',
+        description: 'Welcome new creators with optional waitlist bonus info',
+        subject: 'Welcome to Velo, Creator!',
+        requiredVariables: ['creator_name', 'has_waitlist_bonus', 'bonus_amount', 'sales_required'],
+    },
     EMAIL_VERIFICATION: {
         id: exports.SENDGRID_TEMPLATE_ID,
         name: 'Email Verification',
@@ -217,6 +224,68 @@ exports.HTML_TEMPLATES = {
     <div class="footer">
       <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Secure content marketplace for creators and buyers</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+    CREATOR_WELCOME: (data) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      ${getLogoHtml()}
+      <h1>Welcome to Velo, Creator!</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.creator_name}</strong>,</p>
+      <p>Congratulations on joining Velo as a creator! We're excited to have you on board and can't wait to see what you'll create.</p>
+
+      ${data.has_waitlist_bonus ? `
+      <div class="success-box">
+        <p style="margin: 0 0 8px 0;"><strong>🎁 Waitlist Bonus Unlocked!</strong></p>
+        <p style="margin: 0;">As a thank you for being on our waitlist, you've received a <strong class="amount">$${data.bonus_amount}</strong> bonus!</p>
+      </div>
+
+      <div class="info-box">
+        <p style="margin: 0 0 8px 0;"><strong>💡 How to unlock your bonus:</strong></p>
+        <p style="margin: 0;">Your $${data.bonus_amount} bonus will be available for withdrawal once you make <strong>${data.sales_required} sales</strong>. Start uploading your content and sharing with your audience!</p>
+      </div>
+      ` : ''}
+
+      <h3>Get Started:</h3>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li><strong>Complete your profile</strong> - Add a bio and profile image to attract buyers</li>
+        <li><strong>Upload your first content</strong> - Share your exclusive digital content</li>
+        <li><strong>Set up payouts</strong> - Add your bank details to receive earnings</li>
+        <li><strong>Verify your identity</strong> - Complete KYC to unlock all features</li>
+      </ul>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL || 'https://velo.com'}/creator/dashboard" class="button">Go to Creator Dashboard</a>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>Creator Benefits:</h3>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li>Keep <strong>85%</strong> of every sale</li>
+        <li>Instant access for your buyers</li>
+        <li>Secure content hosting</li>
+        <li>Analytics to track your performance</li>
+      </ul>
+
+      <p class="text-sm" style="margin-top: 30px;">Questions? Our support team is here to help you succeed!</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p class="text-xs">Welcome to the creator economy!</p>
     </div>
   </div>
 </body>

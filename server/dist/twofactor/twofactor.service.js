@@ -61,30 +61,61 @@ let TwofactorService = TwofactorService_1 = class TwofactorService {
             step: 30,
         };
     }
-    async generateSecret(userId, userEmail) {
-        this.logger.log(`Generating 2FA secret for user: ${userId}`);
+    async getUserProfile(userId) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
+            include: {
+                adminProfile: {
+                    select: {
+                        twoFactorEnabled: true,
+                        twoFactorSecret: true,
+                        backupCodes: true,
+                    },
+                },
+            },
         });
         if (!user) {
             throw new common_1.BadRequestException('User not found');
         }
+        const isAdmin = !!user.adminProfile;
+        return {
+            isAdmin,
+            email: user.email,
+            twoFactorEnabled: isAdmin ? user.adminProfile.twoFactorEnabled : user.twoFactorEnabled,
+            twoFactorSecret: isAdmin ? user.adminProfile.twoFactorSecret : user.twoFactorSecret,
+            backupCodes: isAdmin ? user.adminProfile.backupCodes : user.backupCodes,
+        };
+    }
+    async generateSecret(userId, userEmail) {
+        this.logger.log(`Generating 2FA secret for user: ${userId}`);
+        const profile = await this.getUserProfile(userId);
         const secret = speakeasy.generateSecret({
-            name: `${this.config.appName} (${userEmail || user.email})`,
+            name: `${this.config.appName} (${userEmail || profile.email})`,
             issuer: this.config.appName,
             length: 32,
         });
         if (!secret.otpauth_url) {
             throw new common_1.BadRequestException('Failed to generate OTP auth URL');
         }
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: {
-                twoFactorSecret: secret.base32,
-                twoFactorEnabled: false,
-            },
-        });
-        this.logger.log(`2FA secret generated for user: ${userId}`);
+        if (profile.isAdmin) {
+            await this.prisma.adminProfile.update({
+                where: { userId },
+                data: {
+                    twoFactorSecret: secret.base32,
+                    twoFactorEnabled: false,
+                },
+            });
+        }
+        else {
+            await this.prisma.user.update({
+                where: { id: userId },
+                data: {
+                    twoFactorSecret: secret.base32,
+                    twoFactorEnabled: false,
+                },
+            });
+        }
+        this.logger.log(`2FA secret generated for ${profile.isAdmin ? 'admin' : 'user'}: ${userId}`);
         return {
             secret: secret.base32,
             qrCodeUrl: secret.otpauth_url,
@@ -103,16 +134,13 @@ let TwofactorService = TwofactorService_1 = class TwofactorService {
     }
     async verifyToken(userId, token) {
         this.logger.log(`Verifying token for user: ${userId}`);
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorSecret: true, twoFactorEnabled: true },
-        });
-        if (!user || !user.twoFactorSecret) {
+        const profile = await this.getUserProfile(userId);
+        if (!profile.twoFactorSecret) {
             this.logger.error(`No 2FA secret found for user: ${userId}`);
             throw new common_1.UnauthorizedException('2FA not set up for this user');
         }
         const verified = speakeasy.totp.verify({
-            secret: user.twoFactorSecret,
+            secret: profile.twoFactorSecret,
             encoding: 'base32',
             token: token,
             window: this.config.window,
@@ -123,11 +151,8 @@ let TwofactorService = TwofactorService_1 = class TwofactorService {
     }
     async enable2FA(userId, secret, token) {
         this.logger.log(`Enabling 2FA for user: ${userId}`);
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorSecret: true },
-        });
-        if (!user || user.twoFactorSecret !== secret) {
+        const profile = await this.getUserProfile(userId);
+        if (profile.twoFactorSecret !== secret) {
             throw new common_1.BadRequestException('Invalid secret');
         }
         const verified = speakeasy.totp.verify({
@@ -140,15 +165,27 @@ let TwofactorService = TwofactorService_1 = class TwofactorService {
             throw new common_1.UnauthorizedException('Invalid token');
         }
         const backupCodes = this.generateBackupCodes(8);
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: {
-                twoFactorEnabled: true,
-                backupCodes: backupCodes.map(code => this.hashBackupCode(code)),
-                twoFactorVerifiedAt: new Date(),
-            },
-        });
-        this.logger.log(`2FA enabled successfully for user: ${userId}`);
+        if (profile.isAdmin) {
+            await this.prisma.adminProfile.update({
+                where: { userId },
+                data: {
+                    twoFactorEnabled: true,
+                    backupCodes: backupCodes.map(code => this.hashBackupCode(code)),
+                    twoFactorVerifiedAt: new Date(),
+                },
+            });
+        }
+        else {
+            await this.prisma.user.update({
+                where: { id: userId },
+                data: {
+                    twoFactorEnabled: true,
+                    backupCodes: backupCodes.map(code => this.hashBackupCode(code)),
+                    twoFactorVerifiedAt: new Date(),
+                },
+            });
+        }
+        this.logger.log(`2FA enabled successfully for ${profile.isAdmin ? 'admin' : 'user'}: ${userId}`);
         return {
             enabled: true,
             backupCodes,
@@ -156,67 +193,76 @@ let TwofactorService = TwofactorService_1 = class TwofactorService {
     }
     async disable2FA(userId, token) {
         this.logger.log(`Disabling 2FA for user: ${userId}`);
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorEnabled: true },
-        });
-        if (!user || !user.twoFactorEnabled) {
+        const profile = await this.getUserProfile(userId);
+        if (!profile.twoFactorEnabled) {
             throw new common_1.BadRequestException('2FA is not enabled for this user');
         }
         const verified = await this.verifyToken(userId, token);
         if (!verified) {
             throw new common_1.UnauthorizedException('Invalid token');
         }
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: {
-                twoFactorEnabled: false,
-                twoFactorSecret: null,
-                backupCodes: [],
-                twoFactorVerifiedAt: null,
-            },
-        });
-        this.logger.log(`2FA disabled successfully for user: ${userId}`);
+        if (profile.isAdmin) {
+            await this.prisma.adminProfile.update({
+                where: { userId },
+                data: {
+                    twoFactorEnabled: false,
+                    twoFactorSecret: null,
+                    backupCodes: [],
+                    twoFactorVerifiedAt: null,
+                },
+            });
+        }
+        else {
+            await this.prisma.user.update({
+                where: { id: userId },
+                data: {
+                    twoFactorEnabled: false,
+                    twoFactorSecret: null,
+                    backupCodes: [],
+                    twoFactorVerifiedAt: null,
+                },
+            });
+        }
+        this.logger.log(`2FA disabled successfully for ${profile.isAdmin ? 'admin' : 'user'}: ${userId}`);
         return true;
     }
     async is2FAEnabled(userId) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorEnabled: true },
-        });
-        return user?.twoFactorEnabled || false;
+        const profile = await this.getUserProfile(userId);
+        return profile.twoFactorEnabled;
     }
     async get2FAStatus(userId) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorEnabled: true, twoFactorSecret: true },
-        });
+        const profile = await this.getUserProfile(userId);
         return {
-            enabled: user?.twoFactorEnabled || false,
-            hasSecret: !!user?.twoFactorSecret,
+            enabled: profile.twoFactorEnabled,
+            hasSecret: !!profile.twoFactorSecret,
         };
     }
     async verifyBackupCode(userId, backupCode) {
         this.logger.log(`Verifying backup code for user: ${userId}`);
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorEnabled: true, backupCodes: true },
-        });
-        if (!user || !user.twoFactorEnabled || !user.backupCodes || user.backupCodes.length === 0) {
+        const profile = await this.getUserProfile(userId);
+        if (!profile.twoFactorEnabled || !profile.backupCodes || profile.backupCodes.length === 0) {
             throw new common_1.UnauthorizedException('2FA not enabled or no backup codes');
         }
         const hashedCode = this.hashBackupCode(backupCode);
-        const codeIndex = user.backupCodes.indexOf(hashedCode);
+        const codeIndex = profile.backupCodes.indexOf(hashedCode);
         if (codeIndex === -1) {
             this.logger.warn(`Invalid backup code for user: ${userId}`);
             return false;
         }
-        const updatedBackupCodes = [...user.backupCodes];
+        const updatedBackupCodes = [...profile.backupCodes];
         updatedBackupCodes.splice(codeIndex, 1);
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: { backupCodes: updatedBackupCodes },
-        });
+        if (profile.isAdmin) {
+            await this.prisma.adminProfile.update({
+                where: { userId },
+                data: { backupCodes: updatedBackupCodes },
+            });
+        }
+        else {
+            await this.prisma.user.update({
+                where: { id: userId },
+                data: { backupCodes: updatedBackupCodes },
+            });
+        }
         this.logger.log(`Backup code verified and removed for user: ${userId}`);
         return true;
     }
@@ -235,15 +281,12 @@ let TwofactorService = TwofactorService_1 = class TwofactorService {
             .digest('hex');
     }
     async generateCurrentToken(userId) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorSecret: true },
-        });
-        if (!user || !user.twoFactorSecret) {
+        const profile = await this.getUserProfile(userId);
+        if (!profile.twoFactorSecret) {
             throw new common_1.BadRequestException('No 2FA secret found for this user');
         }
         const token = speakeasy.totp({
-            secret: user.twoFactorSecret,
+            secret: profile.twoFactorSecret,
             encoding: 'base32',
             step: this.config.step,
         });
@@ -251,11 +294,8 @@ let TwofactorService = TwofactorService_1 = class TwofactorService {
     }
     async regenerateBackupCodes(userId, token) {
         this.logger.log(`Regenerating backup codes for user: ${userId}`);
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorEnabled: true },
-        });
-        if (!user || !user.twoFactorEnabled) {
+        const profile = await this.getUserProfile(userId);
+        if (!profile.twoFactorEnabled) {
             throw new common_1.BadRequestException('2FA is not enabled for this user');
         }
         const verified = await this.verifyToken(userId, token);
@@ -263,18 +303,36 @@ let TwofactorService = TwofactorService_1 = class TwofactorService {
             throw new common_1.UnauthorizedException('Invalid token');
         }
         const backupCodes = this.generateBackupCodes(8);
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: {
-                backupCodes: backupCodes.map(code => this.hashBackupCode(code)),
-            },
-        });
+        if (profile.isAdmin) {
+            await this.prisma.adminProfile.update({
+                where: { userId },
+                data: {
+                    backupCodes: backupCodes.map(code => this.hashBackupCode(code)),
+                },
+            });
+        }
+        else {
+            await this.prisma.user.update({
+                where: { id: userId },
+                data: {
+                    backupCodes: backupCodes.map(code => this.hashBackupCode(code)),
+                },
+            });
+        }
         this.logger.log(`Backup codes regenerated for user: ${userId}`);
         return backupCodes;
     }
     async clearAll() {
-        this.logger.warn('⚠️  DANGER: Clearing all 2FA data from database for ALL users');
+        this.logger.warn('⚠️  DANGER: Clearing all 2FA data from database for ALL users and admins');
         await this.prisma.user.updateMany({
+            data: {
+                twoFactorEnabled: false,
+                twoFactorSecret: null,
+                backupCodes: [],
+                twoFactorVerifiedAt: null,
+            },
+        });
+        await this.prisma.adminProfile.updateMany({
             data: {
                 twoFactorEnabled: false,
                 twoFactorSecret: null,
@@ -284,11 +342,8 @@ let TwofactorService = TwofactorService_1 = class TwofactorService {
         });
     }
     async getRemainingBackupCodesCount(userId) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { backupCodes: true },
-        });
-        return user?.backupCodes?.length || 0;
+        const profile = await this.getUserProfile(userId);
+        return profile.backupCodes?.length || 0;
     }
 };
 exports.TwofactorService = TwofactorService;

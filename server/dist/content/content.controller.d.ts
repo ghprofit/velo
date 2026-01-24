@@ -93,8 +93,8 @@ export declare class ContentController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                title: string;
                 status: import(".prisma/client").$Enums.ContentStatus;
+                title: string;
                 viewCount: number;
                 creatorId: string;
                 description: string | null;
@@ -188,8 +188,8 @@ export declare class ContentController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                title: string;
                 status: import(".prisma/client").$Enums.ContentStatus;
+                title: string;
                 viewCount: number;
                 creatorId: string;
                 description: string | null;
@@ -287,8 +287,8 @@ export declare class ContentController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                title: string;
                 status: import(".prisma/client").$Enums.ContentStatus;
+                title: string;
                 viewCount: number;
                 creatorId: string;
                 description: string | null;
@@ -337,8 +337,8 @@ export declare class ContentController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            title: string;
             status: import(".prisma/client").$Enums.ContentStatus;
+            title: string;
             viewCount: number;
             creatorId: string;
             description: string | null;
@@ -434,8 +434,8 @@ export declare class ContentController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            title: string;
             status: import(".prisma/client").$Enums.ContentStatus;
+            title: string;
             viewCount: number;
             creatorId: string;
             description: string | null;

@@ -524,9 +524,19 @@ export class AuthService {
     }
 
     // Update user as verified
-    await this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: verificationToken.userId },
       data: { emailVerified: true },
+      include: {
+        creatorProfile: {
+          select: {
+            id: true,
+            displayName: true,
+            profileImage: true,
+            verificationStatus: true,
+          },
+        },
+      },
     });
 
     // Delete used token
@@ -534,8 +544,16 @@ export class AuthService {
       where: { id: verificationToken.id },
     });
 
+    // Return success message with updated user data
     return {
       message: 'Email verified successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        emailVerified: updatedUser.emailVerified,
+        creatorProfile: updatedUser.creatorProfile,
+      },
     };
   }
 

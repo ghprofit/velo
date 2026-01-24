@@ -49,6 +49,11 @@ export default function ContentManagementPage() {
     approved: 0,
     rejected: 0,
     flagged: 0,
+    urgentReview: 0,
+    recentlyProcessed: 0,
+    avgReviewTimeHours: 0,
+  };
+    flagged: 0,
   };
 
   const handleReview = async () => {

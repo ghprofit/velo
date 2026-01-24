@@ -66,8 +66,19 @@ export default function VerifyEmailPage() {
     setIsLoading(true);
 
     try {
-      await authApi.verifyEmail(verificationCode);
+      const response = await authApi.verifyEmail(verificationCode);
       setSuccess('Email verified successfully!');
+
+      // Update user context with the verified user data if available
+      if (response.user) {
+        const currentUser = localStorage.getItem('user');
+        if (currentUser) {
+          const updatedUser = { ...JSON.parse(currentUser), ...response.user };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          // Trigger a refresh without clearing data on failure
+          window.dispatchEvent(new CustomEvent('auth-user-updated'));
+        }
+      }
 
       // Navigate to identity verification after 1 second
       setTimeout(() => {

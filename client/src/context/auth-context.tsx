@@ -40,11 +40,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
     } catch (error) {
       console.error('Failed to refresh user:', error);
-      // If refresh fails, clear auth state
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      setUser(null);
+      
+      // Check if it's a network error or temporary issue
+      const isNetworkError = !error || !(error as any).response;
+      const is401 = (error as any)?.response?.status === 401;
+      
+      // Only clear auth state on 401 (unauthorized), not on network errors
+      if (is401) {
+        console.log('User session expired, logging out');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setUser(null);
+      } else if (!isNetworkError) {
+        console.log('Non-network error refreshing user, but keeping session');
+        // Keep existing user data for non-network errors that aren't 401
+      }
+      // For network errors, keep the user logged in - they might just be offline
     }
   }, []);
 
@@ -95,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, [initializeAuth]);
 
-  // Listen for token refresh events from axios interceptor
+  // Listen for token refresh events from axios interceptor and user updates
   useEffect(() => {
     const handleTokenRefresh = async () => {
       // Tokens are already updated in localStorage by the interceptor
@@ -107,13 +119,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    const handleUserUpdate = () => {
+      // Update user context from localStorage without API call
+      try {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+        }
+      } catch (error) {
+        console.error('Failed to update user from localStorage:', error);
+      }
+    };
+
     if (typeof window !== 'undefined') {
       window.addEventListener('auth-token-refreshed', handleTokenRefresh);
+      window.addEventListener('auth-user-updated', handleUserUpdate);
     }
 
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('auth-token-refreshed', handleTokenRefresh);
+        window.removeEventListener('auth-user-updated', handleUserUpdate);
       }
     };
   }, [refreshUser]);

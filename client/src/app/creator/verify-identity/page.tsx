@@ -24,10 +24,24 @@ export default function CreatorVerifyIdentityPage() {
   // Check current verification status on mount and when redirected from Veriff
   useEffect(() => {
     const verified = searchParams.get('verified');
+    const status = searchParams.get('status');
+    const reason = searchParams.get('reason');
+
     if (verified === 'true') {
-      // User was just redirected from Veriff - immediately check status
+      // User was just redirected from Veriff with verified status
       checkVerificationStatus();
       // Clean up URL
+      router.replace('/creator/verify-identity');
+    } else if (verified === 'false') {
+      // Verification was rejected
+      checkVerificationStatus();
+      if (reason === 'rejected') {
+        setError('Your verification was declined. Please try again with valid documents.');
+      }
+      router.replace('/creator/verify-identity');
+    } else if (status === 'pending') {
+      // Verification is being processed - poll for updates
+      checkVerificationStatus();
       router.replace('/creator/verify-identity');
     } else {
       checkVerificationStatus();

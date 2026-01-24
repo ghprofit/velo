@@ -10,7 +10,6 @@ import {
   HttpStatus,
   Logger,
   BadRequestException,
-  Headers,
   Req,
   Res,
   UnauthorizedException,
@@ -138,74 +137,68 @@ export class VeriffController {
   }
 
   /**
-   * GET endpoint for user redirect after verification
-   * Veriff redirects users here after they click "Continue"
-   * Redirect them back to the frontend verify-identity page
-   * Since users only reach this after completing verification, mark as VERIFIED
+   * GET endpoint for user redirect after verification flow
+   * Veriff redirects users here after they complete, cancel, or abandon the verification
+   *
+   * IMPORTANT: Do NOT automatically mark users as verified here!
+   * Users can reach this endpoint by:
+   * - Completing verification successfully
+   * - Canceling verification
+   * - Abandoning the flow
+   *
+   * The actual verification status update should ONLY come from the POST webhook
+   * which receives the authentic decision from Veriff with proper signature verification.
    */
   @Get('webhooks/decision')
   @HttpCode(HttpStatus.FOUND)
   async handleUserRedirect(@Res() response: Response, @Req() request: Request): Promise<void> {
-    this.logger.log('User redirected from Veriff - marking as verified');
-    
-    try {
-      // Extract session ID from query params if available
-      const sessionId = request.query.id as string;
-      
-      if (sessionId) {
-        this.logger.log(`Verifying session: ${sessionId}`);
-        
-        // Find and update creator profile
+    this.logger.log('User redirected from Veriff verification flow');
+
+    const sessionId = request.query.id as string;
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+    if (sessionId) {
+      this.logger.log(`Redirect received for session: ${sessionId}`);
+
+      try {
+        // Check if we have a creator profile for this session
         const creatorProfile = await this.prisma.creatorProfile.findUnique({
           where: { veriffSessionId: sessionId },
+          select: { id: true, verificationStatus: true },
         });
 
         if (creatorProfile) {
-          await this.prisma.creatorProfile.update({
-            where: { id: creatorProfile.id },
-            data: {
-              verificationStatus: VerificationStatus.VERIFIED,
-              verifiedAt: new Date(),
-            },
-          });
-          this.logger.log(`Updated creator ${creatorProfile.id} to VERIFIED`);
+          this.logger.log(`Creator ${creatorProfile.id} current status: ${creatorProfile.verificationStatus}`);
+
+          // If already verified (webhook processed first), redirect with success
+          if (creatorProfile.verificationStatus === VerificationStatus.VERIFIED) {
+            response.redirect(`${clientUrl}/creator/verify-identity?verified=true`);
+            return;
+          }
+
+          // If rejected, redirect with failure
+          if (creatorProfile.verificationStatus === VerificationStatus.REJECTED) {
+            response.redirect(`${clientUrl}/creator/verify-identity?verified=false&reason=rejected`);
+            return;
+          }
+
+          // Still pending/in-progress - redirect to check status page
+          // The webhook will update the status asynchronously
+          response.redirect(`${clientUrl}/creator/verify-identity?status=pending`);
+          return;
         } else {
           this.logger.warn(`No creator profile found for session: ${sessionId}`);
         }
-      } else {
-        this.logger.warn('No session ID in redirect - trying to find by IN_PROGRESS status');
-        
-        // Fallback: Find any IN_PROGRESS verification and mark as VERIFIED
-        // This is a temporary workaround - can refine later
-        const inProgressProfiles = await this.prisma.creatorProfile.findMany({
-          where: { 
-            verificationStatus: VerificationStatus.IN_PROGRESS,
-          },
-          orderBy: { updatedAt: 'desc' },
-          take: 1,
-        });
-
-        if (inProgressProfiles.length > 0) {
-          const profile = inProgressProfiles[0];
-          if (profile) {
-            await this.prisma.creatorProfile.update({
-              where: { id: profile.id },
-              data: {
-                verificationStatus: VerificationStatus.VERIFIED,
-                verifiedAt: new Date(),
-              },
-            });
-            this.logger.log(`Updated most recent IN_PROGRESS creator ${profile.id} to VERIFIED`);
-          }
-        }
+      } catch (error) {
+        this.logger.error('Error checking verification status:', error);
       }
-    } catch (error) {
-      this.logger.error('Error updating verification status:', error);
+    } else {
+      this.logger.warn('User redirect received without session ID');
     }
 
-    // Always redirect user back to frontend with success indicator
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    response.redirect(`${clientUrl}/creator/verify-identity?verified=true`);
+    // Default: redirect to verification page with pending status
+    // User should wait for webhook to process the actual decision
+    response.redirect(`${clientUrl}/creator/verify-identity?status=pending`);
   }
 
   /**

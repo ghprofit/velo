@@ -35,10 +35,35 @@ export default function VerifyEmailPage() {
       setStatus('success');
       setMessage(response.message || 'Email verified successfully!');
 
-      // Redirect to ID verification after 3 seconds
+      // Update user context with the verified user data if available
+      if (response.user) {
+        const currentUser = localStorage.getItem('user');
+        if (currentUser) {
+          const updatedUser = { ...JSON.parse(currentUser), ...response.user };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          // Trigger a refresh without clearing data on failure
+          window.dispatchEvent(new CustomEvent('auth-user-updated'));
+        }
+      }
+
+      // Redirect to appropriate page after 2 seconds
       setTimeout(() => {
-        router.push('/register/verify');
-      }, 3000);
+        // Check if user is authenticated to determine redirect
+        const user = localStorage.getItem('user');
+        if (user) {
+          const parsedUser = JSON.parse(user);
+          // If it's a creator, go to register flow for identity verification
+          if (parsedUser.role === 'CREATOR') {
+            router.push('/register/verify-identity');
+          } else {
+            // For other roles, go to dashboard
+            router.push('/dashboard');
+          }
+        } else {
+          // If no user data, go to registration flow
+          router.push('/register/verify');
+        }
+      }, 2000);
     } catch (error: unknown) {
       const apiError = error as { data?: { message?: string } };
       setStatus('error');

@@ -53,8 +53,6 @@ export default function ContentManagementPage() {
     recentlyProcessed: 0,
     avgReviewTimeHours: 0,
   };
-    flagged: 0,
-  };
 
   const handleReview = async () => {
     if (!selectedContent || !reviewAction) return;

@@ -232,6 +232,12 @@ export class AuthService {
             verificationStatus: true,
           },
         },
+        adminProfile: {
+          select: {
+            id: true,
+            adminRole: true,
+          },
+        },
       },
     });
 
@@ -315,6 +321,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         emailVerified: user.emailVerified,
+        adminRole: user.adminProfile?.adminRole || null,
         creatorProfile: user.creatorProfile,
       },
       tokens: {
@@ -831,6 +838,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         emailVerified: user.emailVerified,
+        adminRole: user.adminProfile?.adminRole || null,
         creatorProfile: user.creatorProfile,
       },
       tokens: {
@@ -926,6 +934,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         emailVerified: user.emailVerified,
+        adminRole: user.adminProfile?.adminRole || null,
         creatorProfile: user.creatorProfile,
       },
       tokens: {

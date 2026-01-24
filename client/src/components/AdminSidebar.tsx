@@ -100,19 +100,27 @@ export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
   const menuItems = useMemo(() => {
     const adminRole = user?.adminRole;
     
-    if (!adminRole) {
-      // If no adminRole (e.g., SUPER_ADMIN), show all items
+    // Only show all items if user is explicitly SUPER_ADMIN (no adminRole)
+    // and they are actually an ADMIN role type
+    if (!adminRole && user?.role === 'ADMIN') {
+      // This is likely a SUPER_ADMIN, show all items
       return allMenuItems;
     }
 
-    return allMenuItems.filter(item => {
-      // If item has no roles defined, show it to everyone
-      if (!item.roles) return true;
-      
-      // Otherwise, check if user's role is in the allowed roles
-      return item.roles.includes(adminRole);
-    });
-  }, [user?.adminRole]);
+    // If we have an adminRole, filter by it
+    if (adminRole) {
+      return allMenuItems.filter(item => {
+        // If item has no roles defined, show it to everyone
+        if (!item.roles) return true;
+        
+        // Otherwise, check if user's role is in the allowed roles
+        return item.roles.includes(adminRole);
+      });
+    }
+
+    // Default: show no items if something is wrong
+    return [];
+  }, [user?.adminRole, user?.role]);
 
   const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
     const icons: Record<string, JSX.Element> = {

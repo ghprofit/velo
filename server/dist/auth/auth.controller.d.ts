@@ -46,9 +46,21 @@ export declare class AuthController {
         success: boolean;
         message: string;
         data: {
+            mustChangePassword: boolean;
+            userId: string;
+            email: string;
+            message: string;
+            requiresTwoFactor?: undefined;
+            tempToken?: undefined;
+            user?: undefined;
+            tokens?: undefined;
+        } | {
             requiresTwoFactor: boolean;
             tempToken: string;
             message: string;
+            mustChangePassword?: undefined;
+            userId?: undefined;
+            email?: undefined;
             user?: undefined;
             tokens?: undefined;
         } | {
@@ -70,9 +82,12 @@ export declare class AuthController {
                 refreshToken: string;
                 expiresIn: number;
             };
+            mustChangePassword?: undefined;
+            userId?: undefined;
+            email?: undefined;
+            message?: undefined;
             requiresTwoFactor?: undefined;
             tempToken?: undefined;
-            message?: undefined;
         };
     }>;
     refresh(dto: RefreshTokenDto, res: any): Promise<{
@@ -170,6 +185,13 @@ export declare class AuthController {
         message: string;
     }>;
     changePassword(req: any, dto: ChangePasswordDto): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    forceChangePassword(body: {
+        userId: string;
+        newPassword: string;
+    }): Promise<{
         success: boolean;
         message: string;
     }>;

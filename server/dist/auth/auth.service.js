@@ -203,6 +203,7 @@ let AuthService = AuthService_1 = class AuthService {
                     select: {
                         id: true,
                         adminRole: true,
+                        mustChangePassword: true,
                     },
                 },
             },
@@ -220,6 +221,14 @@ let AuthService = AuthService_1 = class AuthService {
             throw new common_1.UnauthorizedException('Invalid email or password.');
         }
         await this.clearFailedLogins(loginKey);
+        if (user.adminProfile?.mustChangePassword) {
+            return {
+                mustChangePassword: true,
+                userId: user.id,
+                email: user.email,
+                message: 'You must change your password before continuing.',
+            };
+        }
         if (user.twoFactorEnabled) {
             const tempToken = this.jwtService.sign({
                 userId: user.id,
@@ -568,6 +577,7 @@ let AuthService = AuthService_1 = class AuthService {
     async changePassword(userId, dto) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
+            include: { adminProfile: true },
         });
         if (!user) {
             throw new common_1.NotFoundException('User not found');
@@ -581,8 +591,41 @@ let AuthService = AuthService_1 = class AuthService {
             where: { id: userId },
             data: { password: hashedPassword },
         });
+        if (user.adminProfile?.mustChangePassword) {
+            await this.prisma.adminProfile.update({
+                where: { userId: userId },
+                data: { mustChangePassword: false },
+            });
+        }
         return {
             message: 'Password changed successfully',
+        };
+    }
+    async forceChangePassword(userId, newPassword) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: { adminProfile: true },
+        });
+        if (!user || !user.adminProfile) {
+            throw new common_1.NotFoundException('Admin user not found');
+        }
+        const hashedPassword = await this.hashPassword(newPassword);
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword },
+        });
+        await this.prisma.adminProfile.update({
+            where: { userId: userId },
+            data: {
+                mustChangePassword: false,
+                lastPasswordReset: new Date(),
+            },
+        });
+        await this.prisma.refreshToken.deleteMany({
+            where: { userId: userId },
+        });
+        return {
+            message: 'Password changed successfully. Please login with your new password.',
         };
     }
     async verify2FALogin(dto) {

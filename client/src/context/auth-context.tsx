@@ -18,7 +18,13 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ requiresTwoFactor?: boolean; tempToken?: string }>;
+  login: (email: string, password: string) => Promise<{ 
+    requiresTwoFactor?: boolean; 
+    tempToken?: string;
+    mustChangePassword?: boolean;
+    userId?: string;
+    email?: string;
+  }>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;

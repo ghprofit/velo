@@ -223,7 +223,7 @@ export default function AdminSettingsPage() {
 
     try {
       setPasswordLoading(true);
-      const response = await fetch('/api/admin/change-password', {
+      const response = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

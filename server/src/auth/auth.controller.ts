@@ -229,6 +229,17 @@ export class AuthController {
     };
   }
 
+  @Post('force-change-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 attempts per 15 minutes
+  async forceChangePassword(@Body() body: { userId: string; newPassword: string }) {
+    const result = await this.authService.forceChangePassword(body.userId, body.newPassword);
+    return {
+      success: true,
+      message: result.message,
+    };
+  }
+
   // ==================== 2FA Endpoints ====================
 
   @Post('2fa/setup')

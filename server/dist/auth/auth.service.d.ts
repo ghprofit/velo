@@ -47,9 +47,21 @@ export declare class AuthService {
         };
     }>;
     login(dto: LoginDto, ipAddress?: string, userAgent?: string): Promise<{
+        mustChangePassword: boolean;
+        userId: string;
+        email: string;
+        message: string;
+        requiresTwoFactor?: undefined;
+        tempToken?: undefined;
+        user?: undefined;
+        tokens?: undefined;
+    } | {
         requiresTwoFactor: boolean;
         tempToken: string;
         message: string;
+        mustChangePassword?: undefined;
+        userId?: undefined;
+        email?: undefined;
         user?: undefined;
         tokens?: undefined;
     } | {
@@ -71,9 +83,12 @@ export declare class AuthService {
             refreshToken: string;
             expiresIn: number;
         };
+        mustChangePassword?: undefined;
+        userId?: undefined;
+        email?: undefined;
+        message?: undefined;
         requiresTwoFactor?: undefined;
         tempToken?: undefined;
-        message?: undefined;
     }>;
     refresh(dto: RefreshTokenDto): Promise<{
         accessToken: string;
@@ -170,6 +185,9 @@ export declare class AuthService {
         message: string;
     }>;
     changePassword(userId: string, dto: ChangePasswordDto): Promise<{
+        message: string;
+    }>;
+    forceChangePassword(userId: string, newPassword: string): Promise<{
         message: string;
     }>;
     verify2FALogin(dto: Verify2FADto): Promise<{

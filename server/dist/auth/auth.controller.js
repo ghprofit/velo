@@ -168,6 +168,13 @@ let AuthController = class AuthController {
             message: result.message,
         };
     }
+    async forceChangePassword(body) {
+        const result = await this.authService.forceChangePassword(body.userId, body.newPassword);
+        return {
+            success: true,
+            message: result.message,
+        };
+    }
     async setup2FA(req) {
         const result = await this.twofactorService.generateSecret(req.user.id, req.user.email);
         const qrCode = await this.twofactorService.generateQRCode(result.qrCodeUrl);
@@ -394,6 +401,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, change_password_dto_1.ChangePasswordDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "changePassword", null);
+__decorate([
+    (0, common_1.Post)('force-change-password'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 900000 } }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "forceChangePassword", null);
 __decorate([
     (0, common_1.Post)('2fa/setup'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),

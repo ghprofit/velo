@@ -236,6 +236,7 @@ export class AuthService {
           select: {
             id: true,
             adminRole: true,
+            mustChangePassword: true,
           },
         },
       },
@@ -263,6 +264,16 @@ export class AuthService {
 
     // Clear failed login attempts on successful login
     await this.clearFailedLogins(loginKey);
+
+    // Check if admin must change password
+    if (user.adminProfile?.mustChangePassword) {
+      return {
+        mustChangePassword: true,
+        userId: user.id,
+        email: user.email,
+        message: 'You must change your password before continuing.',
+      };
+    }
 
     // Check if 2FA is enabled
     if (user.twoFactorEnabled) {
@@ -735,6 +746,7 @@ export class AuthService {
   async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: { adminProfile: true },
     });
 
     if (!user) {
@@ -757,11 +769,56 @@ export class AuthService {
       data: { password: hashedPassword },
     });
 
+    // If admin was forced to change password, clear the flag
+    if (user.adminProfile?.mustChangePassword) {
+      await this.prisma.adminProfile.update({
+        where: { userId: userId },
+        data: { mustChangePassword: false },
+      });
+    }
+
     // Invalidate all refresh tokens except current session (optional)
     // For now, we'll keep all sessions active
 
     return {
       message: 'Password changed successfully',
+    };
+  }
+
+  async forceChangePassword(userId: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { adminProfile: true },
+    });
+
+    if (!user || !user.adminProfile) {
+      throw new NotFoundException('Admin user not found');
+    }
+
+    // Hash new password
+    const hashedPassword = await this.hashPassword(newPassword);
+
+    // Update password and clear mustChangePassword flag
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    await this.prisma.adminProfile.update({
+      where: { userId: userId },
+      data: { 
+        mustChangePassword: false,
+        lastPasswordReset: new Date(),
+      },
+    });
+
+    // Invalidate all refresh tokens (force re-login)
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId: userId },
+    });
+
+    return {
+      message: 'Password changed successfully. Please login with your new password.',
     };
   }
 

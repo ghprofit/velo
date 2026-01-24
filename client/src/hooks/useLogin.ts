@@ -59,6 +59,13 @@ export const useLogin = (): UseLoginReturn => {
         return;
       }
 
+      if (result.mustChangePassword) {
+        // User must change password before continuing
+        setIsLoading(false);
+        router.push(`/force-change-password?userId=${result.userId || ''}&email=${encodeURIComponent(result.email || '')}`);
+        return;
+      }
+
       // Login successful - get user data from localStorage (just set by authLogin)
       const storedUser = localStorage.getItem('user');
       const accessToken = localStorage.getItem('accessToken');

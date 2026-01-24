@@ -2,6 +2,8 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { AdminRoleGuard } from '../auth/guards/admin-role.guard';
+import { AdminRoles } from '../auth/decorators/admin-roles.decorator';
 import {
   DashboardStatsResponseDto,
   GetRevenueQueryDto,
@@ -11,7 +13,8 @@ import {
 } from './dto/dashboard.dto';
 
 @Controller('admin')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard, AdminRoleGuard)
+@AdminRoles('FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 

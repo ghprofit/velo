@@ -395,9 +395,7 @@ export default function AdminAuditPage() {
             <div className="space-y-2 text-sm">
               <div className="text-orange-600">
                 <span className="font-medium">Last Login:</span>{' '}
-                {admin.lastLogin && !isNaN(new Date(admin.lastLogin).getTime())
-                  ? new Date(admin.lastLogin).toLocaleString()
-                  : 'Never'}
+                {admin.lastLogin || 'Never'}
               </div>
               {admin.lastPasswordReset && !isNaN(new Date(admin.lastPasswordReset).getTime()) && (
                 <div className="text-orange-600">

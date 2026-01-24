@@ -223,7 +223,7 @@ export default function CreatorDashboardPage() {
       iconColor: 'text-blue-600'
     },
     {
-      label: 'Total Earnings (90%)',
+      label: 'Total Earnings',
       value: `$${totalEarningsFromTrends.toFixed(2)}`,
       icon: 'dollar',
       bgColor: 'bg-green-100',

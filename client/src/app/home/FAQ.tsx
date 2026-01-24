@@ -113,7 +113,7 @@ export default function FAQ() {
         {
           question: 'What are the fees / commission?',
           answer:
-            'Velolink charges a 20% commission on each transaction: 10% is taken from the creator\'s side, and 10% from the buyer\'s side, meaning, creators get to keep 90% of their earnings per transaction.',
+            'Velolink charges a 20% commission on each transaction: 10% is taken from the creator\'s side, and 10% from the buyer\'s side, meaning, creators get to keep 90% of their earnings per transaction.',
         },
       ],
     },

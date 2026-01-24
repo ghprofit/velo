@@ -165,6 +165,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
+      // Check if password change is required
+      if (data.mustChangePassword) {
+        return {
+          mustChangePassword: true,
+          userId: data.userId,
+          email: data.email,
+        };
+      }
+
       // Store tokens and user data
       const { user: userData, tokens } = data;
       localStorage.setItem('accessToken', tokens.accessToken);

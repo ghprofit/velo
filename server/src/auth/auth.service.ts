@@ -790,6 +790,12 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.userId },
       include: {
+        adminProfile: {
+          select: {
+            id: true,
+            adminRole: true,
+          },
+        },
         creatorProfile: {
           select: {
             id: true,
@@ -881,6 +887,12 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.userId },
       include: {
+        adminProfile: {
+          select: {
+            id: true,
+            adminRole: true,
+          },
+        },
         creatorProfile: {
           select: {
             id: true,

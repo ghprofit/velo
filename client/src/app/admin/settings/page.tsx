@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
 import { useAuth } from '@/context/auth-context';
+import { apiClient } from '@/lib/api-client';
 
 interface Toast {
   message: string;
@@ -143,32 +144,20 @@ export default function AdminSettingsPage() {
 
     try {
       setProfileLoading(true);
-      const response = await fetch('/api/admin/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          name: adminName,
-          email: adminEmail,
-          role: adminRole,
-          bio: adminBio
-        })
+      await apiClient.put('/admin/profile', {
+        name: adminName,
+        email: adminEmail,
+        role: adminRole,
+        bio: adminBio
       });
 
-      if (response.ok) {
-        setOriginalAdminName(adminName);
-        setOriginalAdminEmail(adminEmail);
-        setOriginalAdminRole(adminRole);
-        setOriginalAdminBio(adminBio);
-        showToast('Profile updated successfully', 'success');
-      } else {
-        const error = await response.json();
-        showToast(error.message || 'Failed to update profile', 'error');
-      }
-    } catch {
-      showToast('An error occurred while updating profile', 'error');
+      setOriginalAdminName(adminName);
+      setOriginalAdminEmail(adminEmail);
+      setOriginalAdminRole(adminRole);
+      setOriginalAdminBio(adminBio);
+      showToast('Profile updated successfully', 'success');
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Failed to update profile', 'error');
     } finally {
       setProfileLoading(false);
     }
@@ -223,29 +212,17 @@ export default function AdminSettingsPage() {
 
     try {
       setPasswordLoading(true);
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword
-        })
+      await apiClient.post('/auth/change-password', {
+        currentPassword,
+        newPassword
       });
 
-      if (response.ok) {
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        showToast('Password changed successfully', 'success');
-      } else {
-        const error = await response.json();
-        showToast(error.message || 'Failed to change password', 'error');
-      }
-    } catch {
-      showToast('An error occurred while changing password', 'error');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      showToast('Password changed successfully', 'success');
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Failed to change password', 'error');
     } finally {
       setPasswordLoading(false);
     }
@@ -258,41 +235,23 @@ export default function AdminSettingsPage() {
 
       if (enabled) {
         // Generate QR code
-        const response = await fetch('/api/admin/2fa/setup', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setQrCode(data.qrCode);
-          setTwoFactorSecret(data.secret);
-          setBackupCodes(data.backupCodes);
-          setTwoFactorEnabled(true);
-          showToast('2FA setup initiated. Scan the QR code and confirm.', 'success');
-        } else {
-          showToast('Failed to setup 2FA', 'error');
-        }
+        const response = await apiClient.post('/admin/2fa/setup');
+        const data = response.data;
+        
+        setQrCode(data.qrCode);
+        setTwoFactorSecret(data.secret);
+        setBackupCodes(data.backupCodes);
+        setTwoFactorEnabled(true);
+        showToast('2FA setup initiated. Scan the QR code and confirm.', 'success');
       } else {
         // Disable 2FA
-        const response = await fetch('/api/admin/2fa/disable', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-
-        if (response.ok) {
-          setTwoFactorEnabled(false);
-          setQrCode('');
-          setTwoFactorSecret('');
-          setBackupCodes([]);
-          showToast('2FA disabled', 'success');
-        } else {
-          showToast('Failed to disable 2FA', 'error');
-        }
+        await apiClient.post('/admin/2fa/disable');
+        
+        setTwoFactorEnabled(false);
+        setQrCode('');
+        setTwoFactorSecret('');
+        setBackupCodes([]);
+        showToast('2FA disabled', 'success');
       }
     } catch {
       showToast('An error occurred with 2FA', 'error');
@@ -304,19 +263,9 @@ export default function AdminSettingsPage() {
   // Session Management Functions
   const handleRevokeSession = async (sessionId: string) => {
     try {
-      const response = await fetch(`/api/admin/sessions/${sessionId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        loadActiveSessions();
-        showToast('Session revoked successfully', 'success');
-      } else {
-        showToast('Failed to revoke session', 'error');
-      }
+      await apiClient.delete(`/admin/sessions/${sessionId}`);
+      loadActiveSessions();
+      showToast('Session revoked successfully', 'success');
     } catch {
       showToast('An error occurred while revoking session', 'error');
     }
@@ -326,26 +275,15 @@ export default function AdminSettingsPage() {
   const handleSaveNotifications = async () => {
     try {
       setNotificationsLoading(true);
-      const response = await fetch('/api/admin/notifications', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          emailNotifications,
-          pushNotifications,
-          newCreatorAlert,
-          paymentAlert,
-          reportAlert
-        })
+      await apiClient.put('/admin/notifications', {
+        emailNotifications,
+        pushNotifications,
+        newCreatorAlert,
+        paymentAlert,
+        reportAlert
       });
 
-      if (response.ok) {
-        showToast('Notification preferences saved', 'success');
-      } else {
-        showToast('Failed to save notification preferences', 'error');
-      }
+      showToast('Notification preferences saved', 'success');
     } catch {
       showToast('An error occurred while saving preferences', 'error');
     } finally {

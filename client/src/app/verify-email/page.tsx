@@ -36,10 +36,10 @@ export default function VerifyEmailPage() {
       setMessage(response.message || 'Email verified successfully!');
 
       // Update user context with the verified user data if available
-      if (response.user) {
+      if (response.data) {
         const currentUser = localStorage.getItem('user');
         if (currentUser) {
-          const updatedUser = { ...JSON.parse(currentUser), ...response.user };
+          const updatedUser = { ...JSON.parse(currentUser), emailVerified: true };
           localStorage.setItem('user', JSON.stringify(updatedUser));
           // Trigger a refresh without clearing data on failure
           window.dispatchEvent(new CustomEvent('auth-user-updated'));

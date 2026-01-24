@@ -100,8 +100,8 @@ export default function AdminAuditPage() {
       await updateAdmin({
         id: adminId,
         data: {
-          ...(editRole && { role: editRole as any }),
-          ...(editStatus && { status: editStatus as any }),
+          ...(editRole && { role: editRole as 'FINANCIAL_ADMIN' | 'CONTENT_ADMIN' | 'SUPPORT_SPECIALIST' | 'ANALYTICS_ADMIN' }),
+          ...(editStatus && { status: editStatus as 'ACTIVE' | 'SUSPENDED' | 'INVITED' }),
         },
       }).unwrap();
       setShowEditModal(false);

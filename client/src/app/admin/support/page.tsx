@@ -83,7 +83,7 @@ export default function SupportReportsPage() {
   if (has403Error) {
     return (
       <div className="flex h-screen">
-        <AdminSidebar activePage={activeTab} />
+        <AdminSidebar activeTab={activeTab} />
         <div className="flex-1 flex items-center justify-center bg-gray-50">
           <div className="max-w-md text-center">
             <div className="mb-6">

@@ -24,6 +24,14 @@ export default function AdminAuditPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editRole, setEditRole] = useState('');
   const [editStatus, setEditStatus] = useState('');
+  const [editPermissions, setEditPermissions] = useState({
+    dashboard: false,
+    creatorManagement: false,
+    contentReview: false,
+    financialReports: false,
+    systemSettings: false,
+    supportTickets: false,
+  });
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageModalContent, setMessageModalContent] = useState({ title: '', message: '', type: 'success' as 'success' | 'error' });
 
@@ -93,6 +101,24 @@ export default function AdminAuditPage() {
     { name: 'Support Tickets', enabled: admin.permissions.supportTickets },
   ];
 
+  // Map role to default permissions
+  const getRolePermissions = (role: string) => {
+    const basePermissions = { dashboard: true, creatorManagement: false, contentReview: false, financialReports: false, systemSettings: false, supportTickets: false };
+    
+    switch (role) {
+      case 'FINANCIAL_ADMIN':
+        return { ...basePermissions, financialReports: true };
+      case 'CONTENT_ADMIN':
+        return { ...basePermissions, creatorManagement: true, contentReview: true };
+      case 'SUPPORT_SPECIALIST':
+        return { ...basePermissions, supportTickets: true };
+      case 'ANALYTICS_ADMIN':
+        return { ...basePermissions, financialReports: true, supportTickets: true };
+      default:
+        return basePermissions;
+    }
+  };
+
   const handleEditAdmin = async () => {
     if (!editRole && !editStatus) return;
 
@@ -102,6 +128,7 @@ export default function AdminAuditPage() {
         data: {
           ...(editRole && { role: editRole as 'FINANCIAL_ADMIN' | 'CONTENT_ADMIN' | 'SUPPORT_SPECIALIST' | 'ANALYTICS_ADMIN' }),
           ...(editStatus && { status: editStatus as 'ACTIVE' | 'SUSPENDED' | 'INVITED' }),
+          permissions: editPermissions,
         },
       }).unwrap();
       setShowEditModal(false);
@@ -127,7 +154,48 @@ export default function AdminAuditPage() {
   const openEditModal = () => {
     setEditRole(admin.role);
     setEditStatus(admin.status);
+    setEditPermissions(admin.permissions);
     setShowEditModal(true);
+  };
+
+  // Handle role change and auto-update permissions
+  const handleRoleChange = (newRole: string) => {
+    setEditRole(newRole);
+    const defaultPermissions = getRolePermissions(newRole);
+    setEditPermissions(defaultPermissions);
+  };
+
+  // Handle individual permission toggle
+  const handlePermissionToggle = (permission: keyof typeof editPermissions) => {
+    setEditPermissions(prev => ({
+      ...prev,
+      [permission]: !prev[permission],
+    }));
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case 'FINANCIAL_ADMIN': return 'Financial Admin';
+      case 'CONTENT_ADMIN': return 'Content Admin';
+      case 'SUPPORT_SPECIALIST': return 'Support Specialist';
+      case 'ANALYTICS_ADMIN': return 'Analytics Admin';
+      default: return role;
+    }
+  };
+
+  const getRoleDescription = (role: string) => {
+    switch (role) {
+      case 'FINANCIAL_ADMIN':
+        return 'Financial Admin has access to all financial data, payment processing, and revenue analytics.';
+      case 'CONTENT_ADMIN':
+        return 'Content Admin manages creator accounts, reviews content submissions, and handles moderation.';
+      case 'SUPPORT_SPECIALIST':
+        return 'Support Specialist handles user support tickets and customer service inquiries.';
+      case 'ANALYTICS_ADMIN':
+        return 'Analytics Admin has access to all platform analytics, custom report generation, and data export capabilities.';
+      default:
+        return '';
+    }
   };
 
   const handleForce2FAResetClick = async () => {
@@ -558,55 +626,178 @@ export default function AdminAuditPage() {
       {/* Edit Admin Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Edit Admin Details</h3>
-            
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                <select
-                  value={editRole}
-                  onChange={(e) => setEditRole(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                >
-                  <option value="FINANCIAL_ADMIN">Financial Admin</option>
-                  <option value="CONTENT_ADMIN">Content Admin</option>
-                  <option value="SUPPORT_SPECIALIST">Support Specialist</option>
-                  <option value="ANALYTICS_ADMIN">Analytics Admin</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                >
-                  <option value="ACTIVE">Active</option>
-                  <option value="SUSPENDED">Suspended</option>
-                  <option value="INVITED">Invited</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Edit Admin Details</h3>
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   setEditRole('');
                   setEditStatus('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Current Role */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Current Role</label>
+                <div className="px-4 py-3 bg-pink-50 border border-pink-200 rounded-lg">
+                  <span className="text-pink-700 font-medium">{getRoleDisplayName(admin.role)}</span>
+                </div>
+              </div>
+
+              {/* Change Role */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Change Role</label>
+                <select
+                  value={editRole}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-gray-900"
+                >
+                  <option value="FINANCIAL_ADMIN">Financial Admin</option>
+                  <option value="CONTENT_ADMIN">Content Admin</option>
+                  <option value="SUPPORT_SPECIALIST">Support Specialist</option>
+                  <option value="ANALYTICS_ADMIN">Analytics Admin</option>
+                </select>
+                {editRole && (
+                  <p className="mt-2 text-sm text-gray-600">{getRoleDescription(editRole)}</p>
+                )}
+              </div>
+
+              {/* Permissions */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Permissions</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editPermissions.dashboard}
+                      onChange={() => handlePermissionToggle('dashboard')}
+                      className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">Dashboard</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editPermissions.creatorManagement}
+                      onChange={() => handlePermissionToggle('creatorManagement')}
+                      className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">Creator Management</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editPermissions.contentReview}
+                      onChange={() => handlePermissionToggle('contentReview')}
+                      className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">Content Review</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editPermissions.financialReports}
+                      onChange={() => handlePermissionToggle('financialReports')}
+                      className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">Financial Reports</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editPermissions.systemSettings}
+                      onChange={() => handlePermissionToggle('systemSettings')}
+                      className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">System Settings</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editPermissions.supportTickets}
+                      onChange={() => handlePermissionToggle('supportTickets')}
+                      className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">Support Tickets</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Security & Audit */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <h4 className="font-semibold text-gray-900">Security & Audit</h4>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-2">Two-Factor Authentication</label>
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm">
+                        {admin.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-2">Last Password Reset</label>
+                    <div className="text-sm text-gray-700">
+                      {admin.lastPasswordReset && !isNaN(new Date(admin.lastPasswordReset).getTime())
+                        ? new Date(admin.lastPasswordReset).toLocaleDateString()
+                        : 'Never'}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    window.open(`/superadmin/admin/${adminId}`, '_self');
+                  }}
+                  className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-medium hover:bg-blue-100 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  View Admin Activity Log
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 mt-8 pt-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditRole('');
+                  setEditStatus('');
+                }}
+                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEditAdmin}
                 disabled={isUpdating}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isUpdating ? 'Saving...' : 'Save Changes'}
+                {isUpdating ? 'Updating...' : 'Update Admin Details'}
               </button>
             </div>
           </div>

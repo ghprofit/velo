@@ -70,6 +70,14 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
+    // Handle 403 Forbidden - Access Denied
+    if (error.response?.status === 403) {
+      console.warn('Access forbidden:', error.response.data);
+      // Don't log out the user, just reject the request
+      // The component will handle showing appropriate error UI
+      return Promise.reject(error);
+    }
+
     // If error is 401 and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Don't retry refresh endpoint to avoid infinite loop

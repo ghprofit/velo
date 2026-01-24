@@ -26,7 +26,7 @@ export default function SupportReportsPage() {
   const [pageLimit] = useState(10);
 
   // Fetch stats and tickets data
-  const { data: statsData, isLoading: statsLoading } = useGetSupportStatsQuery();
+  const { data: statsData, isLoading: statsLoading, error: statsError } = useGetSupportStatsQuery();
 
   const ticketQueryParams = useMemo(() => ({
     search: searchQuery || undefined,
@@ -37,7 +37,7 @@ export default function SupportReportsPage() {
     limit: pageLimit,
   }), [searchQuery, status, priority, assignedTo, currentPage, pageLimit]);
 
-  const { data: ticketsData, isLoading: ticketsLoading, refetch: refetchTickets } = useGetSupportTicketsQuery(ticketQueryParams);
+  const { data: ticketsData, isLoading: ticketsLoading, error: ticketsError, refetch: refetchTickets } = useGetSupportTicketsQuery(ticketQueryParams);
 
   const [updateStatus] = useUpdateTicketStatusMutation();
 
@@ -75,6 +75,58 @@ export default function SupportReportsPage() {
 
   if (!hasAccess) {
     return null;
+  }
+
+  // Check if we have a 403 error (access denied after login)
+  const has403Error = (statsError as { status?: number })?.status === 403 || (ticketsError as { status?: number })?.status === 403;
+
+  if (has403Error) {
+    return (
+      <div className="flex h-screen">
+        <AdminSidebar activePage={activeTab} />
+        <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="max-w-md text-center">
+            <div className="mb-6">
+              <svg className="w-24 h-24 text-red-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Access Denied</h1>
+            <p className="text-gray-600 mb-6">
+              Your account doesn&apos;t have permission to access this page. This might be because:
+            </p>
+            <ul className="text-left text-gray-600 mb-6 space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 mt-1">•</span>
+                <span>You need to <strong>log out and log back in</strong> for your role permissions to update</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 mt-1">•</span>
+                <span>Your admin role hasn&apos;t been assigned yet</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 mt-1">•</span>
+                <span>Your account permissions were recently changed</span>
+              </li>
+            </ul>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => window.location.href = '/admin/dashboard'}
+                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+              >
+                Go to Dashboard
+              </button>
+              <button
+                onClick={() => window.location.href = '/login'}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
+                Log Out & Log In Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Handler for status change

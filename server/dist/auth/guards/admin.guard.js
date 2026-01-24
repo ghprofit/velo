@@ -15,8 +15,8 @@ let AdminGuard = class AdminGuard {
         if (!user) {
             throw new common_1.ForbiddenException('Authentication required');
         }
-        const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'];
-        if (!adminRoles.includes(user.role)) {
+        const allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'];
+        if (!allowedRoles.includes(user.role)) {
             throw new common_1.ForbiddenException('Admin access required');
         }
         return true;

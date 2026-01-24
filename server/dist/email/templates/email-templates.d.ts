@@ -26,6 +26,12 @@ export declare const HTML_TEMPLATES: {
     WELCOME: (data: {
         user_name: string;
     }) => string;
+    WELCOME_CREATOR_WAITLIST: (data: {
+        user_name: string;
+    }) => string;
+    WELCOME_CREATOR: (data: {
+        user_name: string;
+    }) => string;
     EMAIL_VERIFICATION: (data: {
         user_name: string;
         verification_code: string;

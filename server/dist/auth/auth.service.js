@@ -123,6 +123,19 @@ let AuthService = AuthService_1 = class AuthService {
             catch (error) {
                 console.error('Failed to generate verification token:', error);
             }
+            try {
+                if (hasWaitlistBonus) {
+                    await this.emailService.sendWelcomeCreatorWaitlistEmail(user.email, dto.displayName);
+                    this.logger.log(`Waitlist welcome email sent to: ${user.email}`);
+                }
+                else {
+                    await this.emailService.sendWelcomeCreatorEmail(user.email, dto.displayName);
+                    this.logger.log(`Creator welcome email sent to: ${user.email}`);
+                }
+            }
+            catch (error) {
+                this.logger.error(`Failed to send welcome email:`, error);
+            }
             if (waitlistEntry) {
                 await this.prisma.waitlist.delete({
                     where: { id: waitlistEntry.id },
@@ -186,6 +199,12 @@ let AuthService = AuthService_1 = class AuthService {
                         verificationStatus: true,
                     },
                 },
+                adminProfile: {
+                    select: {
+                        id: true,
+                        adminRole: true,
+                    },
+                },
             },
         });
         if (!user) {
@@ -245,6 +264,7 @@ let AuthService = AuthService_1 = class AuthService {
                 email: user.email,
                 role: user.role,
                 emailVerified: user.emailVerified,
+                adminRole: user.adminProfile?.adminRole || null,
                 creatorProfile: user.creatorProfile,
             },
             tokens: {
@@ -301,6 +321,7 @@ let AuthService = AuthService_1 = class AuthService {
                 where: { id: userId },
                 include: {
                     creatorProfile: true,
+                    adminProfile: true,
                 },
             });
             if (!user) {
@@ -350,6 +371,7 @@ let AuthService = AuthService_1 = class AuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 profilePicture: user.profilePicture,
+                adminRole: user.adminProfile?.adminRole || null,
                 creatorProfile: user.creatorProfile
                     ? {
                         ...user.creatorProfile,
@@ -405,15 +427,32 @@ let AuthService = AuthService_1 = class AuthService {
             });
             throw new common_1.BadRequestException('Verification token has expired. Please request a new one.');
         }
-        await this.prisma.user.update({
+        const updatedUser = await this.prisma.user.update({
             where: { id: verificationToken.userId },
             data: { emailVerified: true },
+            include: {
+                creatorProfile: {
+                    select: {
+                        id: true,
+                        displayName: true,
+                        profileImage: true,
+                        verificationStatus: true,
+                    },
+                },
+            },
         });
         await this.prisma.emailVerificationToken.delete({
             where: { id: verificationToken.id },
         });
         return {
             message: 'Email verified successfully',
+            user: {
+                id: updatedUser.id,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                emailVerified: updatedUser.emailVerified,
+                creatorProfile: updatedUser.creatorProfile,
+            },
         };
     }
     async resendVerification(dto) {
@@ -559,6 +598,12 @@ let AuthService = AuthService_1 = class AuthService {
         const user = await this.prisma.user.findUnique({
             where: { id: payload.userId },
             include: {
+                adminProfile: {
+                    select: {
+                        id: true,
+                        adminRole: true,
+                    },
+                },
                 creatorProfile: {
                     select: {
                         id: true,
@@ -599,6 +644,7 @@ let AuthService = AuthService_1 = class AuthService {
                 email: user.email,
                 role: user.role,
                 emailVerified: user.emailVerified,
+                adminRole: user.adminProfile?.adminRole || null,
                 creatorProfile: user.creatorProfile,
             },
             tokens: {
@@ -628,6 +674,12 @@ let AuthService = AuthService_1 = class AuthService {
         const user = await this.prisma.user.findUnique({
             where: { id: payload.userId },
             include: {
+                adminProfile: {
+                    select: {
+                        id: true,
+                        adminRole: true,
+                    },
+                },
                 creatorProfile: {
                     select: {
                         id: true,
@@ -669,6 +721,7 @@ let AuthService = AuthService_1 = class AuthService {
                 email: user.email,
                 role: user.role,
                 emailVerified: user.emailVerified,
+                adminRole: user.adminProfile?.adminRole || null,
                 creatorProfile: user.creatorProfile,
             },
             tokens: {

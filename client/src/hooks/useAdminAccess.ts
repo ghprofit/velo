@@ -20,7 +20,8 @@ export function useAdminAccess({ allowedRoles, redirectTo = '/admin/dashboard' }
     if (loading) return;
 
     // If not an admin, redirect to home
-    if (!user || user.role !== 'ADMIN') {
+    // Accept both ADMIN and SUPPORT roles (SUPPORT is for admin users with specific roles)
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPPORT')) {
       router.push('/login');
       return;
     }
@@ -37,7 +38,7 @@ export function useAdminAccess({ allowedRoles, redirectTo = '/admin/dashboard' }
   }, [user, loading, allowedRoles, redirectTo, router]);
 
   return {
-    hasAccess: !loading && user?.role === 'ADMIN' && (!user.adminRole || allowedRoles.includes(user.adminRole)),
+    hasAccess: !loading && (user?.role === 'ADMIN' || user?.role === 'SUPPORT') && (!user.adminRole || allowedRoles.includes(user.adminRole)),
     loading,
   };
 }

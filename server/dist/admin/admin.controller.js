@@ -17,6 +17,8 @@ const common_1 = require("@nestjs/common");
 const admin_service_1 = require("./admin.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const admin_guard_1 = require("../auth/guards/admin.guard");
+const admin_role_guard_1 = require("../auth/guards/admin-role.guard");
+const admin_roles_decorator_1 = require("../auth/decorators/admin-roles.decorator");
 const dashboard_dto_1 = require("./dto/dashboard.dto");
 let AdminController = class AdminController {
     constructor(adminService) {
@@ -54,7 +56,8 @@ __decorate([
 ], AdminController.prototype, "getRecentActivity", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard, admin_role_guard_1.AdminRoleGuard),
+    (0, admin_roles_decorator_1.AdminRoles)('FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'),
     __metadata("design:paramtypes", [admin_service_1.AdminService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

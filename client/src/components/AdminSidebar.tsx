@@ -102,7 +102,8 @@ export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
     
     // Only show all items if user is explicitly SUPER_ADMIN (no adminRole)
     // and they are actually an ADMIN role type
-    if (!adminRole && user?.role === 'ADMIN') {
+    // Accept both ADMIN and SUPPORT roles (SUPPORT is for admin users with specific roles)
+    if (!adminRole && (user?.role === 'ADMIN' || user?.role === 'SUPPORT')) {
       // This is likely a SUPER_ADMIN, show all items
       return allMenuItems;
     }

@@ -17,6 +17,8 @@ const common_1 = require("@nestjs/common");
 const reports_service_1 = require("./reports.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const admin_guard_1 = require("../auth/guards/admin.guard");
+const admin_role_guard_1 = require("../auth/guards/admin-role.guard");
+const admin_roles_decorator_1 = require("../auth/decorators/admin-roles.decorator");
 let ReportsController = class ReportsController {
     constructor(reportsService) {
         this.reportsService = reportsService;
@@ -84,7 +86,8 @@ __decorate([
 ], ReportsController.prototype, "getGeographicDistribution", null);
 exports.ReportsController = ReportsController = __decorate([
     (0, common_1.Controller)('admin/reports'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard, admin_role_guard_1.AdminRoleGuard),
+    (0, admin_roles_decorator_1.AdminRoles)('ANALYTICS_ADMIN', 'FINANCIAL_ADMIN'),
     __metadata("design:paramtypes", [reports_service_1.ReportsService])
 ], ReportsController);
 //# sourceMappingURL=reports.controller.js.map

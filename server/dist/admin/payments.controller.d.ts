@@ -109,8 +109,8 @@ export declare class PaymentsController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                currency: string;
                 status: string;
+                currency: string;
                 creatorId: string;
                 processedAt: Date | null;
                 paymentMethod: string;
@@ -166,8 +166,8 @@ export declare class PaymentsController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            currency: string;
             status: import(".prisma/client").$Enums.PayoutRequestStatus;
+            currency: string;
             creatorId: string;
             requestedAmount: number;
             emailVerifiedAt: Date | null;
@@ -193,8 +193,8 @@ export declare class PaymentsController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                currency: string;
                 status: string;
+                currency: string;
                 creatorId: string;
                 processedAt: Date | null;
                 paymentMethod: string;
@@ -250,8 +250,8 @@ export declare class PaymentsController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            currency: string;
             status: import(".prisma/client").$Enums.PayoutRequestStatus;
+            currency: string;
             creatorId: string;
             requestedAmount: number;
             emailVerifiedAt: Date | null;
@@ -271,8 +271,8 @@ export declare class PaymentsController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                currency: string;
                 status: import(".prisma/client").$Enums.PayoutRequestStatus;
+                currency: string;
                 creatorId: string;
                 requestedAmount: number;
                 emailVerifiedAt: Date | null;
@@ -288,8 +288,8 @@ export declare class PaymentsController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                currency: string;
                 status: string;
+                currency: string;
                 creatorId: string;
                 processedAt: Date | null;
                 paymentMethod: string;
@@ -305,8 +305,8 @@ export declare class PaymentsController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            currency: string;
             status: import(".prisma/client").$Enums.PayoutRequestStatus;
+            currency: string;
             creatorId: string;
             requestedAmount: number;
             emailVerifiedAt: Date | null;

@@ -57,6 +57,7 @@ export declare class AuthController {
                 email: string;
                 role: import(".prisma/client").$Enums.UserRole;
                 emailVerified: boolean;
+                adminRole: import(".prisma/client").$Enums.AdminRole | null;
                 creatorProfile: {
                     id: string;
                     displayName: string;
@@ -98,6 +99,7 @@ export declare class AuthController {
             firstName: string | null;
             lastName: string | null;
             profilePicture: string | null;
+            adminRole: import(".prisma/client").$Enums.AdminRole | null;
             creatorProfile: {
                 totalEarnings: number;
                 totalViews: number;
@@ -190,6 +192,7 @@ export declare class AuthController {
                 email: string;
                 role: import(".prisma/client").$Enums.UserRole;
                 emailVerified: boolean;
+                adminRole: import(".prisma/client").$Enums.AdminRole | null;
                 creatorProfile: {
                     id: string;
                     displayName: string;
@@ -234,6 +237,7 @@ export declare class AuthController {
                 email: string;
                 role: import(".prisma/client").$Enums.UserRole;
                 emailVerified: boolean;
+                adminRole: import(".prisma/client").$Enums.AdminRole | null;
                 creatorProfile: {
                     id: string;
                     displayName: string;

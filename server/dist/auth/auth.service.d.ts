@@ -58,6 +58,7 @@ export declare class AuthService {
             email: string;
             role: import(".prisma/client").$Enums.UserRole;
             emailVerified: boolean;
+            adminRole: import(".prisma/client").$Enums.AdminRole | null;
             creatorProfile: {
                 id: string;
                 displayName: string;
@@ -91,6 +92,7 @@ export declare class AuthService {
         firstName: string | null;
         lastName: string | null;
         profilePicture: string | null;
+        adminRole: import(".prisma/client").$Enums.AdminRole | null;
         creatorProfile: {
             totalEarnings: number;
             totalViews: number;
@@ -137,6 +139,18 @@ export declare class AuthService {
     private getRefreshTokenExpiration;
     verifyEmail(dto: VerifyEmailDto): Promise<{
         message: string;
+        user: {
+            id: string;
+            email: string;
+            role: import(".prisma/client").$Enums.UserRole;
+            emailVerified: boolean;
+            creatorProfile: {
+                id: string;
+                displayName: string;
+                profileImage: string | null;
+                verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
+            } | null;
+        };
     }>;
     resendVerification(dto: ResendVerificationDto): Promise<{
         message: string;
@@ -157,6 +171,7 @@ export declare class AuthService {
             email: string;
             role: import(".prisma/client").$Enums.UserRole;
             emailVerified: boolean;
+            adminRole: import(".prisma/client").$Enums.AdminRole | null;
             creatorProfile: {
                 id: string;
                 displayName: string;
@@ -176,6 +191,7 @@ export declare class AuthService {
             email: string;
             role: import(".prisma/client").$Enums.UserRole;
             emailVerified: boolean;
+            adminRole: import(".prisma/client").$Enums.AdminRole | null;
             creatorProfile: {
                 id: string;
                 displayName: string;

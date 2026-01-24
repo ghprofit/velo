@@ -80,57 +80,41 @@ let VeriffController = VeriffController_1 = class VeriffController {
         }
     }
     async handleUserRedirect(response, request) {
-        this.logger.log('User redirected from Veriff - marking as verified');
-        try {
-            const sessionId = request.query.id;
-            if (sessionId) {
-                this.logger.log(`Verifying session: ${sessionId}`);
+        this.logger.log('User redirected from Veriff verification flow');
+        const sessionId = request.query.id;
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+        if (sessionId) {
+            this.logger.log(`Redirect received for session: ${sessionId}`);
+            try {
                 const creatorProfile = await this.prisma.creatorProfile.findUnique({
                     where: { veriffSessionId: sessionId },
+                    select: { id: true, verificationStatus: true },
                 });
                 if (creatorProfile) {
-                    await this.prisma.creatorProfile.update({
-                        where: { id: creatorProfile.id },
-                        data: {
-                            verificationStatus: client_1.VerificationStatus.VERIFIED,
-                            verifiedAt: new Date(),
-                        },
-                    });
-                    this.logger.log(`Updated creator ${creatorProfile.id} to VERIFIED`);
+                    this.logger.log(`Creator ${creatorProfile.id} current status: ${creatorProfile.verificationStatus}`);
+                    if (creatorProfile.verificationStatus === client_1.VerificationStatus.VERIFIED) {
+                        response.redirect(`${clientUrl}/creator/verify-identity?verified=true`);
+                        return;
+                    }
+                    if (creatorProfile.verificationStatus === client_1.VerificationStatus.REJECTED) {
+                        response.redirect(`${clientUrl}/creator/verify-identity?verified=false&reason=rejected`);
+                        return;
+                    }
+                    response.redirect(`${clientUrl}/creator/verify-identity?status=pending`);
+                    return;
                 }
                 else {
                     this.logger.warn(`No creator profile found for session: ${sessionId}`);
                 }
             }
-            else {
-                this.logger.warn('No session ID in redirect - trying to find by IN_PROGRESS status');
-                const inProgressProfiles = await this.prisma.creatorProfile.findMany({
-                    where: {
-                        verificationStatus: client_1.VerificationStatus.IN_PROGRESS,
-                    },
-                    orderBy: { updatedAt: 'desc' },
-                    take: 1,
-                });
-                if (inProgressProfiles.length > 0) {
-                    const profile = inProgressProfiles[0];
-                    if (profile) {
-                        await this.prisma.creatorProfile.update({
-                            where: { id: profile.id },
-                            data: {
-                                verificationStatus: client_1.VerificationStatus.VERIFIED,
-                                verifiedAt: new Date(),
-                            },
-                        });
-                        this.logger.log(`Updated most recent IN_PROGRESS creator ${profile.id} to VERIFIED`);
-                    }
-                }
+            catch (error) {
+                this.logger.error('Error checking verification status:', error);
             }
         }
-        catch (error) {
-            this.logger.error('Error updating verification status:', error);
+        else {
+            this.logger.warn('User redirect received without session ID');
         }
-        const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-        response.redirect(`${clientUrl}/creator/verify-identity?verified=true`);
+        response.redirect(`${clientUrl}/creator/verify-identity?status=pending`);
     }
     async handleWebhook(request) {
         this.logger.log('Received Veriff webhook');

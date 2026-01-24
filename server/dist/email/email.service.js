@@ -162,6 +162,16 @@ let EmailService = EmailService_1 = class EmailService {
             app_name: this.config.fromName,
         }, `Welcome to ${this.config.fromName}!`);
     }
+    async sendWelcomeCreatorWaitlistEmail(to, userName) {
+        return this.sendHTMLTemplateEmail(to, 'WELCOME_CREATOR_WAITLIST', {
+            user_name: userName,
+        }, 'Welcome to Velo - Your $50 Waitlist Bonus Awaits!');
+    }
+    async sendWelcomeCreatorEmail(to, userName) {
+        return this.sendHTMLTemplateEmail(to, 'WELCOME_CREATOR', {
+            user_name: userName,
+        }, 'Welcome to Velo - Start Creating Today!');
+    }
     async sendEmailVerification(to, userName, verificationCode, expiryMinutes = 20) {
         return this.sendHTMLTemplateEmail(to, 'EMAIL_VERIFICATION', {
             user_name: userName,

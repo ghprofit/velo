@@ -1,0 +1,10 @@
+import { CanActivate, ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { PrismaService } from '../../prisma/prisma.service';
+export declare class AdminRoleGuard implements CanActivate {
+    private reflector;
+    private prisma;
+    constructor(reflector: Reflector, prisma: PrismaService);
+    canActivate(context: ExecutionContext): Promise<boolean>;
+}
+//# sourceMappingURL=admin-role.guard.d.ts.map

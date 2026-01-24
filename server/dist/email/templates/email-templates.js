@@ -1,25 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HTML_TEMPLATES = exports.EMAIL_TEMPLATES = exports.SENDGRID_TEMPLATE_ID = void 0;
-const getLogoUrl = () => {
-    return process.env.LOGO_URL || null;
-};
 const getLogoHtml = () => {
-    const logoUrl = getLogoUrl();
-    if (logoUrl) {
-        return `
-      <img
-        src="${logoUrl}"
-        alt="VeloLink Logo"
-        width="180"
-        height="auto"
-        style="width: 180px; height: auto; max-width: 100%; display: block; margin: 0 auto 16px auto;"
-      />
-    `;
-    }
     return `
-    <div style="margin-bottom: 16px;">
-      <span style="font-size: 36px; font-weight: 700; color: white; letter-spacing: -1px;">Velo</span><span style="font-size: 36px; font-weight: 300; color: rgba(255,255,255,0.9); letter-spacing: -1px;">Link</span>
+    <div style="margin-bottom: 20px; text-align: center;">
+      <span style="font-size: 42px; font-weight: 700; color: white; letter-spacing: -1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">VeloLink</span>
     </div>
   `;
 };
@@ -208,6 +193,7 @@ exports.HTML_TEMPLATES = {
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
       <p>Welcome to VeloLink! We're thrilled to have you join our community of creators and content enthusiasts.</p>
+
       <div class="success-box">
         <p style="margin: 0;"><strong>✨ Your journey starts here!</strong></p>
       </div>
@@ -223,7 +209,7 @@ exports.HTML_TEMPLATES = {
       </ul>
 
       <div class="text-center mt-20">
-        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}" class="button">Explore VeloLink</a>
+        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}" class="button">Explore Velo</a>
       </div>
 
       <p class="text-sm" style="margin-top: 30px;">If you have any questions, our support team is always here to help!</p>
@@ -231,6 +217,118 @@ exports.HTML_TEMPLATES = {
     <div class="footer">
       <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Secure content marketplace for creators and buyers</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+    WELCOME_CREATOR_WAITLIST: (data) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      ${getLogoHtml()}
+      <h1>🎉 Welcome to Velo, ${data.user_name}!</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Welcome to VeloLink! We're excited to see you here. As a valued member from our early waitlist, you have special benefits waiting for you.</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>🎁 Waitlist Bonus: $50.00 Unlocked!</strong></p>
+      </div>
+
+      <h3>How Your Waitlist Bonus Works:</h3>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li>💰 You've received a <strong>$50.00 creator bonus</strong></li>
+        <li>🔓 <strong>Bonus unlocks after 5 successful sales</strong> - your balance will then be available for withdrawal</li>
+        <li>📊 Track your progress in your creator dashboard</li>
+        <li>💸 Once unlocked, withdraw to your connected bank account anytime</li>
+      </ul>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>💡 Pro Tip:</strong> Start uploading quality content to begin making your first sales and unlock your bonus faster!</p>
+      </div>
+
+      <h3>What's Next:</h3>
+      <ol style="color: #4b5563; line-height: 1.8;">
+        <li>Complete your creator profile</li>
+        <li>Add your first digital content</li>
+        <li>Set your pricing</li>
+        <li>Make your first sale and watch your bonus progress!</li>
+      </ol>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}/creator/dashboard" class="button">Start Creating</a>
+      </div>
+
+      <p class="text-sm" style="margin-top: 30px;">Questions? Our support team is here to help you succeed!</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
+      <p class="text-xs">Welcome to the Velo creator community!</p>
+    </div>
+  </div>
+</body>
+</html>
+  `,
+    WELCOME_CREATOR: (data) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      ${getLogoHtml()}
+      <h1>🎉 Welcome to Velo, ${data.user_name}!</h1>
+    </div>
+    <div class="content">
+      <p>Hi <strong>${data.user_name}</strong>,</p>
+      <p>Welcome to VeloLink! We're thrilled to have you join our community of creators and content enthusiasts.</p>
+
+      <div class="success-box">
+        <p style="margin: 0;"><strong>✨ Your creative journey starts here!</strong></p>
+      </div>
+
+      <h3>What You Can Do as a Creator:</h3>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li>📤 Upload and share your exclusive digital content</li>
+        <li>💰 Set your own prices and start earning</li>
+        <li>🎯 Reach a global audience of buyers</li>
+        <li>📊 Track sales and earnings in your dashboard</li>
+        <li>🔐 Secure transactions with instant payment processing</li>
+      </ul>
+
+      <h3>Get Started in 3 Easy Steps:</h3>
+      <ol style="color: #4b5563; line-height: 1.8;">
+        <li>Complete your creator profile with a photo and bio</li>
+        <li>Upload your first piece of content</li>
+        <li>Set your price and start earning!</li>
+      </ol>
+
+      <div class="text-center mt-20">
+        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}/creator/dashboard" class="button">Access Your Dashboard</a>
+      </div>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>💡 Creator Tips:</strong> Upload high-quality content regularly to build your audience and increase your earnings!</p>
+      </div>
+
+      <p class="text-sm" style="margin-top: 30px;">If you have any questions, our support team is always here to help!</p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
+      <p class="text-xs">Welcome to the Velo creator community!</p>
     </div>
   </div>
 </body>

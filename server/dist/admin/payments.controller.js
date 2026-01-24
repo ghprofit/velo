@@ -17,6 +17,8 @@ const common_1 = require("@nestjs/common");
 const payments_service_1 = require("./payments.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const admin_guard_1 = require("../auth/guards/admin.guard");
+const admin_role_guard_1 = require("../auth/guards/admin-role.guard");
+const admin_roles_decorator_1 = require("../auth/decorators/admin-roles.decorator");
 const payments_dto_1 = require("./dto/payments.dto");
 const approve_payout_request_dto_1 = require("./dto/approve-payout-request.dto");
 let PaymentsController = class PaymentsController {
@@ -131,7 +133,8 @@ __decorate([
 ], PaymentsController.prototype, "rejectPayoutRequest", null);
 exports.PaymentsController = PaymentsController = __decorate([
     (0, common_1.Controller)('admin/payments'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard, admin_role_guard_1.AdminRoleGuard),
+    (0, admin_roles_decorator_1.AdminRoles)('FINANCIAL_ADMIN'),
     __metadata("design:paramtypes", [payments_service_1.PaymentsService])
 ], PaymentsController);
 //# sourceMappingURL=payments.controller.js.map

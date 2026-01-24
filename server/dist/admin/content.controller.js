@@ -17,6 +17,8 @@ const common_1 = require("@nestjs/common");
 const content_service_1 = require("./content.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const admin_guard_1 = require("../auth/guards/admin.guard");
+const admin_role_guard_1 = require("../auth/guards/admin-role.guard");
+const admin_roles_decorator_1 = require("../auth/decorators/admin-roles.decorator");
 const content_dto_1 = require("./dto/content.dto");
 let ContentController = class ContentController {
     constructor(contentService) {
@@ -88,7 +90,8 @@ __decorate([
 ], ContentController.prototype, "removeContent", null);
 exports.ContentController = ContentController = __decorate([
     (0, common_1.Controller)('admin/content'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard, admin_role_guard_1.AdminRoleGuard),
+    (0, admin_roles_decorator_1.AdminRoles)('CONTENT_ADMIN'),
     __metadata("design:paramtypes", [content_service_1.ContentService])
 ], ContentController);
 //# sourceMappingURL=content.controller.js.map

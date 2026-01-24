@@ -100,7 +100,7 @@ let FinancialReportsService = class FinancialReportsService {
         });
         const totalRevenue = revenueData._sum.amount || 0;
         const totalPayouts = payoutData._sum.amount || 0;
-        const platformRevenue = totalRevenue - totalPayouts;
+        const platformRevenue = totalRevenue * 0.20;
         const avgTransactionValue = revenueData._count > 0 ? totalRevenue / revenueData._count : 0;
         const topCreators = await this.prisma.creatorProfile.findMany({
             select: {

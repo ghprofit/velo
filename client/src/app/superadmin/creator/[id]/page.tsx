@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useGetCreatorByIdQuery } from '@/state/api';
@@ -7,6 +8,8 @@ import { useGetCreatorByIdQuery } from '@/state/api';
 export default function CreatorAuditPage() {
   const params = useParams();
   const creatorId = params.id as string;
+  const [showKycModal, setShowKycModal] = useState(false);
+  const [showPayoutsModal, setShowPayoutsModal] = useState(false);
 
   const { data: creatorResponse, isLoading, error } = useGetCreatorByIdQuery(creatorId);
   const creator = creatorResponse?.data;
@@ -153,7 +156,10 @@ export default function CreatorAuditPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-gray-900">Profile, Contact & Verification</h2>
-          <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+          <button
+            onClick={() => setShowKycModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -222,7 +228,10 @@ export default function CreatorAuditPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-gray-900">Financial Overview</h2>
-          <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+          <button
+            onClick={() => setShowPayoutsModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
@@ -421,6 +430,205 @@ export default function CreatorAuditPage() {
           <p className="text-gray-500 text-center py-8">No payouts yet</p>
         )}
       </div>
+
+      {/* KYC Documents Modal */}
+      {showKycModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">KYC Verification Details</h3>
+              <button
+                onClick={() => setShowKycModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <span className="text-gray-600">Verification Status</span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  creator.verification?.status === 'VERIFIED'
+                    ? 'bg-green-100 text-green-700'
+                    : creator.verification?.status === 'PENDING'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : creator.verification?.status === 'REJECTED'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {creator.verification?.status || 'N/A'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <span className="text-gray-600">Verified At</span>
+                <span className="text-gray-900 font-medium">{formatDateTime(creator.verification?.verifiedAt)}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <span className="text-gray-600">Full Name</span>
+                <span className="text-gray-900 font-medium">
+                  {creator.profile?.firstName && creator.profile?.lastName
+                    ? `${creator.profile.firstName} ${creator.profile.lastName}`
+                    : creator.name || 'N/A'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <span className="text-gray-600">Date of Birth</span>
+                <span className="text-gray-900 font-medium">{formatDate(creator.profile?.dateOfBirth)}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <span className="text-gray-600">Country</span>
+                <span className="text-gray-900 font-medium">{creator.profile?.country || 'N/A'}</span>
+              </div>
+
+              {creator.verification?.notes && (
+                <div className="py-3">
+                  <span className="text-gray-600 block mb-2">Verification Notes</span>
+                  <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{creator.verification.notes}</p>
+                </div>
+              )}
+
+              {!creator.verification?.status || creator.verification?.status === 'PENDING' ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                  <p className="text-yellow-800 text-sm">
+                    KYC verification is pending. Documents have not been submitted or are awaiting review.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowKycModal(false)}
+                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Payout History Modal */}
+      {showPayoutsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Financial History</h3>
+                <p className="text-gray-500 text-sm">All payouts for {creator.name}</p>
+              </div>
+              <button
+                onClick={() => setShowPayoutsModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-green-50 rounded-lg p-4 text-center">
+                <p className="text-2xl font-bold text-green-600">{formatCurrency(creator.stats?.totalEarnings)}</p>
+                <p className="text-sm text-green-700">Total Earnings</p>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4 text-center">
+                <p className="text-2xl font-bold text-blue-600">{creator.recentPayouts?.length || 0}</p>
+                <p className="text-sm text-blue-700">Recent Payouts</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-2xl font-bold text-gray-600">{creator.payout?.status || 'N/A'}</p>
+                <p className="text-sm text-gray-700">Payout Status</p>
+              </div>
+            </div>
+
+            {/* Payout Method Info */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h4 className="font-semibold text-gray-900 mb-2">Payout Method</h4>
+              <div className="flex items-center gap-2">
+                {creator.payout?.stripeAccountId ? (
+                  <>
+                    <span className="text-indigo-600 font-medium">Stripe Connect</span>
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">Connected</span>
+                  </>
+                ) : creator.payout?.paypalEmail ? (
+                  <>
+                    <span className="text-blue-600 font-medium">PayPal</span>
+                    <span className="text-gray-600 text-sm">({creator.payout.paypalEmail})</span>
+                  </>
+                ) : (
+                  <span className="text-gray-500">No payout method configured</span>
+                )}
+              </div>
+            </div>
+
+            {/* Payouts Table */}
+            {creator.recentPayouts && creator.recentPayouts.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Payout ID</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-600 text-sm">Amount</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-600 text-sm">Status</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-600 text-sm">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {creator.recentPayouts.map((payout: { id: string; amount: number; status: string; createdAt: string }) => (
+                      <tr key={payout.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-4 px-4 text-gray-900 font-mono text-sm">{payout.id.slice(0, 20).toUpperCase()}</td>
+                        <td className="py-4 px-4 text-center text-gray-900 font-medium">{formatCurrency(payout.amount)}</td>
+                        <td className="py-4 px-4 text-center">
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                            payout.status === 'COMPLETED' ? 'bg-green-100 text-green-600' :
+                            payout.status === 'PENDING' ? 'bg-yellow-100 text-yellow-600' :
+                            payout.status === 'FAILED' ? 'bg-red-100 text-red-600' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            {payout.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center text-gray-600">{formatDateTime(payout.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p>No payout history available</p>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-between items-center">
+              <Link
+                href="/superadmin/financial-reports"
+                className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+              >
+                View All Financial Reports
+              </Link>
+              <button
+                onClick={() => setShowPayoutsModal(false)}
+                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

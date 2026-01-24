@@ -156,8 +156,9 @@ export default function AdminSettingsPage() {
       setOriginalAdminRole(adminRole);
       setOriginalAdminBio(adminBio);
       showToast('Profile updated successfully', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Failed to update profile', 'error');
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } } };
+      showToast(err.response?.data?.message || 'Failed to update profile', 'error');
     } finally {
       setProfileLoading(false);
     }
@@ -221,8 +222,9 @@ export default function AdminSettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
       showToast('Password changed successfully', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Failed to change password', 'error');
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } } };
+      showToast(err.response?.data?.message || 'Failed to change password', 'error');
     } finally {
       setPasswordLoading(false);
     }

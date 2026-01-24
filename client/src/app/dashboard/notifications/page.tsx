@@ -11,7 +11,6 @@ import {
   useMarkAllUserNotificationsAsReadMutation,
   useClearAllReadNotificationsMutation,
   useDeleteUserNotificationMutation,
-  NotificationData,
 } from '@/state/api';
 
 export default function NotificationsPage() {
@@ -32,7 +31,6 @@ export default function NotificationsPage() {
   const [clearAllRead] = useClearAllReadNotificationsMutation();
   const [deleteNotification] = useDeleteUserNotificationMutation();
 
-  const notifications = notificationsData?.data || [];
   const stats = statsData?.data;
 
   const menuItems = [
@@ -73,9 +71,10 @@ export default function NotificationsPage() {
 
   // Filter notifications by category
   const filteredNotifications = useMemo(() => {
+    const notifications = notificationsData?.data || [];
     if (filterTab === 'All') return notifications;
     return notifications.filter(n => getCategoryFromType(n.type) === filterTab);
-  }, [notifications, filterTab]);
+  }, [notificationsData?.data, filterTab]);
 
   // Handle mark all as read
   const handleMarkAllAsRead = async () => {

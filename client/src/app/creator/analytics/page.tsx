@@ -57,20 +57,20 @@ interface BrowserData {
   percentage: number;
 }
 
-interface DemographicsData {
-  geographic: {
-    countries: CountryData[];
-    totalViews: number;
-  };
-  devices: {
-    devices: DeviceData[];
-    totalViews: number;
-  };
-  browsers: {
-    browsers: BrowserData[];
-    totalViews: number;
-  };
-}
+// interface DemographicsData {
+//   geographic: {
+//     countries: CountryData[];
+//     totalViews: number;
+//   };
+//   devices: {
+//     devices: DeviceData[];
+//     totalViews: number;
+//   };
+//   browsers: {
+//     browsers: BrowserData[];
+//     totalViews: number;
+//   };
+// }
 
 export default function AnalyticsPage() {
   const [timePeriod, setTimePeriod] = useState('All Time');

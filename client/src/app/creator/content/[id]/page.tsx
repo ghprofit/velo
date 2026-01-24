@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { contentApi } from '@/lib/api-client';
@@ -167,7 +167,7 @@ export default function ContentDetailPage() {
   };
 
   // Fetch signed URLs for content preview
-  const fetchPreviewUrls = async () => {
+  const fetchPreviewUrls = useCallback(async () => {
     if (!content || !content.contentItems) return;
     
     setLoadingPreview(true);
@@ -206,7 +206,7 @@ export default function ContentDetailPage() {
     } finally {
       setLoadingPreview(false);
     }
-  };
+  }, [content, contentId]);
 
   // Open lightbox and fetch preview URLs if needed
   const openLightbox = (index: number) => {

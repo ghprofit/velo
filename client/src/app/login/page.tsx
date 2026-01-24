@@ -18,8 +18,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
-  const [showEmailError, setShowEmailError] = useState(false);
-  const [showPasswordError, setShowPasswordError] = useState(false);
+  // const [showEmailError, setShowEmailError] = useState(false);
+  // const [showPasswordError, setShowPasswordError] = useState(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -323,7 +323,6 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     className="w-full h-12 px-4 text-base border-2 border-gray-300 rounded-xl focus-glow outline-none transition-all"
-                    animate={showEmailError ? { x: [0, -10, 10, -10, 10, 0], transition: { duration: 0.4 } } : {}}
                     required
                   />
                 </motion.div>
@@ -341,7 +340,6 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                       className="w-full h-12 px-4 pr-12 text-base border-2 border-gray-300 rounded-xl focus-glow outline-none transition-all"
-                      animate={showPasswordError ? { x: [0, -10, 10, -10, 10, 0], transition: { duration: 0.4 } } : {}}
                       required
                     />
                     <button

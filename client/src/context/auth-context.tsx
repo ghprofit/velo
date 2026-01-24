@@ -42,8 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to refresh user:', error);
       
       // Check if it's a network error or temporary issue
-      const isNetworkError = !error || !(error as any).response;
-      const is401 = (error as any)?.response?.status === 401;
+      const errorObj = error as { response?: { status?: number } };
+      const isNetworkError = !error || !errorObj.response;
+      const is401 = errorObj?.response?.status === 401;
       
       // Only clear auth state on 401 (unauthorized), not on network errors
       if (is401) {

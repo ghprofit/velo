@@ -5,6 +5,15 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useGetAdminByIdQuery, useGetAdminActivityQuery } from '@/state/api';
 
+interface AdminActivity {
+  id: string;
+  createdAt: string;
+  action: string;
+  reason?: string;
+  targetType: string;
+  targetId: string;
+}
+
 export default function AdminAuditPage() {
   const params = useParams();
   const adminId = params?.id as string;
@@ -24,7 +33,7 @@ export default function AdminAuditPage() {
   });
 
   const activitiesPerPage = 6;
-  const activityLog = activityResponse?.data || [];
+  const activityLog = (activityResponse?.data || []) as AdminActivity[];
   const totalActivities = activityLog.length;
   const totalPages = Math.ceil(totalActivities / activitiesPerPage);
 
@@ -51,7 +60,7 @@ export default function AdminAuditPage() {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Admin Not Found</h2>
-          <p className="text-gray-600 mb-4">The admin account you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-4">The admin account you&apos;re looking for doesn&apos;t exist.</p>
           <Link
             href="/superadmin/management"
             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
@@ -349,7 +358,7 @@ export default function AdminAuditPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {activityLog.slice((currentPage - 1) * activitiesPerPage, currentPage * activitiesPerPage).map((activity: any) => (
+                  {activityLog.slice((currentPage - 1) * activitiesPerPage, currentPage * activitiesPerPage).map((activity) => (
                     <tr key={activity.id} className="border-b border-gray-100">
                       <td className="py-4 px-4 text-center text-gray-600">
                         {new Date(activity.createdAt).toLocaleString()}

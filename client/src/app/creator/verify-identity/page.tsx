@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui';
 import { veriffApi } from '@/lib/api-client';
@@ -20,6 +20,21 @@ export default function CreatorVerifyIdentityPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   const { user } = useAppSelector((state) => state.auth);
+
+  const checkVerificationStatus = useCallback(async () => {
+    try {
+      setIsCheckingStatus(true);
+      const response = await veriffApi.getMyVerificationStatus();
+      const data = response.data.data;
+
+      setVerificationStatus(data.verificationStatus);
+      setSessionId(data.veriffSessionId);
+    } catch (err: unknown) {
+      console.error('Failed to fetch verification status:', err);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  }, []);
 
   // Check current verification status on mount and when redirected from Veriff
   useEffect(() => {
@@ -46,7 +61,7 @@ export default function CreatorVerifyIdentityPage() {
     } else {
       checkVerificationStatus();
     }
-  }, [searchParams]);
+  }, [searchParams, router, checkVerificationStatus]);
 
   // Auto-poll status when IN_PROGRESS
   useEffect(() => {
@@ -58,22 +73,7 @@ export default function CreatorVerifyIdentityPage() {
 
       return () => clearInterval(interval);
     }
-  }, [verificationStatus]);
-
-  const checkVerificationStatus = async () => {
-    try {
-      setIsCheckingStatus(true);
-      const response = await veriffApi.getMyVerificationStatus();
-      const data = response.data.data;
-
-      setVerificationStatus(data.verificationStatus);
-      setSessionId(data.veriffSessionId);
-    } catch (err: unknown) {
-      console.error('Failed to fetch verification status:', err);
-    } finally {
-      setIsCheckingStatus(false);
-    }
-  };
+  }, [verificationStatus, checkVerificationStatus]);
 
   const handleInitiateVerification = async () => {
     if (!user) {
@@ -117,41 +117,41 @@ export default function CreatorVerifyIdentityPage() {
     }
   };
 
-  const handleResubmit = async () => {
-    if (!sessionId) return;
+  // const handleResubmit = async () => {
+  //   if (!sessionId) return;
 
-    setError(null);
-    setIsLoading(true);
+  //   setError(null);
+  //   setIsLoading(true);
 
-    // Open window IMMEDIATELY (before async call) to avoid iOS popup blocker
-    const verificationWindow = window.open('about:blank', '_blank');
-    if (!verificationWindow) {
-      setError('Please allow popups for this site to complete verification.');
-      setIsLoading(false);
-      return;
-    }
+  //   // Open window IMMEDIATELY (before async call) to avoid iOS popup blocker
+  //   const verificationWindow = window.open('about:blank', '_blank');
+  //   if (!verificationWindow) {
+  //     setError('Please allow popups for this site to complete verification.');
+  //     setIsLoading(false);
+  //     return;
+  //   }
 
-    try {
-      const response = await veriffApi.resubmitVerification(sessionId);
-      const sessionData = response.data.data;
+  //   try {
+  //     const response = await veriffApi.resubmitVerification(sessionId);
+  //     const sessionData = response.data.data;
 
-      setVerificationSession(sessionData);
+  //     setVerificationSession(sessionData);
 
-      if (sessionData.verificationUrl) {
-        verificationWindow.location.href = sessionData.verificationUrl;
-      } else {
-        verificationWindow.close();
-        setError('No verification URL received.');
-      }
-    } catch (err: unknown) {
-      console.error('Resubmission error:', err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to resubmit verification.');
-      verificationWindow.close();
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     if (sessionData.verificationUrl) {
+  //       verificationWindow.location.href = sessionData.verificationUrl;
+  //     } else {
+  //       verificationWindow.close();
+  //       setError('No verification URL received.');
+  //     }
+  //   } catch (err: unknown) {
+  //     console.error('Resubmission error:', err);
+  //     const error = err as { response?: { data?: { message?: string } } };
+  //     setError(error.response?.data?.message || 'Failed to resubmit verification.');
+  //     verificationWindow.close();
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const getStatusBadge = () => {
     const badges = {

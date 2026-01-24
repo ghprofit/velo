@@ -426,7 +426,6 @@ export default function UploadContentPage() {
             
             xhr.upload.addEventListener('progress', (e) => {
               if (e.lengthComputable) {
-                const previousBytes = uploadedBytes;
                 uploadedBytes = contentUrls
                   .slice(0, index)
                   .reduce((sum: number, _: unknown, i: number) => sum + uploadedFiles[i].file.size, 0) + e.loaded;

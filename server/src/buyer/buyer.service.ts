@@ -907,7 +907,8 @@ export class BuyerService {
             await this.emailService.sendCreatorSaleNotification(creatorEmail, {
               creator_name: creatorName,
               content_title: content.title,
-              amount: creatorEarnings.toFixed(2),
+              sale_amount: (purchaseWithRelations.basePrice || purchaseWithRelations.amount).toFixed(2),
+              creator_earnings: creatorEarnings.toFixed(2),
               date: new Date().toLocaleDateString(),
             });
             this.logger.log(`[EMAIL] ✅ Creator sale notification sent to ${creatorEmail}`);

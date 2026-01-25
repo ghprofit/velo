@@ -110,7 +110,7 @@ export const EMAIL_TEMPLATES = {
     name: 'Creator Sale Notification',
     description: 'Notify creator of new sale',
     subject: 'New Sale: Someone purchased your content!',
-    requiredVariables: ['creator_name', 'content_title', 'amount', 'date'],
+    requiredVariables: ['creator_name', 'content_title', 'sale_amount', 'creator_earnings', 'date'],
   } as EmailTemplate,
 
   PAYOUT_PROCESSED: {
@@ -820,7 +820,7 @@ export const HTML_TEMPLATES = {
 </html>
   `,
 
-  CREATOR_SALE_NOTIFICATION: (data: { creator_name: string; content_title: string; amount: string; date: string }) => `
+  CREATOR_SALE_NOTIFICATION: (data: { creator_name: string; content_title: string; sale_amount: string; creator_earnings: string; date: string }) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -850,11 +850,11 @@ export const HTML_TEMPLATES = {
         </tr>
         <tr>
           <th>Sale Amount</th>
-          <td class="amount">$${data.amount}</td>
+          <td class="amount">$${data.sale_amount}</td>
         </tr>
         <tr>
           <th>Your Earnings (90%)</th>
-          <td class="amount" style="color: #10b981;">$${(parseFloat(data.amount) * 0.85).toFixed(2)}</td>
+          <td class="amount" style="color: #10b981;">$${data.creator_earnings}</td>
         </tr>
         <tr>
           <th>Date</th>

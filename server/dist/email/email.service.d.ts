@@ -31,7 +31,8 @@ export declare class EmailService {
     sendCreatorSaleNotification(to: string, data: {
         creator_name: string;
         content_title: string;
-        amount: string;
+        sale_amount: string;
+        creator_earnings: string;
         date: string;
     }): Promise<EmailSendResult>;
     sendPayoutProcessed(to: string, data: {

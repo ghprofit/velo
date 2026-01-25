@@ -258,6 +258,7 @@ export class StripeController {
                 contentTitle: content.title,
                 contentId: content.id,
                 amount,
+                basePrice,
                 accessToken,
                 creatorEmail: content.creator.user.email,
                 creatorName: content.creator.displayName,
@@ -346,6 +347,7 @@ export class StripeController {
             contentTitle: purchase.content.title,
             contentId: purchase.content.id,
             amount: purchase.amount,
+            basePrice: purchase.basePrice || purchase.content.price,
             accessToken: purchase.accessToken,
             creatorEmail: purchase.content.creator.user.email,
             creatorName: purchase.content.creator.displayName,
@@ -411,7 +413,8 @@ export class StripeController {
             {
               creator_name: purchaseData.creatorName,
               content_title: purchaseData.contentTitle,
-              amount: purchaseData.creatorEarnings.toFixed(2),
+              sale_amount: purchaseData.basePrice.toFixed(2),
+              creator_earnings: purchaseData.creatorEarnings.toFixed(2),
               date: new Date().toLocaleDateString(),
             },
           );

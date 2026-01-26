@@ -33,14 +33,42 @@ export async function GET(
     
     // Import sharp for image processing
     const sharp = (await import('sharp')).default;
-    
-    // Apply blur effect
-    const blurredImage = await sharp(Buffer.from(imageBuffer))
-      .blur(10) // Adjust blur intensity (higher = more blur)
+
+    // Target OG image dimensions
+    const width = 1200;
+    const height = 630;
+
+    // Prepare truncated description and buyer price
+    const description = content.description
+      ? String(content.description).substring(0, 150) + '...'
+      : '';
+    const buyerPrice = (Number(content.price) * 1.1).toFixed(2);
+
+    // Create an SVG overlay with two lines: description and bold price
+    const svg = `<?xml version="1.0" encoding="utf-8"?>
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .overlay { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+        .desc { font-size: 44px; fill: #ffffff; font-weight: 500; }
+        .price { font-size: 56px; fill: #ffffff; font-weight: 800; }
+        .bg { fill: rgba(0,0,0,0.4); }
+      </style>
+      <rect x="0" y="${height - 220}" width="${width}" height="220" class="bg" />
+      <g class="overlay">
+        <text x="60" y="${height - 110}" class="desc">${escapeXml(description)}</text>
+        <text x="60" y="${height - 40}" class="price">Unlock my Velolink for $${escapeXml(buyerPrice)}</text>
+      </g>
+    </svg>`;
+
+    // Process image: resize -> blur -> composite SVG overlay
+    const processed = await sharp(Buffer.from(imageBuffer))
+      .resize(width, height, { fit: 'cover' })
+      .blur(10)
+      .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
       .jpeg({ quality: 80 })
       .toBuffer();
 
-    return new NextResponse(new Uint8Array(blurredImage), {
+    return new NextResponse(new Uint8Array(processed), {
       headers: {
         'Content-Type': 'image/jpeg',
         'Cache-Control': 'public, max-age=3600',

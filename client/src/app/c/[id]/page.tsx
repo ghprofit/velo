@@ -49,14 +49,15 @@ export async function generateMetadata({
   // Calculate buyer price (110% of base price)
   const buyerPrice = (content.price * 1.1).toFixed(2);
 
-  // Use thumbnail URL or fallback
-  const imageUrl =
-    content.thumbnailUrl || '/assets/logo_images/Brand_icon(white).png';
+  // Use blurred OG image route or fallback
+  const imageUrl = content.thumbnailUrl
+    ? `${process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'}/api/og-image/${id}`
+    : 'https://velolink-content.s3.eu-north-1.amazonaws.com/Secondary_Logo(white).svg';
 
   // Compose the description with price
   const metaDescription = content.description
-    ? `${content.description.substring(0, 150)}... - $${buyerPrice}`
-    : `${content.contentType} by ${content.creator.displayName} - $${buyerPrice}`;
+    ? `${content.description.substring(0, 150)}... /n Unlock my Velolink for - $${buyerPrice}`
+    : `Unlock my Velolink for - $${buyerPrice}`;
 
   return {
     title: `${content.title} | VeloLink`,

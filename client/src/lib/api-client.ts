@@ -546,6 +546,10 @@ export const buyerApi = {
   verifyPurchase: (id: string) =>
     apiClient.get(`/buyer/purchase/${id}`),
 
+  // Verify purchase by payment intent ID (for webhook polling)
+  verifyPurchaseByPaymentIntent: (paymentIntentId: string) =>
+    apiClient.get(`/buyer/purchase-by-payment/${paymentIntentId}`),
+
   // Get content access after purchase
   getContentAccess: (accessToken: string, fingerprint: string) =>
     apiClient.post('/buyer/access', { accessToken, fingerprint }),

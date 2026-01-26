@@ -130,30 +130,30 @@ export function PaymentClient({ id }: { id: string }) {
           fingerprint
         });
 
-        const purchaseResponse = await buyerApi.createPurchase({
+        const paymentResponse = await buyerApi.createPurchase({
           contentId: id,
           sessionToken: session.sessionToken,
           email: email,
           fingerprint,
         });
 
-        console.log('[CHECKOUT] ✅ Purchase created successfully!');
-        console.log('[CHECKOUT] Purchase ID:', purchaseResponse.data.purchaseId);
-        console.log('[CHECKOUT] Already purchased:', purchaseResponse.data.alreadyPurchased || false);
+        console.log('[CHECKOUT] ✅ Payment intent created successfully!');
+        console.log('[CHECKOUT] Already purchased:', paymentResponse.data.alreadyPurchased || false);
 
-        if (purchaseResponse.data.alreadyPurchased) {
+        if (paymentResponse.data.alreadyPurchased) {
           // Already purchased, redirect to content view
           console.log('[CHECKOUT] Redirecting to content (already purchased)');
-          savePurchaseToken(id, purchaseResponse.data.accessToken);
-          router.push(`/c/${id}?token=${purchaseResponse.data.accessToken}`);
+          savePurchaseToken(id, paymentResponse.data.accessToken);
+          router.push(`/c/${id}?token=${paymentResponse.data.accessToken}`);
           return;
         }
 
-        // Store purchase info in state (not relying on Stripe metadata)
+        // Store payment info in state
+        // Note: Purchase will be created by webhook when payment succeeds
         setPurchaseInfo({
-          purchaseId: purchaseResponse.data.purchaseId,
-          accessToken: purchaseResponse.data.accessToken,
-          clientSecret: purchaseResponse.data.clientSecret,
+          purchaseId: paymentResponse.data.paymentIntentId, // Use payment intent ID as correlation
+          accessToken: '', // Will be provided by webhook
+          clientSecret: paymentResponse.data.clientSecret,
         });
 
         console.log('[CHECKOUT] ========== PAYMENT INITIALIZATION COMPLETE ==========');
@@ -184,69 +184,20 @@ export function PaymentClient({ id }: { id: string }) {
     paymentIntentId: string
   ) => {
     try {
-      console.log('[PAYMENT] Confirming purchase with backend...');
-      console.log('[PAYMENT] Purchase ID:', purchaseId);
-      console.log('[PAYMENT] Purchase ID type:', typeof purchaseId);
+      console.log('[PAYMENT] ✅ Payment succeeded!');
       console.log('[PAYMENT] Payment Intent ID:', paymentIntentId);
-      console.log('[PAYMENT] Payment Intent ID type:', typeof paymentIntentId);
       
-      const requestData = {
-        purchaseId,
-        paymentIntentId,
-      };
-      console.log('[PAYMENT] Request data being sent:', JSON.stringify(requestData, null, 2));
-      
-      // Confirm the purchase with the backend
-      const result = await buyerApi.confirmPurchase(requestData);
-
-      console.log('[PAYMENT] ✅ Purchase confirmed:', result.data);
-      console.log('[PAYMENT] Confirmed access token:', result.data.accessToken);
-      console.log('[PAYMENT] Confirmed status:', result.data.status);
-
-      // Only proceed if confirmation succeeded
-      if (result.data.status === 'COMPLETED') {
-        // Use the confirmed access token from the response (most reliable)
-        const confirmedToken = result.data.accessToken;
-        
-        console.log('[PAYMENT] 💾 Saving purchase token to localStorage...');
-        // Clear the cached fingerprint after successful purchase
-        clearCachedBuyerFingerprint();
-        
-        // Save the confirmed token
-        savePurchaseToken(id, confirmedToken);
-        console.log('[PAYMENT] ✅ Token saved successfully');
-        
-        console.log('[PAYMENT] 🔄 Redirecting to success page...');
-        router.push(`/checkout/${id}/success?token=${confirmedToken}`);
-      } else {
-        throw new Error('Purchase confirmation incomplete');
-      }
-    } catch (error) {
-      console.error('[PAYMENT] ❌ Failed to confirm purchase:', error);
-      const err = error as { response?: { data?: { message?: string; error?: unknown; statusCode?: number }; status?: number }; message?: string };
-      console.error('[PAYMENT] Error response data:', JSON.stringify(err.response?.data, null, 2));
-      console.error('[PAYMENT] Error response status:', err.response?.status);
-      console.error('[PAYMENT] Error message:', err.message);
-
-      // Show error instead of silently continuing
-      setError(
-        `Payment processed but verification failed: ${err.response?.data?.message || err.message || 'Unknown error'}. Please contact support with your payment confirmation. Your access token has been saved.`
-      );
-
-      console.log('[PAYMENT] ⚠️ Error occurred, but saving token anyway for webhook processing...');
-      // Clear cached fingerprint even on error (purchase attempted)
+      // Payment is successful, webhook will create the purchase and send emails
+      // We redirect to success page where they'll wait for webhook processing
+      console.log('[PAYMENT] 💾 Clearing cached fingerprint...');
       clearCachedBuyerFingerprint();
-
-      // Save token anyway (webhook will handle completion)
-      // Use the original token since confirmation failed
-      savePurchaseToken(id, accessToken);
-      console.log('[PAYMENT] ✅ Token saved (fallback)');
-
-      // Show error for 5 seconds then redirect to success page
-      setTimeout(() => {
-        console.log('[PAYMENT] 🔄 Redirecting to success page after error...');
-        router.push(`/checkout/${id}/success?token=${accessToken}`);
-      }, 5000);
+      
+      console.log('[PAYMENT] 🔄 Redirecting to success page...');
+      // Pass the payment intent ID so success page can poll for purchase completion
+      router.push(`/checkout/${id}/success?paymentIntentId=${paymentIntentId}`);
+    } catch (error) {
+      console.error('[PAYMENT] ❌ Unexpected error:', error);
+      setError('An unexpected error occurred. Please try again.');
     }
   };
 

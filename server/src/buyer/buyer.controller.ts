@@ -51,11 +51,19 @@ export class BuyerController {
   }
 
   /**
-   * Verify purchase status
+   * Verify purchase status by ID or payment intent
    */
   @Get('purchase/:id')
   async verifyPurchase(@Param('id') id: string) {
     return this.buyerService.verifyPurchase(id);
+  }
+
+  /**
+   * Look up purchase by payment intent ID (for webhook polling)
+   */
+  @Get('purchase-by-payment/:paymentIntentId')
+  async verifyPurchaseByPaymentIntent(@Param('paymentIntentId') paymentIntentId: string) {
+    return this.buyerService.verifyPurchaseByPaymentIntent(paymentIntentId);
   }
 
   /**

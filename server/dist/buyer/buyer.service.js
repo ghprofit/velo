@@ -237,7 +237,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
         };
     }
     async createPurchase(dto, ipAddress) {
-        this.logger.log(`[PURCHASE] Starting purchase creation for content: ${dto.contentId}`);
+        this.logger.log(`[PURCHASE] Starting payment intent creation for content: ${dto.contentId}`);
         this.logger.log(`[PURCHASE] IP Address: ${ipAddress}, Fingerprint: ${dto.fingerprint ? 'present' : 'missing'}`);
         try {
             this.logger.log(`[PURCHASE] Validating session: ${dto.sessionToken}`);
@@ -307,6 +307,9 @@ let BuyerService = BuyerService_1 = class BuyerService {
                     contentTitle: content.title,
                     creatorName: content.creator.displayName,
                     sessionId: session.id.toString(),
+                    basePrice: content.price.toString(),
+                    fingerprint: dto.fingerprint || '',
+                    ipAddress: ipAddress || '',
                 });
                 this.logger.log(`[PURCHASE] PaymentIntent created successfully: ${paymentIntent.id}`);
             }
@@ -314,35 +317,15 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 this.logger.error('[PURCHASE] Stripe payment intent creation failed:', stripeError);
                 throw new common_1.BadRequestException('Failed to initialize payment. Please try again.');
             }
-            const accessToken = crypto.randomBytes(32).toString('hex');
-            this.logger.log(`[PURCHASE] Generated access token for purchase`);
-            this.logger.log(`[PURCHASE] Creating purchase record in database`);
-            const purchase = await this.prisma.purchase.create({
-                data: {
-                    contentId: dto.contentId,
-                    buyerSessionId: session.id,
-                    amount: buyerAmount,
-                    basePrice: content.price,
-                    currency: 'USD',
-                    paymentProvider: 'STRIPE',
-                    paymentIntentId: paymentIntent.id,
-                    status: 'PENDING',
-                    accessToken,
-                    purchaseFingerprint: dto.fingerprint || null,
-                    trustedFingerprints: dto.fingerprint ? [dto.fingerprint] : [],
-                    purchaseIpAddress: ipAddress || null,
-                },
-            });
-            this.logger.log(`[PURCHASE] ✅ Purchase created successfully: ${purchase.id} for content ${dto.contentId}`);
+            this.logger.log(`[PURCHASE] ✅ Payment intent created, purchase will be created after payment succeeds`);
             return {
-                purchaseId: purchase.id,
                 clientSecret: paymentIntent.client_secret,
                 amount: buyerAmount,
-                accessToken: purchase.accessToken,
+                paymentIntentId: paymentIntent.id,
             };
         }
         catch (error) {
-            this.logger.error(`[PURCHASE] ❌ Purchase creation FAILED for content ${dto.contentId}`);
+            this.logger.error(`[PURCHASE] ❌ Payment intent creation FAILED for content ${dto.contentId}`);
             this.logger.error(`[PURCHASE] Error:`, error);
             if (error instanceof Error) {
                 this.logger.error(`[PURCHASE] Error message: ${error.message}`);
@@ -363,6 +346,29 @@ let BuyerService = BuyerService_1 = class BuyerService {
     async verifyPurchase(purchaseId) {
         const purchase = await this.prisma.purchase.findUnique({
             where: { id: purchaseId },
+            include: {
+                content: {
+                    select: {
+                        id: true,
+                        title: true,
+                        contentType: true,
+                    },
+                },
+            },
+        });
+        if (!purchase) {
+            throw new common_1.NotFoundException('Purchase not found');
+        }
+        return {
+            id: purchase.id,
+            status: purchase.status,
+            accessToken: purchase.accessToken,
+            content: purchase.content,
+        };
+    }
+    async verifyPurchaseByPaymentIntent(paymentIntentId) {
+        const purchase = await this.prisma.purchase.findUnique({
+            where: { paymentIntentId },
             include: {
                 content: {
                     select: {

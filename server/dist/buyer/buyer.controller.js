@@ -38,6 +38,9 @@ let BuyerController = class BuyerController {
     async verifyPurchase(id) {
         return this.buyerService.verifyPurchase(id);
     }
+    async verifyPurchaseByPaymentIntent(paymentIntentId) {
+        return this.buyerService.verifyPurchaseByPaymentIntent(paymentIntentId);
+    }
     async getContentAccess(dto) {
         console.log('[BUYER CONTROLLER] getContentAccess called with token:', dto.accessToken?.substring(0, 20) + '...');
         const result = await this.buyerService.getContentAccess(dto.accessToken);
@@ -119,6 +122,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], BuyerController.prototype, "verifyPurchase", null);
+__decorate([
+    (0, common_1.Get)('purchase-by-payment/:paymentIntentId'),
+    __param(0, (0, common_1.Param)('paymentIntentId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], BuyerController.prototype, "verifyPurchaseByPaymentIntent", null);
 __decorate([
     (0, common_1.Post)('access'),
     __param(0, (0, common_1.Body)()),

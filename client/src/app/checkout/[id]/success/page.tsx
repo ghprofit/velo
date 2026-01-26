@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, use } from 'react';
+import { useEffect, use, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { buyerApi } from '@/lib/api-client';
 import SuccessConfetti from '@/components/SuccessConfetti';
 import FloatingLogo from '@/components/FloatingLogo';
 
@@ -11,39 +12,109 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
   const { id } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const accessToken = searchParams.get('token');
+  const paymentIntentId = searchParams.get('paymentIntentId');
+  const accessToken = searchParams.get('token'); // Fallback for already-purchased scenario
+  
+  const [status, setStatus] = useState<'processing' | 'completed' | 'error'>('processing');
+  const [finalAccessToken, setFinalAccessToken] = useState<string | null>(accessToken);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
-    // Redirect to content page after a short delay
+    // If we already have the token (already purchased case), redirect immediately
     if (accessToken) {
       const timer = setTimeout(() => {
         router.push(`/c/${id}?token=${accessToken}`);
-      }, 3000);
-
+      }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [accessToken, id, router]);
 
-  if (!accessToken) {
+    // Otherwise, poll for the purchase to be created by webhook
+    if (!paymentIntentId) {
+      setStatus('error');
+      setErrorMessage('Invalid payment session. Please contact support.');
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 30; // 30 seconds (1 second interval)
+    
+    const pollForPurchase = async () => {
+      try {
+        attempts++;
+        console.log(`[SUCCESS] Polling for purchase (attempt ${attempts}/${maxAttempts})...`);
+        
+        // Look up purchase by payment intent ID
+        const result = await buyerApi.verifyPurchaseByPaymentIntent(paymentIntentId as string);
+        
+        if (result.data && result.data.accessToken) {
+          console.log('[SUCCESS] ✅ Purchase completed! Access token received');
+          setFinalAccessToken(result.data.accessToken);
+          setStatus('completed');
+          
+          // Redirect after a short delay to show the success screen
+          const timer = setTimeout(() => {
+            router.push(`/c/${id}?token=${result.data.accessToken}`);
+          }, 3000);
+          
+          return () => clearTimeout(timer);
+        }
+        
+        if (attempts < maxAttempts) {
+          // Keep polling
+          setTimeout(pollForPurchase, 1000);
+        } else {
+          // Timeout after 30 seconds
+          console.error('[SUCCESS] ❌ Timeout waiting for purchase webhook');
+          setStatus('error');
+          setErrorMessage(
+            'Payment was processed but purchase confirmation timed out. Please check your email or contact support.'
+          );
+        }
+      } catch (error) {
+        console.error('[SUCCESS] Error polling for purchase:', error);
+        if (attempts < maxAttempts) {
+          // Continue polling even on error
+          setTimeout(pollForPurchase, 1000);
+        } else {
+          setStatus('error');
+          setErrorMessage('Failed to confirm purchase. Please contact support.');
+        }
+      }
+    };
+
+    pollForPurchase();
+  }, [accessToken, paymentIntentId, id, router]);
+
+  // Error state
+  if (status === 'error') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid Access</h1>
-          <p className="text-gray-600 mb-6">No access token found</p>
-          <Link
-            href="/"
-            className="inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Go Home
-          </Link>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Purchase Confirmation Issue</h1>
+          <p className="text-gray-600 mb-6">{errorMessage}</p>
+          <div className="flex gap-4 justify-center">
+            <Link
+              href="/"
+              className="inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Go Home
+            </Link>
+            <Link
+              href={`/checkout/${id}`}
+              className="inline-block px-6 py-3 bg-gray-300 text-gray-900 font-medium rounded-lg hover:bg-gray-400 transition-colors"
+            >
+              Try Again
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Success state
   return (
     <div className="min-h-screen bg-gray-50 relative">
       {/* Success Confetti Animation */}
@@ -79,7 +150,9 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            <span className="text-xs sm:text-sm font-medium">Purchase Complete</span>
+            <span className="text-xs sm:text-sm font-medium">
+              {status === 'completed' ? 'Purchase Complete' : 'Payment Processing'}
+            </span>
           </div>
         </div>
       </header>
@@ -91,35 +164,45 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
             {/* Success Animation */}
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 icon-3d-container icon-3d-green rounded-full mb-6">
-                <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                {status === 'completed' ? (
+                  <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="animate-spin h-10 h-10 sm:h-12 sm:w-12 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
               </div>
 
               {/* Success Message */}
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
-                Payment Successful!
+                {status === 'completed' ? 'Payment Successful!' : 'Processing Payment'}
               </h1>
               <p className="text-base sm:text-lg text-gray-600 mb-8">
-                Your purchase is complete. You now have full access to the content.
+                {status === 'completed'
+                  ? 'Your purchase is complete. You now have full access to the content.'
+                  : 'Please wait while we confirm your purchase. This usually takes a few seconds.'}
               </p>
 
-              {/* Loading Animation */}
-              <div className="flex items-center justify-center gap-2 text-indigo-600 mb-8">
-                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span className="text-sm font-medium">Redirecting to your content...</span>
-              </div>
-
-              {/* Manual Button */}
-              <Link
-                href={`/c/${id}?token=${accessToken}`}
-                className="inline-block px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                View Your Content Now →
-              </Link>
+              {/* Loading/Success Button */}
+              {status === 'processing' ? (
+                <div className="flex items-center justify-center gap-2 text-indigo-600 mb-8">
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-sm font-medium">Confirming your purchase...</span>
+                </div>
+              ) : (
+                <Link
+                  href={`/c/${id}?token=${finalAccessToken}`}
+                  className="inline-block px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  View Your Content Now →
+                </Link>
+              )}
             </div>
 
             {/* Success Details */}

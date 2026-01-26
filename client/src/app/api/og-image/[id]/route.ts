@@ -28,17 +28,27 @@ export async function GET(
     const content = await response.json();
     const thumbnailUrl = content.thumbnailUrl;
     
-    if (!thumbnailUrl) {
-      return new NextResponse('No thumbnail available', { status: 404 });
-    }
+    const fallbackLogo = 'https://velolink-content.s3.eu-north-1.amazonaws.com/Secondary_Logo(white).svg';
 
-    // Fetch the original image
-    const imageResponse = await fetch(thumbnailUrl);
-    if (!imageResponse.ok) {
-      return new NextResponse('Image not found', { status: 404 });
+    // Try to fetch the original image; fall back to public logo on failure
+    let imageBuffer: ArrayBuffer;
+    if (thumbnailUrl) {
+      try {
+        const imageResponse = await fetch(thumbnailUrl);
+        if (imageResponse.ok) {
+          imageBuffer = await imageResponse.arrayBuffer();
+        } else {
+          const fallbackResponse = await fetch(fallbackLogo);
+          imageBuffer = await fallbackResponse.arrayBuffer();
+        }
+      } catch (e) {
+        const fallbackResponse = await fetch(fallbackLogo);
+        imageBuffer = await fallbackResponse.arrayBuffer();
+      }
+    } else {
+      const fallbackResponse = await fetch(fallbackLogo);
+      imageBuffer = await fallbackResponse.arrayBuffer();
     }
-
-    const imageBuffer = await imageResponse.arrayBuffer();
     
     // Import sharp for image processing
     const sharp = (await import('sharp')).default;

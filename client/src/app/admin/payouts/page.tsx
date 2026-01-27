@@ -463,7 +463,7 @@ export default function AdminPayoutsPage() {
                 {/* Creator's Address (if provided) */}
                 {(selectedRequest.creator.streetAddress || selectedRequest.creator.city || selectedRequest.creator.state || selectedRequest.creator.postalCode) && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">Creator's Address</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">Creator&apos;s Address</h4>
                     <div className="space-y-1 text-sm">
                       {selectedRequest.creator.streetAddress && (
                         <p className="text-gray-900">{selectedRequest.creator.streetAddress}</p>
@@ -642,7 +642,7 @@ export default function AdminPayoutsPage() {
                 {/* Creator's Address (if provided) */}
                 {(selectedRequest.creator.streetAddress || selectedRequest.creator.city || selectedRequest.creator.state || selectedRequest.creator.postalCode) && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">Creator's Address</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">Creator&apos;s Address</h4>
                     <div className="space-y-1 text-sm">
                       {selectedRequest.creator.streetAddress && (
                         <p className="text-gray-900">{selectedRequest.creator.streetAddress}</p>

@@ -27,10 +27,22 @@ export default function CreatorVerifyIdentityPage() {
       const response = await veriffApi.getMyVerificationStatus();
       const data = response.data.data;
 
+      console.log('Verification status check:', data);
       setVerificationStatus(data.verificationStatus);
       setSessionId(data.veriffSessionId);
+      setError(null); // Clear any previous errors on successful check
     } catch (err: unknown) {
       console.error('Failed to fetch verification status:', err);
+      const error = err as { response?: { status?: number; data?: { message?: string } } };
+      
+      // If it's a 401, user is logged out - don't show error, just clear status
+      if (error.response?.status === 401) {
+        console.log('Session expired, redirecting to login');
+        setError('Your session has expired. Please log in again.');
+      } else {
+        // For other errors, log but don't break the flow
+        console.warn('Non-critical status check error:', error.response?.data?.message);
+      }
     } finally {
       setIsCheckingStatus(false);
     }
@@ -44,6 +56,7 @@ export default function CreatorVerifyIdentityPage() {
 
     if (verified === 'true') {
       // User was just redirected from Veriff with verified status
+      // Start more aggressive polling to catch the webhook update
       checkVerificationStatus();
       // Clean up URL
       router.replace('/creator/verify-identity');
@@ -63,15 +76,30 @@ export default function CreatorVerifyIdentityPage() {
     }
   }, [searchParams, router, checkVerificationStatus]);
 
-  // Auto-poll status when IN_PROGRESS
+  // Auto-poll status when IN_PROGRESS with aggressive retries after redirect
   useEffect(() => {
     if (verificationStatus === 'IN_PROGRESS') {
-      // Poll every 5 seconds for status updates
-      const interval = setInterval(() => {
+      let pollCount = 0;
+      const maxAgggressivePolls = 12; // Poll aggressively for 12 times (24 seconds)
+      
+      const poll = () => {
         checkVerificationStatus();
-      }, 5000);
+        pollCount++;
+      };
 
-      return () => clearInterval(interval);
+      // Start with aggressive polling (2 seconds) for the first 12 polls
+      let pollInterval = 2000;
+      let intervalId = setInterval(() => {
+        poll();
+        
+        // After 12 aggressive polls, switch to slower polling (5 seconds)
+        if (pollCount === maxAgggressivePolls) {
+          clearInterval(intervalId);
+          intervalId = setInterval(poll, 5000);
+        }
+      }, pollInterval);
+
+      return () => clearInterval(intervalId);
     }
   }, [verificationStatus, checkVerificationStatus]);
 

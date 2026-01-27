@@ -336,6 +336,13 @@ export class VeriffController {
         this.logger.log(
           `Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`,
         );
+        
+        // Also log the user ID for easier debugging
+        const user = await tx.user.findUnique({
+          where: { id: creatorProfile.userId },
+          select: { email: true },
+        });
+        this.logger.log(`User email: ${user?.email}, Status: ${verificationStatus}`);
       });
 
       return { received: true };

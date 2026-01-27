@@ -157,20 +157,36 @@ export class CreatorsService {
 
           const status = veriffStatus.verification.status;
           const code = veriffStatus.verification.code;
+          const reason = veriffStatus.verification.reason || 'N/A';
 
-          this.logger.log(`Veriff API returned: status=${status}, code=${code}`);
+          this.logger.log(
+            `Veriff API returned: status=${status}, code=${code}, reason=${reason}, full response: ${JSON.stringify(veriffStatus)}`,
+          );
 
           // Update status based on Veriff response
           let newStatus: VerificationStatus | null = null;
           let verifiedAt: Date | null = null;
 
+          // Handle approved verification
           if (status === 'approved' && code === 9001) {
             newStatus = VerificationStatus.VERIFIED;
             verifiedAt = new Date();
             this.logger.log('Verification approved - updating status to VERIFIED');
-          } else if (status === 'declined' && code === 9103) {
+          } 
+          // Handle declined/rejected verification
+          else if (status === 'declined' || code === 9103 || code === 9102 || code === 9104) {
             newStatus = VerificationStatus.REJECTED;
-            this.logger.log('Verification declined - updating status to REJECTED');
+            this.logger.log(`Verification declined/rejected - updating status to REJECTED (code: ${code})`);
+          }
+          // Handle resubmission required
+          else if (status === 'resubmission_requested' || code === 9121) {
+            newStatus = VerificationStatus.REJECTED;
+            this.logger.log('Verification requires resubmission - updating status to REJECTED');
+          }
+          // Handle expired session
+          else if (status === 'expired' || code === 9120) {
+            newStatus = VerificationStatus.EXPIRED;
+            this.logger.log('Verification session expired - updating status to EXPIRED');
           }
 
           // Update database if status changed
@@ -190,6 +206,10 @@ export class CreatorsService {
               verifiedAt,
               emailVerified: user.emailVerified,
             };
+          } else {
+            this.logger.warn(
+              `Veriff status '${status}' (code ${code}) not handled - verification still in progress`,
+            );
           }
         } catch (veriffError) {
           // If Veriff API call fails, just continue with database status

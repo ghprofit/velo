@@ -672,6 +672,11 @@ export class PaymentsService {
         bankIban: request.creator.bankIban,
         bankCountry: request.creator.bankCountry,
         bankCurrency: request.creator.bankCurrency,
+        // Include creator's personal address
+        streetAddress: request.creator.streetAddress,
+        city: request.creator.city,
+        state: request.creator.state,
+        postalCode: request.creator.postalCode,
       },
     }));
 

@@ -32,6 +32,11 @@ interface PayoutRequest {
     bankIban?: string;
     bankCountry?: string;
     bankCurrency?: string;
+    // Creator's personal address
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
   };
 }
 
@@ -360,6 +365,31 @@ export default function AdminPayoutsPage() {
                               </>
                             )}
                           </div>
+                          {/* Bank Info Preview */}
+                          {/* {request.creator.bankAccountName && (
+                            <div className="text-xs text-gray-600 mt-2 space-y-0.5">
+                              <div className="font-medium text-gray-700">Bank: {request.creator.bankName}</div>
+                              <div>Account: {request.creator.bankAccountName}</div>
+                              {request.creator.bankCountry && (
+                                <div>Country: {request.creator.bankCountry}</div>
+                              )}
+                            </div>
+                          )} */}
+                          {/* Address Preview */}
+                          {/* {(request.creator.streetAddress || request.creator.city) && (
+                            <div className="text-xs text-blue-600 mt-1.5 space-y-0.5">
+                              <div className="font-medium">Address:</div>
+                              {request.creator.streetAddress && (
+                                <div>{request.creator.streetAddress}</div>
+                              )}
+                              {(request.creator.city || request.creator.state) && (
+                                <div>
+                                  {[request.creator.city, request.creator.state].filter(Boolean).join(', ')}
+                                  {request.creator.postalCode && ` ${request.creator.postalCode}`}
+                                </div>
+                              )}
+                            </div>
+                          )} */}
                           {request.status !== 'PENDING' && request.reviewNotes && (
                             <div className="text-xs text-gray-500 mt-2">
                               <div className="font-medium">Notes:</div>
@@ -429,6 +459,24 @@ export default function AdminPayoutsPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Creator's Address (if provided) */}
+                {(selectedRequest.creator.streetAddress || selectedRequest.creator.city || selectedRequest.creator.state || selectedRequest.creator.postalCode) && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">Creator's Address</h4>
+                    <div className="space-y-1 text-sm">
+                      {selectedRequest.creator.streetAddress && (
+                        <p className="text-gray-900">{selectedRequest.creator.streetAddress}</p>
+                      )}
+                      <p className="text-gray-900">
+                        {[selectedRequest.creator.city, selectedRequest.creator.state]
+                          .filter(Boolean)
+                          .join(', ')}
+                        {selectedRequest.creator.postalCode && ` ${selectedRequest.creator.postalCode}`}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-6">
                   <p className="text-sm text-yellow-800">
@@ -590,6 +638,24 @@ export default function AdminPayoutsPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Creator's Address (if provided) */}
+                {(selectedRequest.creator.streetAddress || selectedRequest.creator.city || selectedRequest.creator.state || selectedRequest.creator.postalCode) && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">Creator's Address</h4>
+                    <div className="space-y-1 text-sm">
+                      {selectedRequest.creator.streetAddress && (
+                        <p className="text-gray-900">{selectedRequest.creator.streetAddress}</p>
+                      )}
+                      <p className="text-gray-900">
+                        {[selectedRequest.creator.city, selectedRequest.creator.state]
+                          .filter(Boolean)
+                          .join(', ')}
+                        {selectedRequest.creator.postalCode && ` ${selectedRequest.creator.postalCode}`}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Review Notes if any */}
                 {selectedRequest.reviewNotes && (

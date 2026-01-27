@@ -300,26 +300,11 @@ export class CreatorsService {
         throw new BadRequestException('Creator must be verified before setting up payout');
       }
 
-      // Create or get Stripe Connect account
-      let stripeAccountId = user.creatorProfile.stripeAccountId;
+      // For manual payouts, we don't need Stripe Connect
+      // Just store the bank account details for manual processing
+      this.logger.log(`Setting up manual payout bank account for user: ${userId}`);
 
-      if (!stripeAccountId) {
-        this.logger.log(`Creating Stripe Connect account for user: ${userId}`);
-        
-        const stripeAccount = await this.stripeService.createConnectAccount(
-          user.email,
-          {
-            userId: user.id,
-            creatorId: user.creatorProfile.id,
-            displayName: user.creatorProfile.displayName,
-          },
-        );
-
-        stripeAccountId = stripeAccount.id;
-        this.logger.log(`Stripe Connect account created: ${stripeAccountId}`);
-      }
-
-      // Update creator profile with bank account info and Stripe account
+      // Update creator profile with bank account info (no Stripe needed for manual payouts)
       const updatedProfile = await this.prisma.creatorProfile.update({
         where: { id: user.creatorProfile.id },
         data: {
@@ -331,7 +316,10 @@ export class CreatorsService {
           bankIban: bankAccountDto.bankIban,
           bankCountry: bankAccountDto.bankCountry,
           bankCurrency: bankAccountDto.bankCurrency || 'USD',
-          stripeAccountId,
+          streetAddress: bankAccountDto.streetAddress,
+          city: bankAccountDto.city,
+          state: bankAccountDto.state,
+          postalCode: bankAccountDto.postalCode,
           payoutSetupCompleted: true,
         },
       });
@@ -346,7 +334,6 @@ export class CreatorsService {
         bankCountry: updatedProfile.bankCountry!,
         bankCurrency: updatedProfile.bankCurrency!,
         payoutSetupCompleted: updatedProfile.payoutSetupCompleted,
-        stripeAccountId: updatedProfile.stripeAccountId!,
       };
     } catch (error) {
       this.logger.error(`Failed to setup bank account for user ${userId}:`, error);
@@ -385,6 +372,11 @@ export class CreatorsService {
         bankCurrency: profile.bankCurrency!,
         payoutSetupCompleted: profile.payoutSetupCompleted,
         stripeAccountId: profile.stripeAccountId || undefined,
+        // Include creator's address
+        streetAddress: profile.streetAddress || undefined,
+        city: profile.city || undefined,
+        state: profile.state || undefined,
+        postalCode: profile.postalCode || undefined,
       };
     } catch (error) {
       this.logger.error(`Failed to get bank account for user ${userId}:`, error);

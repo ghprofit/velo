@@ -22,6 +22,10 @@ interface BankAccount {
   bankCountry: string;
   bankCurrency: string;
   payoutSetupCompleted: boolean;
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
 }
 
 interface NotificationPreferences {
@@ -62,8 +66,13 @@ export default function SettingsPage() {
     bankIban: '',
     bankCountry: '',
     bankCurrency: 'USD',
+    streetAddress: '',
+    city: '',
+    state: '',
+    postalCode: '',
   });
   const [confirmAccountNumber, setConfirmAccountNumber] = useState('');
+  const [customCountry, setCustomCountry] = useState('');
 
   // Password state
   const [passwordData, setPasswordData] = useState({
@@ -206,7 +215,16 @@ export default function SettingsPage() {
         bankIban: '',
         bankCountry: bankAccount.bankCountry || '',
         bankCurrency: bankAccount.bankCurrency || 'USD',
+        streetAddress: bankAccount.streetAddress || '',
+        city: bankAccount.city || '',
+        state: bankAccount.state || '',
+        postalCode: bankAccount.postalCode || '',
       });
+      // Set custom country if it's not a standard one
+      const standardCountries = ['US', 'GB', 'CA', 'AU', 'NG', 'KE', 'ZA', 'GH', 'IN'];
+      if (bankAccount.bankCountry && !standardCountries.includes(bankAccount.bankCountry)) {
+        setCustomCountry(bankAccount.bankCountry);
+      }
     }
     setIsEditingBankAccount(true);
   };
@@ -222,8 +240,13 @@ export default function SettingsPage() {
       bankIban: '',
       bankCountry: '',
       bankCurrency: 'USD',
+      streetAddress: '',
+      city: '',
+      state: '',
+      postalCode: '',
     });
     setConfirmAccountNumber('');
+    setCustomCountry('');
     setError('');
   };
 
@@ -257,6 +280,12 @@ export default function SettingsPage() {
       return;
     }
 
+    if (bankFormData.bankCountry === 'OTHER' && !customCountry.trim()) {
+      setError('Please enter your country name');
+      setSaving(false);
+      return;
+    }
+
     try {
       const payload: {
         bankAccountName: string;
@@ -267,17 +296,25 @@ export default function SettingsPage() {
         bankRoutingNumber?: string;
         bankSwiftCode?: string;
         bankIban?: string;
+        streetAddress?: string;
+        city?: string;
+        state?: string;
+        postalCode?: string;
       } = {
         bankAccountName: bankFormData.bankAccountName,
         bankName: bankFormData.bankName,
         bankAccountNumber: bankFormData.bankAccountNumber,
-        bankCountry: bankFormData.bankCountry,
+        bankCountry: bankFormData.bankCountry === 'OTHER' ? customCountry.trim() : bankFormData.bankCountry,
         bankCurrency: bankFormData.bankCurrency,
       };
 
       if (bankFormData.bankRoutingNumber) payload.bankRoutingNumber = bankFormData.bankRoutingNumber;
       if (bankFormData.bankSwiftCode) payload.bankSwiftCode = bankFormData.bankSwiftCode;
       if (bankFormData.bankIban) payload.bankIban = bankFormData.bankIban;
+      if (bankFormData.streetAddress) payload.streetAddress = bankFormData.streetAddress;
+      if (bankFormData.city) payload.city = bankFormData.city;
+      if (bankFormData.state) payload.state = bankFormData.state;
+      if (bankFormData.postalCode) payload.postalCode = bankFormData.postalCode;
 
       await payoutApi.setupBankAccount(payload);
 
@@ -292,8 +329,13 @@ export default function SettingsPage() {
         bankIban: '',
         bankCountry: '',
         bankCurrency: 'USD',
+        streetAddress: '',
+        city: '',
+        state: '',
+        postalCode: '',
       });
       setConfirmAccountNumber('');
+      setCustomCountry('');
       await loadUserData();
     } catch (err: unknown) {
       setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to update bank account');
@@ -725,6 +767,24 @@ export default function SettingsPage() {
                     </select>
                   </div>
 
+                  {/* Custom Country Input (when Other is selected) */}
+                  {bankFormData.bankCountry === 'OTHER' && (
+                    <div>
+                      <label htmlFor="customCountry" className="block text-sm font-medium text-gray-900 mb-2">
+                        Enter Your Country <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="customCountry"
+                        type="text"
+                        required
+                        value={customCountry}
+                        onChange={(e) => setCustomCountry(e.target.value)}
+                        placeholder="Enter your country name"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
+                      />
+                    </div>
+                  )}
+
                   {/* Account Holder Name */}
                   <div>
                     <label htmlFor="bankAccountName" className="block text-sm font-medium text-gray-900 mb-2">
@@ -840,6 +900,64 @@ export default function SettingsPage() {
                       />
                     </div>
                   )}
+
+                  {/* User's Personal Address */}
+                  <div>
+                    <label htmlFor="streetAddress" className="block text-sm font-medium text-gray-900 mb-2">
+                      Your Street Address (Optional)
+                    </label>
+                    <input
+                      id="streetAddress"
+                      type="text"
+                      value={bankFormData.streetAddress}
+                      onChange={(e) => setBankFormData({ ...bankFormData, streetAddress: e.target.value })}
+                      placeholder="123 Main Street, Apt 4B"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
+                    />
+                  </div>
+
+                  {/* City, State, Postal Code */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label htmlFor="city" className="block text-sm font-medium text-gray-900 mb-2">
+                        City (Optional)
+                      </label>
+                      <input
+                        id="city"
+                        type="text"
+                        value={bankFormData.city}
+                        onChange={(e) => setBankFormData({ ...bankFormData, city: e.target.value })}
+                        placeholder="New York"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="state" className="block text-sm font-medium text-gray-900 mb-2">
+                        State/Province (Optional)
+                      </label>
+                      <input
+                        id="state"
+                        type="text"
+                        value={bankFormData.state}
+                        onChange={(e) => setBankFormData({ ...bankFormData, state: e.target.value })}
+                        placeholder="NY"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="postalCode" className="block text-sm font-medium text-gray-900 mb-2">
+                        Postal/ZIP Code (Optional)
+                      </label>
+                      <input
+                        id="postalCode"
+                        type="text"
+                        value={bankFormData.postalCode}
+                        onChange={(e) => setBankFormData({ ...bankFormData, postalCode: e.target.value })}
+                        placeholder="10001"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
+                      />
+                    </div>
+                  </div>
 
                   {/* Submit Button */}
                   <button

@@ -221,6 +221,11 @@ model CreatorProfile {
   bankIban             String? // For European banks
   bankCountry          String?
   bankCurrency         String?      @default("USD")
+  // Creator's Personal Address
+  streetAddress        String?
+  city                 String?
+  state                String?
+  postalCode           String?
   payoutSetupCompleted Boolean      @default(false)
   // Payout Info
   paypalEmail          String?

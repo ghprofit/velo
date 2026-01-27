@@ -45,6 +45,22 @@ export class SetupBankAccountDto {
   @IsString()
   @IsOptional()
   bankCurrency?: string; // Defaults to USD
+
+  @IsString()
+  @IsOptional()
+  streetAddress?: string;
+
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @IsString()
+  @IsOptional()
+  postalCode?: string;
 }
 
 export class BankAccountResponseDto {
@@ -55,4 +71,9 @@ export class BankAccountResponseDto {
   bankCurrency: string;
   payoutSetupCompleted: boolean;
   stripeAccountId?: string;
+  // Creator's personal address
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
 }

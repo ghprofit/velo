@@ -20,7 +20,12 @@ export default function PayoutSetupPage() {
     bankIban: '',
     bankCountry: '',
     bankCurrency: 'USD',
+    streetAddress: '',
+    city: '',
+    state: '',
+    postalCode: '',
   });
+  const [customCountry, setCustomCountry] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -38,6 +43,13 @@ export default function PayoutSetupPage() {
       // Validate required fields
       if (!formData.bankAccountName || !formData.bankName || !formData.bankAccountNumber || !formData.bankCountry) {
         setError('Please fill in all required fields');
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate custom country when 'OTHER' is selected
+      if (formData.bankCountry === 'OTHER' && !customCountry.trim()) {
+        setError('Please enter your country name');
         setIsLoading(false);
         return;
       }
@@ -63,7 +75,7 @@ export default function PayoutSetupPage() {
         bankAccountName: formData.bankAccountName,
         bankName: formData.bankName,
         bankAccountNumber: formData.bankAccountNumber,
-        bankCountry: formData.bankCountry,
+        bankCountry: formData.bankCountry === 'OTHER' ? customCountry.trim() : formData.bankCountry,
         bankCurrency: formData.bankCurrency,
       };
 
@@ -212,6 +224,25 @@ export default function PayoutSetupPage() {
                 </select>
               </div>
 
+              {/* Custom Country Input (when Other is selected) */}
+              {formData.bankCountry === 'OTHER' && (
+                <div>
+                  <label htmlFor="customCountry" className="block text-sm font-medium text-gray-700 mb-2">
+                    Enter Your Country <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="customCountry"
+                    name="customCountry"
+                    type="text"
+                    required
+                    value={customCountry}
+                    onChange={(e) => setCustomCountry(e.target.value)}
+                    placeholder="Enter your country name"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+
               {/* Account Holder Full Name */}
               <div>
                 <label htmlFor="bankAccountName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -340,6 +371,68 @@ export default function PayoutSetupPage() {
                   />
                 </div>
               )}
+
+              {/* User's Personal Address */}
+              <div>
+                <label htmlFor="streetAddress" className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Street Address (Optional)
+                </label>
+                <input
+                  id="streetAddress"
+                  name="streetAddress"
+                  type="text"
+                  value={formData.streetAddress}
+                  onChange={handleChange}
+                  placeholder="123 Main Street, Apt 4B"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* City, State, Postal Code */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
+                    City (Optional)
+                  </label>
+                  <input
+                    id="city"
+                    name="city"
+                    type="text"
+                    value={formData.city}
+                    onChange={handleChange}
+                    placeholder="New York"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
+                    State/Province (Optional)
+                  </label>
+                  <input
+                    id="state"
+                    name="state"
+                    type="text"
+                    value={formData.state}
+                    onChange={handleChange}
+                    placeholder="NY"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-2">
+                    Postal/ZIP Code (Optional)
+                  </label>
+                  <input
+                    id="postalCode"
+                    name="postalCode"
+                    type="text"
+                    value={formData.postalCode}
+                    onChange={handleChange}
+                    placeholder="10001"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 pt-6">

@@ -125,6 +125,7 @@ export class CreatorsService {
 
   /**
    * Get verification status for the current user
+   * Also checks Veriff API directly if webhook hasn't arrived yet
    */
   async getMyVerificationStatus(userId: string) {
     try {
@@ -137,10 +138,72 @@ export class CreatorsService {
         throw new NotFoundException('Creator profile not found');
       }
 
+      const profile = user.creatorProfile;
+
+      // If status is IN_PROGRESS and we have a session ID, check Veriff API directly
+      // This is a fallback in case webhook hasn't arrived yet
+      if (
+        profile.verificationStatus === VerificationStatus.IN_PROGRESS &&
+        profile.veriffSessionId
+      ) {
+        try {
+          this.logger.log(
+            `Checking Veriff API directly for session: ${profile.veriffSessionId}`,
+          );
+          
+          const veriffStatus = await this.veriffService.getVerificationStatus(
+            profile.veriffSessionId,
+          );
+
+          const status = veriffStatus.verification.status;
+          const code = veriffStatus.verification.code;
+
+          this.logger.log(`Veriff API returned: status=${status}, code=${code}`);
+
+          // Update status based on Veriff response
+          let newStatus: VerificationStatus | null = null;
+          let verifiedAt: Date | null = null;
+
+          if (status === 'approved' && code === 9001) {
+            newStatus = VerificationStatus.VERIFIED;
+            verifiedAt = new Date();
+            this.logger.log('Verification approved - updating status to VERIFIED');
+          } else if (status === 'declined' && code === 9103) {
+            newStatus = VerificationStatus.REJECTED;
+            this.logger.log('Verification declined - updating status to REJECTED');
+          }
+
+          // Update database if status changed
+          if (newStatus) {
+            await this.prisma.creatorProfile.update({
+              where: { id: profile.id },
+              data: {
+                verificationStatus: newStatus,
+                verifiedAt,
+                veriffDecisionId: profile.veriffSessionId,
+              },
+            });
+
+            return {
+              verificationStatus: newStatus,
+              veriffSessionId: profile.veriffSessionId,
+              verifiedAt,
+              emailVerified: user.emailVerified,
+            };
+          }
+        } catch (veriffError) {
+          // If Veriff API call fails, just continue with database status
+          this.logger.warn(
+            `Failed to check Veriff API for session ${profile.veriffSessionId}:`,
+            veriffError,
+          );
+        }
+      }
+
       return {
-        verificationStatus: user.creatorProfile.verificationStatus,
-        veriffSessionId: user.creatorProfile.veriffSessionId,
-        verifiedAt: user.creatorProfile.verifiedAt,
+        verificationStatus: profile.verificationStatus,
+        veriffSessionId: profile.veriffSessionId,
+        verifiedAt: profile.verifiedAt,
         emailVerified: user.emailVerified,
       };
     } catch (error) {

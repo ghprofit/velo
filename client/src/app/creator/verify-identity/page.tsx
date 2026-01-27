@@ -88,7 +88,7 @@ export default function CreatorVerifyIdentityPage() {
       };
 
       // Start with aggressive polling (2 seconds) for the first 12 polls
-      let pollInterval = 2000;
+      const pollInterval = 2000;
       let intervalId = setInterval(() => {
         poll();
         

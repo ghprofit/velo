@@ -295,24 +295,36 @@ export default function CreatorVerifyIdentityPage() {
                 <span className="text-2xl">🔄</span>
                 Verification In Progress
               </h2>
-              <p className="text-gray-700 mb-6">
+              <p className="text-gray-700 mb-4">
                 Your identity verification is being reviewed. This usually takes a few minutes, but can take up to 24 hours.
               </p>
+              <div className="bg-white border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mt-0.5"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 mb-1">Auto-checking status...</p>
+                    <p className="text-xs text-gray-600">
+                      We&apos;re automatically checking your verification status every few seconds. 
+                      Your status will update automatically when verification is complete.
+                    </p>
+                  </div>
+                </div>
+              </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   variant="primary"
                   onClick={checkVerificationStatus}
                   className="w-full sm:w-auto"
+                  disabled={isCheckingStatus}
                 >
-                  Check Status
+                  {isCheckingStatus ? 'Checking...' : 'Refresh Status Now'}
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={handleInitiateVerification}
-                  isLoading={isLoading}
+                  onClick={() => router.push('/creator')}
                   className="w-full sm:w-auto"
                 >
-                  {isLoading ? 'Starting...' : 'Start New Verification'}
+                  Go to Dashboard
                 </Button>
               </div>
               <p className="text-sm text-gray-600 mt-4">

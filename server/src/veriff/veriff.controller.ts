@@ -380,7 +380,54 @@ export class VeriffController {
       apiKeyConfigured: process.env.VERIFF_API_KEY ? 'SET (hidden)' : 'NOT SET',
       apiSecretConfigured: process.env.VERIFF_API_SECRET ? 'SET (hidden)' : 'NOT SET',
       webhookSecretConfigured: process.env.VERIFF_WEBHOOK_SECRET ? 'SET (hidden)' : 'NOT SET',
+      webhookUrl: `${process.env.API_URL || process.env.BACKEND_URL}/api/veriff/webhooks/decision`,
       note: 'If any value shows NOT SET, check your .env file',
+    };
+  }
+
+  /**
+   * Debug endpoint to check if webhook was received for a session
+   * GET /veriff/debug/webhook/:sessionId
+   */
+  @Get('debug/webhook/:sessionId')
+  @HttpCode(HttpStatus.OK)
+  async debugWebhookStatus(@Param('sessionId') sessionId: string): Promise<any> {
+    this.logger.log(`Checking webhook status for session: ${sessionId}`);
+
+    const webhook = await this.prisma.processedWebhook.findUnique({
+      where: { webhookId: sessionId },
+    });
+
+    const creatorProfile = await this.prisma.creatorProfile.findUnique({
+      where: { veriffSessionId: sessionId },
+      select: {
+        id: true,
+        verificationStatus: true,
+        verifiedAt: true,
+        user: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    });
+
+    return {
+      sessionId,
+      webhookReceived: !!webhook,
+      webhookData: webhook
+        ? {
+            eventType: webhook.eventType,
+            processedAt: webhook.createdAt,
+          }
+        : null,
+      creatorProfile: creatorProfile
+        ? {
+            email: creatorProfile.user.email,
+            status: creatorProfile.verificationStatus,
+            verifiedAt: creatorProfile.verifiedAt,
+          }
+        : 'NOT FOUND',
     };
   }
 }

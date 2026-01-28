@@ -49,9 +49,9 @@ export async function generateMetadata({
   // Calculate buyer price (110% of base price)
   const buyerPrice = (content.price * 1.1).toFixed(2);
 
-  // Use OG image route (blurred) if thumbnail exists, otherwise fallback to default logo
+  // Use thumbnail directly (crawler-friendly) if available, otherwise fallback to default logo
   const imageUrl = content.thumbnailUrl
-    ? `${process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'}/api/og-image/${id}`
+    ? content.thumbnailUrl
     : 'https://velolink-content.s3.eu-north-1.amazonaws.com/Secondary_Logo(white).svg';
 
   // Compose the description with price (newline between truncated text and price)

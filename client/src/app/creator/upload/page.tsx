@@ -380,10 +380,55 @@ export default function UploadContentPage() {
     setUploadProgress(0);
 
     try {
+      // Step 0: Convert thumbnail to blurred version (2%)
+      setUploadProgress(2);
+      
+      // Get thumbnail blob and blur it
+      const thumbnailDataUrl = uploadedFiles[0].thumbnail;
+      
+      // Convert data URL to canvas for blurring
+      const blurredThumbnailBlob = await new Promise<Blob>((resolve, reject) => {
+        const img = new Image();
+        img.onload = async () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d', { alpha: false });
+            
+            if (!ctx) {
+              throw new Error('Failed to get canvas context for blur');
+            }
+            
+            ctx.drawImage(img, 0, 0);
+            
+            // Apply blur filter to the canvas
+            ctx.filter = 'blur(10px)';
+            ctx.drawImage(canvas, 0, 0);
+            ctx.filter = 'none';
+            
+            // Convert to blob with high quality
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  resolve(blob);
+                } else {
+                  reject(new Error('Failed to create blob from blurred canvas'));
+                }
+              },
+              'image/jpeg',
+              0.9
+            );
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = () => reject(new Error('Failed to load thumbnail for blurring'));
+        img.src = thumbnailDataUrl;
+      });
+      
       // Step 1: Get presigned upload URLs from backend (5%)
       setUploadProgress(5);
-      
-      const thumbnailBlob = await fetch(uploadedFiles[0].thumbnail).then(r => r.blob());
       
       const uploadUrlsResponse = await contentApi.getUploadUrls({
         title: title.trim(),
@@ -391,7 +436,7 @@ export default function UploadContentPage() {
         price: parseFloat(price),
         thumbnailFileName: 'thumbnail.jpg',
         thumbnailContentType: 'image/jpeg',
-        thumbnailFileSize: thumbnailBlob.size,
+        thumbnailFileSize: blurredThumbnailBlob.size,
         contentFiles: uploadedFiles.map(uf => ({
           fileName: uf.file.name,
           contentType: uf.file.type,
@@ -402,11 +447,11 @@ export default function UploadContentPage() {
 
       const { contentId, thumbnailUrl, contentUrls } = uploadUrlsResponse.data.data;
 
-      // Step 2: Upload thumbnail directly to S3 (10%)
+      // Step 2: Upload blurred thumbnail directly to S3 (10%)
       setUploadProgress(10);
       await fetch(thumbnailUrl.uploadUrl, {
         method: 'PUT',
-        body: thumbnailBlob,
+        body: blurredThumbnailBlob,
         headers: {
           'Content-Type': 'image/jpeg',
         },

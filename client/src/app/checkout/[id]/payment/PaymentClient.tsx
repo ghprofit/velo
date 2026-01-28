@@ -364,7 +364,7 @@ export function PaymentClient({ id }: { id: string }) {
                   alt={content.title}
                   width={1280}
                   height={720}
-                  className="w-full h-full object-cover blur-sm"
+                  className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-linear-to-br from-black/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-[2px] flex items-center justify-center">
                   <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-5 shadow-2xl">

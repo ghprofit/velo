@@ -352,11 +352,11 @@ export class VeriffController {
           this.logger.log('⏳ Verification still SUBMITTED/IN_PROGRESS - no final decision yet');
           // Don't update status - still waiting for final decision
           return;
-        } else if (status === 'expired' || code === 9120) {
+        } else if (decision === 'expired') {
           this.logger.log('⏱️  Verification session EXPIRED');
           verificationStatus = VerificationStatus.EXPIRED;
         } else {
-          this.logger.log(`ℹ️  Unknown status/code combination: ${status}/${code}`);
+          this.logger.log(`ℹ️  Unknown decision: ${decision}`);
           // Still mark as processed but don't update status
           return;
         }

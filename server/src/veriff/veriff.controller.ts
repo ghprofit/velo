@@ -213,50 +213,58 @@ export class VeriffController {
   async handleWebhook(@Req() request: Request): Promise<{ received: boolean }> {
     this.logger.log('Received Veriff webhook');
     this.logger.log(`Headers: ${JSON.stringify(request.headers)}`);
+    this.logger.log(`Body type: ${typeof request.body}, isBuffer: ${Buffer.isBuffer(request.body)}`);
 
     try {
-      // 1. MANDATORY signature verification
+      // 1. Handle raw body
+      let webhookData: WebhookDecisionDto;
+      let rawBody: Buffer;
+
+      // Check if body is already parsed (shouldn't happen but handle it)
+      if (typeof request.body === 'object' && !Buffer.isBuffer(request.body)) {
+        this.logger.warn('Body received as parsed JSON object instead of Buffer');
+        webhookData = request.body as WebhookDecisionDto;
+        rawBody = Buffer.from(JSON.stringify(webhookData));
+      } else if (Buffer.isBuffer(request.body)) {
+        rawBody = request.body;
+        webhookData = JSON.parse(rawBody.toString('utf-8'));
+      } else {
+        this.logger.error(`Unexpected body type: ${typeof request.body}`);
+        throw new BadRequestException('Invalid request body format');
+      }
+
+      this.logger.log(`Webhook data parsed: ${JSON.stringify(webhookData, null, 2)}`);
+
+      // 2. HMAC signature verification (optional in development)
       const signature = request.headers['x-hmac-signature'] as string;
 
-      if (!signature) {
-        this.logger.error('Webhook received without signature - REJECTED');
-        
-        // For development: log body anyway to debug
-        if (process.env.NODE_ENV === 'development') {
-          this.logger.warn('DEVELOPMENT MODE: Processing webhook without signature verification');
-          const rawBody = request.body as Buffer;
-          this.logger.log(`Webhook body: ${rawBody.toString('utf-8')}`);
-        } else {
+      if (signature) {
+        try {
+          const isValid = this.veriffService.verifyWebhookSignature(
+            rawBody,
+            signature,
+          );
+
+          if (!isValid) {
+            this.logger.error('Invalid webhook signature - REJECTED');
+            throw new UnauthorizedException('Invalid webhook signature');
+          }
+
+          this.logger.log('Webhook signature verified successfully');
+        } catch (signatureError) {
+          this.logger.error('Signature verification error:', signatureError);
+          if (process.env.NODE_ENV !== 'development') {
+            throw signatureError;
+          }
+          this.logger.warn('DEVELOPMENT MODE: Continuing despite signature verification error');
+        }
+      } else {
+        this.logger.warn('Webhook received without signature');
+        if (process.env.NODE_ENV !== 'development') {
           throw new UnauthorizedException('Missing webhook signature');
         }
+        this.logger.warn('DEVELOPMENT MODE: Proceeding without signature');
       }
-
-      // 2. Use raw body for signature verification (configured in main.ts)
-      const rawBody = request.body as Buffer;
-
-      if (!Buffer.isBuffer(rawBody)) {
-        this.logger.error('Raw body not available - check main.ts configuration');
-        this.logger.error(`Body type: ${typeof request.body}`);
-        throw new BadRequestException('Raw body parser not configured');
-      }
-
-      // Skip signature verification in development if signature is missing
-      if (signature) {
-        const isValid = this.veriffService.verifyWebhookSignature(
-          rawBody,
-          signature,
-        );
-
-        if (!isValid) {
-          this.logger.error('Invalid webhook signature - REJECTED');
-          throw new UnauthorizedException('Invalid webhook signature');
-        }
-
-        this.logger.log('Webhook signature verified successfully');
-      }
-
-      // 3. Parse body AFTER signature verification
-      const webhookData: WebhookDecisionDto = JSON.parse(rawBody.toString('utf-8'));
 
       // 4. Check idempotency - prevent duplicate processing
       const webhookId = webhookData.verification.id;
@@ -274,10 +282,12 @@ export class VeriffController {
       this.logger.log(`Processing webhook for session: ${webhookData.verification.id}`);
       this.logger.log(`Verification status: ${webhookData.verification.status}`);
       this.logger.log(`Verification code: ${webhookData.verification.code}`);
+      this.logger.log(`Verification reason: ${webhookData.verification.reason || 'N/A'}`);
 
       const sessionId = webhookData.verification.id;
       const status = webhookData.verification.status;
       const code = webhookData.verification.code;
+      const reason = webhookData.verification.reason;
 
       // 5. Process webhook in transaction
       await this.prisma.$transaction(async (tx) => {
@@ -304,22 +314,27 @@ export class VeriffController {
         let verificationStatus: VerificationStatus;
         let verifiedAt: Date | null = null;
 
-        // Handle different verification statuses
+        // Handle different verification statuses based on status and code
         if (status === 'approved' && code === 9001) {
-          this.logger.log('Verification approved');
+          this.logger.log('✅ Verification APPROVED');
           verificationStatus = VerificationStatus.VERIFIED;
           verifiedAt = new Date();
-        } else if (status === 'declined' && code === 9103) {
-          this.logger.log(
-            `Verification declined: ${webhookData.verification.reason}`,
-          );
+        } else if (status === 'declined' || code === 9103 || code === 9102 || code === 9104) {
+          this.logger.log(`❌ Verification DECLINED/REJECTED - Reason: ${reason}`);
           verificationStatus = VerificationStatus.REJECTED;
-        } else if (code === 9102) {
-          this.logger.log('Verification requires resubmission');
-          verificationStatus = VerificationStatus.IN_PROGRESS;
+        } else if (status === 'resubmission_requested' || code === 9121) {
+          this.logger.log('⚠️  Verification RESUBMISSION REQUESTED');
+          verificationStatus = VerificationStatus.REJECTED;
+        } else if (status === 'submitted' || code === 7002) {
+          this.logger.log('⏳ Verification still SUBMITTED/IN_PROGRESS - no decision yet');
+          // Don't update status - still waiting for final decision
+          return;
+        } else if (status === 'expired' || code === 9120) {
+          this.logger.log('⏱️  Verification session EXPIRED');
+          verificationStatus = VerificationStatus.EXPIRED;
         } else {
-          this.logger.log(`Unknown status/code: ${status}/${code}`);
-          // Still mark as processed to prevent retries
+          this.logger.log(`ℹ️  Unknown status/code combination: ${status}/${code}`);
+          // Still mark as processed but don't update status
           return;
         }
 
@@ -334,7 +349,7 @@ export class VeriffController {
         });
 
         this.logger.log(
-          `Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`,
+          `✅ Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`,
         );
         
         // Also log the user ID for easier debugging
@@ -342,13 +357,25 @@ export class VeriffController {
           where: { id: creatorProfile.userId },
           select: { email: true },
         });
-        this.logger.log(`User email: ${user?.email}, Status: ${verificationStatus}`);
+        this.logger.log(`User email: ${user?.email}, Final Status: ${verificationStatus}`);
       });
 
       return { received: true };
     } catch (error) {
       this.logger.error('Failed to process webhook:', error);
-      throw error;
+      
+      // Log full error details for debugging
+      if (error instanceof Error) {
+        this.logger.error(`Error message: ${error.message}`);
+        this.logger.error(`Error stack: ${error.stack}`);
+      }
+      
+      // Return 200 OK anyway so Veriff knows we received it
+      // This prevents webhook retries for application errors
+      // The webhook is already logged in processedWebhook table for manual review
+      this.logger.warn('Returning 200 OK despite error - webhook was received, may need manual review');
+      
+      return { received: true };
     }
   }
 

@@ -27,9 +27,34 @@ export class WebhookDecisionDto {
   @IsString()
   status: string;
 
+  @IsOptional()
+  @IsString()
+  sessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  vendorData?: string;
+
+  @IsOptional()
+  @IsString()
+  eventType?: string;
+
   @IsNotEmpty()
   @IsObject()
-  verification: {
+  data: {
+    verification: {
+      decision: string;
+      decisionScore?: number;
+      person?: any;
+      document?: any;
+      insights?: any[];
+    };
+  };
+
+  // Legacy format support (for older webhook versions)
+  @IsOptional()
+  @IsObject()
+  verification?: {
     id: string;
     code: number;
     status: string;

@@ -266,28 +266,43 @@ export class VeriffController {
         this.logger.warn('DEVELOPMENT MODE: Proceeding without signature');
       }
 
-      // 4. Check idempotency - prevent duplicate processing
-      const webhookId = webhookData.verification.id;
+      // 4. Extract session ID and decision
+      // Veriff sends either new format (data.verification.decision) or legacy (verification.status/code)
+      let sessionId: string;
+      let decision: string;
+      let webhookId: string;
 
+      // New format: data.verification.decision
+      if (webhookData.data?.verification?.decision) {
+        sessionId = webhookData.sessionId || webhookData.vendorData || '';
+        decision = webhookData.data.verification.decision;
+        webhookId = `${sessionId}_${webhookData.eventType || 'decision'}`;
+        
+        this.logger.log(`📦 New format webhook - SessionId: ${sessionId}, Decision: ${decision}`);
+      } 
+      // Legacy format: verification.status/code
+      else if (webhookData.verification) {
+        sessionId = webhookData.verification.id;
+        decision = webhookData.verification.status;
+        webhookId = webhookData.verification.id;
+        
+        this.logger.log(`📦 Legacy format webhook - SessionId: ${sessionId}, Status: ${decision}, Code: ${webhookData.verification.code}`);
+      } 
+      else {
+        this.logger.error('❌ Unknown webhook format - cannot extract session ID or decision');
+        this.logger.error(`Webhook data: ${JSON.stringify(webhookData, null, 2)}`);
+        return { received: true };
+      }
+
+      // Check idempotency - prevent duplicate processing
       const existingWebhook = await this.prisma.processedWebhook.findUnique({
         where: { webhookId },
       });
 
       if (existingWebhook) {
-        this.logger.log(`Webhook already processed: ${webhookId}`);
+        this.logger.log(`✓ Webhook already processed: ${webhookId}`);
         return { received: true };
       }
-
-      // Log webhook details
-      this.logger.log(`Processing webhook for session: ${webhookData.verification.id}`);
-      this.logger.log(`Verification status: ${webhookData.verification.status}`);
-      this.logger.log(`Verification code: ${webhookData.verification.code}`);
-      this.logger.log(`Verification reason: ${webhookData.verification.reason || 'N/A'}`);
-
-      const sessionId = webhookData.verification.id;
-      const status = webhookData.verification.status;
-      const code = webhookData.verification.code;
-      const reason = webhookData.verification.reason;
 
       // 5. Process webhook in transaction
       await this.prisma.$transaction(async (tx) => {
@@ -296,37 +311,45 @@ export class VeriffController {
           data: {
             webhookId,
             provider: 'VERIFF',
-            eventType: `${status}_${code}`,
+            eventType: `${decision}`,
             payload: webhookData as any,
           },
         });
 
-        // Find creator profile by session ID
-        const creatorProfile = await tx.creatorProfile.findUnique({
+        // Find creator profile by session ID or vendorData
+        let creatorProfile = await tx.creatorProfile.findUnique({
           where: { veriffSessionId: sessionId },
         });
 
+        // If not found by session ID, try vendorData (it contains the creator profile ID)
+        if (!creatorProfile && webhookData.vendorData) {
+          creatorProfile = await tx.creatorProfile.findUnique({
+            where: { id: webhookData.vendorData },
+          });
+          this.logger.log(`Found creator by vendorData: ${webhookData.vendorData}`);
+        }
+
         if (!creatorProfile) {
-          this.logger.warn(`No creator profile found for session: ${sessionId}`);
+          this.logger.warn(`❌ No creator profile found for session: ${sessionId}`);
           return;
         }
 
         let verificationStatus: VerificationStatus;
         let verifiedAt: Date | null = null;
 
-        // Handle different verification statuses based on status and code
-        if (status === 'approved' && code === 9001) {
+        // Handle different verification decisions
+        if (decision === 'approved') {
           this.logger.log('✅ Verification APPROVED');
           verificationStatus = VerificationStatus.VERIFIED;
           verifiedAt = new Date();
-        } else if (status === 'declined' || code === 9103 || code === 9102 || code === 9104) {
-          this.logger.log(`❌ Verification DECLINED/REJECTED - Reason: ${reason}`);
+        } else if (decision === 'declined' || decision === 'rejected') {
+          this.logger.log(`❌ Verification DECLINED/REJECTED`);
           verificationStatus = VerificationStatus.REJECTED;
-        } else if (status === 'resubmission_requested' || code === 9121) {
+        } else if (decision === 'resubmission_requested') {
           this.logger.log('⚠️  Verification RESUBMISSION REQUESTED');
           verificationStatus = VerificationStatus.REJECTED;
-        } else if (status === 'submitted' || code === 7002) {
-          this.logger.log('⏳ Verification still SUBMITTED/IN_PROGRESS - no decision yet');
+        } else if (decision === 'submitted' || decision === 'started') {
+          this.logger.log('⏳ Verification still SUBMITTED/IN_PROGRESS - no final decision yet');
           // Don't update status - still waiting for final decision
           return;
         } else if (status === 'expired' || code === 9120) {

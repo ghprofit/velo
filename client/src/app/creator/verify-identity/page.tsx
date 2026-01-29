@@ -76,32 +76,8 @@ export default function CreatorVerifyIdentityPage() {
     }
   }, [searchParams, router, checkVerificationStatus]);
 
-  // Auto-poll status when IN_PROGRESS with aggressive retries after redirect
-  useEffect(() => {
-    if (verificationStatus === 'IN_PROGRESS') {
-      let pollCount = 0;
-      const maxAgggressivePolls = 12; // Poll aggressively for 12 times (24 seconds)
-      
-      const poll = () => {
-        checkVerificationStatus();
-        pollCount++;
-      };
-
-      // Start with aggressive polling (2 seconds) for the first 12 polls
-      const pollInterval = 2000;
-      let intervalId = setInterval(() => {
-        poll();
-        
-        // After 12 aggressive polls, switch to slower polling (5 seconds)
-        if (pollCount === maxAgggressivePolls) {
-          clearInterval(intervalId);
-          intervalId = setInterval(poll, 5000);
-        }
-      }, pollInterval);
-
-      return () => clearInterval(intervalId);
-    }
-  }, [verificationStatus, checkVerificationStatus]);
+  // Do not auto-poll. Users can refresh manually or reload the page to check status.
+  // This keeps the UI from polling the server every few seconds.
 
   const handleInitiateVerification = async () => {
     if (!user) {
@@ -302,10 +278,9 @@ export default function CreatorVerifyIdentityPage() {
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mt-0.5"></div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 mb-1">Auto-checking status...</p>
+                    <p className="text-sm font-medium text-gray-900 mb-1">Status check</p>
                     <p className="text-xs text-gray-600">
-                      We&apos;re automatically checking your verification status every few seconds. 
-                      Your status will update automatically when verification is complete.
+                      You can refresh your verification status manually using the button below or reload the page to fetch the latest status.
                     </p>
                   </div>
                 </div>

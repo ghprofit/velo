@@ -229,6 +229,13 @@ export default function SettingsPage() {
     setIsEditingBankAccount(true);
   };
 
+  // Simple client-side validators
+  const stripNonDigits = (s = '') => s.replace(/\D/g, '');
+  const isValidUSRouting = (s = '') => /^\d{9}$/.test(stripNonDigits(s));
+  const isValidGBSort = (s = '') => stripNonDigits(s).length === 6;
+  const isValidUSPostal = (s = '') => /^\d{5}(-\d{4})?$/.test(s.trim());
+  const isValidCAPostal = (s = '') => /^[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d$/.test(s.trim());
+
   const handleCancelEditBankAccount = () => {
     setIsEditingBankAccount(false);
     setBankFormData({
@@ -284,6 +291,47 @@ export default function SettingsPage() {
       setError('Please enter your country name');
       setSaving(false);
       return;
+    }
+
+    // Country-specific address requirements
+    const requiresFullAddress = bankFormData.bankCountry === 'US';
+    if (requiresFullAddress) {
+      if (!bankFormData.streetAddress || !bankFormData.city || !bankFormData.state || !bankFormData.postalCode) {
+        setError('For US bank accounts, street address, city, state and ZIP code are required');
+        setSaving(false);
+        return;
+      }
+    }
+
+    // Routing / Sort code format validation
+    if (bankFormData.bankCountry === 'US') {
+      if (!bankFormData.bankRoutingNumber || !isValidUSRouting(bankFormData.bankRoutingNumber)) {
+        setError('Routing number must be 9 digits (numbers only)');
+        setSaving(false);
+        return;
+      }
+
+      if (!isValidUSPostal(bankFormData.postalCode || '')) {
+        setError('Invalid US ZIP code (expected 5 or 5+4 digits)');
+        setSaving(false);
+        return;
+      }
+    }
+
+    if (bankFormData.bankCountry === 'GB') {
+      if (bankFormData.bankRoutingNumber && !isValidGBSort(bankFormData.bankRoutingNumber)) {
+        setError('UK sort code should contain 6 digits');
+        setSaving(false);
+        return;
+      }
+    }
+
+    if (bankFormData.bankCountry === 'CA') {
+      if (bankFormData.postalCode && !isValidCAPostal(bankFormData.postalCode)) {
+        setError('Invalid Canadian postal code (format A1A 1A1)');
+        setSaving(false);
+        return;
+      }
     }
 
     try {
@@ -904,11 +952,12 @@ export default function SettingsPage() {
                   {/* User's Personal Address */}
                   <div>
                     <label htmlFor="streetAddress" className="block text-sm font-medium text-gray-900 mb-2">
-                      Your Street Address (Optional)
+                      Your Street Address {bankFormData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
                     </label>
                     <input
                       id="streetAddress"
                       type="text"
+                      required={bankFormData.bankCountry === 'US'}
                       value={bankFormData.streetAddress}
                       onChange={(e) => setBankFormData({ ...bankFormData, streetAddress: e.target.value })}
                       placeholder="123 Main Street, Apt 4B"
@@ -920,11 +969,12 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label htmlFor="city" className="block text-sm font-medium text-gray-900 mb-2">
-                        City (Optional)
+                        City {bankFormData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
                       </label>
                       <input
                         id="city"
                         type="text"
+                        required={bankFormData.bankCountry === 'US'}
                         value={bankFormData.city}
                         onChange={(e) => setBankFormData({ ...bankFormData, city: e.target.value })}
                         placeholder="New York"
@@ -933,11 +983,12 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label htmlFor="state" className="block text-sm font-medium text-gray-900 mb-2">
-                        State/Province (Optional)
+                        State/Province {bankFormData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
                       </label>
                       <input
                         id="state"
                         type="text"
+                        required={bankFormData.bankCountry === 'US'}
                         value={bankFormData.state}
                         onChange={(e) => setBankFormData({ ...bankFormData, state: e.target.value })}
                         placeholder="NY"
@@ -946,11 +997,12 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label htmlFor="postalCode" className="block text-sm font-medium text-gray-900 mb-2">
-                        Postal/ZIP Code (Optional)
+                        Postal/ZIP Code {bankFormData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
                       </label>
                       <input
                         id="postalCode"
                         type="text"
+                        required={bankFormData.bankCountry === 'US'}
                         value={bankFormData.postalCode}
                         onChange={(e) => setBankFormData({ ...bankFormData, postalCode: e.target.value })}
                         placeholder="10001"

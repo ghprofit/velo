@@ -54,6 +54,52 @@ export default function PayoutSetupPage() {
         return;
       }
 
+      // Country-specific address requirements
+      const requiresFullAddress = formData.bankCountry === 'US';
+      if (requiresFullAddress) {
+        if (!formData.streetAddress || !formData.city || !formData.state || !formData.postalCode) {
+          setError('For US bank accounts, street address, city, state and ZIP code are required');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Basic format checks
+      const stripNonDigits = (s = '') => s.replace(/\D/g, '');
+      const isValidUSRouting = (s = '') => /^\d{9}$/.test(stripNonDigits(s));
+      const isValidUSPostal = (s = '') => /^\d{5}(-\d{4})?$/.test(s.trim());
+      const isValidGBSort = (s = '') => stripNonDigits(s).length === 6;
+      const isValidCAPostal = (s = '') => /^[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d$/.test(s.trim());
+
+      if (formData.bankCountry === 'US') {
+        if (!formData.bankRoutingNumber || !isValidUSRouting(formData.bankRoutingNumber)) {
+          setError('Routing number must be 9 digits (numbers only)');
+          setIsLoading(false);
+          return;
+        }
+        if (!isValidUSPostal(formData.postalCode || '')) {
+          setError('Invalid US ZIP code (expected 5 or 5+4 digits)');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      if (formData.bankCountry === 'GB' && formData.bankRoutingNumber) {
+        if (!isValidGBSort(formData.bankRoutingNumber)) {
+          setError('UK sort code should contain 6 digits');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      if (formData.bankCountry === 'CA' && formData.postalCode) {
+        if (!isValidCAPostal(formData.postalCode)) {
+          setError('Invalid Canadian postal code (format A1A 1A1)');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Validate account number confirmation
       if (formData.bankAccountNumber !== confirmAccountNumber) {
         setError('Account numbers do not match');
@@ -375,12 +421,13 @@ export default function PayoutSetupPage() {
               {/* User's Personal Address */}
               <div>
                 <label htmlFor="streetAddress" className="block text-sm font-medium text-gray-700 mb-2">
-                  Your Street Address (Optional)
+                  Your Street Address {formData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
                 </label>
                 <input
                   id="streetAddress"
                   name="streetAddress"
                   type="text"
+                  required={formData.bankCountry === 'US'}
                   value={formData.streetAddress}
                   onChange={handleChange}
                   placeholder="123 Main Street, Apt 4B"
@@ -390,48 +437,51 @@ export default function PayoutSetupPage() {
 
               {/* City, State, Postal Code */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                    City (Optional)
-                  </label>
-                  <input
-                    id="city"
-                    name="city"
-                    type="text"
-                    value={formData.city}
-                    onChange={handleChange}
-                    placeholder="New York"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
-                    State/Province (Optional)
-                  </label>
-                  <input
-                    id="state"
-                    name="state"
-                    type="text"
-                    value={formData.state}
-                    onChange={handleChange}
-                    placeholder="NY"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-2">
-                    Postal/ZIP Code (Optional)
-                  </label>
-                  <input
-                    id="postalCode"
-                    name="postalCode"
-                    type="text"
-                    value={formData.postalCode}
-                    onChange={handleChange}
-                    placeholder="10001"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
+                  <div>
+                    <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
+                      City {formData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                    </label>
+                    <input
+                      id="city"
+                      name="city"
+                      type="text"
+                      required={formData.bankCountry === 'US'}
+                      value={formData.city}
+                      onChange={handleChange}
+                      placeholder="New York"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
+                      State/Province {formData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                    </label>
+                    <input
+                      id="state"
+                      name="state"
+                      type="text"
+                      required={formData.bankCountry === 'US'}
+                      value={formData.state}
+                      onChange={handleChange}
+                      placeholder="NY"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-2">
+                      Postal/ZIP Code {formData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                    </label>
+                    <input
+                      id="postalCode"
+                      name="postalCode"
+                      type="text"
+                      required={formData.bankCountry === 'US'}
+                      value={formData.postalCode}
+                      onChange={handleChange}
+                      placeholder="10001"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
               </div>
 
               {/* Action Buttons */}

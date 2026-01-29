@@ -380,7 +380,14 @@ export default function EarningsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-semibold text-gray-900">{payout.amount}</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {(() => {
+                        const raw = (payout.amount || '').toString();
+                        const numeric = parseFloat(raw.replace(/[^0-9.]/g, '')) || 0;
+                        const sign = payout.title && payout.title.toLowerCase().includes('payout') ? '-' : (raw.trim().startsWith('-') ? '-' : '+');
+                        return `${sign}$${numeric.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                      })()}
+                    </p>
                     <p className={`text-sm ${payout.statusColor} font-medium`}>{payout.status}</p>
                   </div>
                 </div>
@@ -481,7 +488,15 @@ export default function EarningsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <span className={`text-sm font-semibold ${transaction.amountColor}`}>
-                          {transaction.amount}
+                          {
+                            (() => {
+                              // Normalize amount string to numeric and prefix - for payouts
+                              const raw = (transaction.amount || '').toString();
+                              const numeric = parseFloat(raw.replace(/[^0-9.]/g, '')) || 0;
+                              const sign = transaction.type && transaction.type.toLowerCase() === 'payout' ? '-' : (raw.trim().startsWith('-') ? '-' : '+');
+                              return `${sign}$${numeric.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                            })()
+                          }
                         </span>
                       </td>
                     </tr>

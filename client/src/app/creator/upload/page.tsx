@@ -400,11 +400,9 @@ export default function UploadContentPage() {
               throw new Error('Failed to get canvas context for blur');
             }
             
+            // Apply blur filter BEFORE drawing the image
+            ctx.filter = 'blur(20px)';
             ctx.drawImage(img, 0, 0);
-            
-            // Apply blur filter to the canvas
-            ctx.filter = 'blur(10px)';
-            ctx.drawImage(canvas, 0, 0);
             ctx.filter = 'none';
             
             // Convert to blob with high quality

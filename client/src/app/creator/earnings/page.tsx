@@ -33,6 +33,7 @@ interface Transaction {
   buyerEmail?: string;
   recipient?: string;
   amount: number;
+  status?: string;
   paymentMethod?: string;
   date: string;
 }

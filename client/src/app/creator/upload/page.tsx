@@ -105,7 +105,7 @@ export default function UploadContentPage() {
   const generateThumbnail = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       if (file.type.startsWith('image/')) {
-        // For images, use object URL and resize
+        // For images, use object URL and resize with blur
         const img = new Image();
         img.onload = () => {
           try {
@@ -134,13 +134,17 @@ export default function UploadContentPage() {
 
             canvas.width = width;
             canvas.height = height;
+            
+            // Apply CSS blur filter for strong, visible blur
+            ctx.filter = 'blur(25px)'; // Strong blur effect
             ctx.drawImage(img, 0, 0, width, height);
+            ctx.filter = 'none'; // Reset filter
 
             // Revoke object URL to free memory
             URL.revokeObjectURL(img.src);
             
-            // Use higher quality for Rekognition (0.9 instead of 0.7)
-            const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+            // Use good quality for blurred thumbnail
+            const dataURL = canvas.toDataURL('image/jpeg', 0.8);
             
             // Verify we got a valid data URL
             if (!dataURL || !dataURL.startsWith('data:image/jpeg')) {
@@ -212,7 +216,10 @@ export default function UploadContentPage() {
               throw new Error('Failed to get canvas context');
             }
             
+            // Apply blur to video thumbnail as well
+            ctx.filter = 'blur(20px)'; // Blur for video thumbnails
             ctx.drawImage(video, 0, 0, width, height);
+            ctx.filter = 'none';
 
             const blobUrl = video.src;
             video.src = '';
@@ -305,10 +312,10 @@ export default function UploadContentPage() {
       try {
         console.log(`[UPLOAD] Processing file: ${file.name}, type: ${file.type}, size: ${(file.size / 1048576).toFixed(2)}MB`);
         
-        // Generate thumbnail only (no base64 conversion of full file)
+        // Generate blurred thumbnail
         const thumbnail = await generateThumbnail(file);
         
-        console.log(`[UPLOAD] ✅ Thumbnail generated for ${file.name}`);
+        console.log(`[UPLOAD] ✅ Blurred thumbnail generated for ${file.name}`);
 
         const newFile: UploadedFile = {
           file,
@@ -380,14 +387,14 @@ export default function UploadContentPage() {
     setUploadProgress(0);
 
     try {
-      // Step 0: Convert thumbnail to blurred version (2%)
+      // Step 0: Convert thumbnail to blob (already blurred from generateThumbnail) (2%)
       setUploadProgress(2);
       
-      // Get thumbnail blob and blur it
+      // Get thumbnail (already blurred)
       const thumbnailDataUrl = uploadedFiles[0].thumbnail;
       
-      // Convert data URL to canvas for blurring
-      const blurredThumbnailBlob = await new Promise<Blob>((resolve, reject) => {
+      // Convert data URL to blob
+      const thumbnailBlob = await new Promise<Blob>((resolve, reject) => {
         const img = new Image();
         img.onload = async () => {
           try {
@@ -397,31 +404,29 @@ export default function UploadContentPage() {
             const ctx = canvas.getContext('2d', { alpha: false });
             
             if (!ctx) {
-              throw new Error('Failed to get canvas context for blur');
+              throw new Error('Failed to get canvas context');
             }
             
-            // Apply blur filter BEFORE drawing the image
-            ctx.filter = 'blur(20px)';
+            // Just draw the already-blurred image
             ctx.drawImage(img, 0, 0);
-            ctx.filter = 'none';
             
-            // Convert to blob with high quality
+            // Convert to blob with good quality
             canvas.toBlob(
               (blob) => {
                 if (blob) {
                   resolve(blob);
                 } else {
-                  reject(new Error('Failed to create blob from blurred canvas'));
+                  reject(new Error('Failed to create blob from thumbnail'));
                 }
               },
               'image/jpeg',
-              0.9
+              0.8
             );
           } catch (err) {
             reject(err);
           }
         };
-        img.onerror = () => reject(new Error('Failed to load thumbnail for blurring'));
+        img.onerror = () => reject(new Error('Failed to load thumbnail'));
         img.src = thumbnailDataUrl;
       });
       
@@ -434,7 +439,7 @@ export default function UploadContentPage() {
         price: parseFloat(price),
         thumbnailFileName: 'thumbnail.jpg',
         thumbnailContentType: 'image/jpeg',
-        thumbnailFileSize: blurredThumbnailBlob.size,
+        thumbnailFileSize: thumbnailBlob.size,
         contentFiles: uploadedFiles.map(uf => ({
           fileName: uf.file.name,
           contentType: uf.file.type,
@@ -449,7 +454,7 @@ export default function UploadContentPage() {
       setUploadProgress(10);
       await fetch(thumbnailUrl.uploadUrl, {
         method: 'PUT',
-        body: blurredThumbnailBlob,
+        body: thumbnailBlob,
         headers: {
           'Content-Type': 'image/jpeg',
         },

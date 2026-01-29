@@ -293,14 +293,11 @@ export default function SettingsPage() {
       return;
     }
 
-    // Country-specific address requirements
-    const requiresFullAddress = bankFormData.bankCountry === 'US';
-    if (requiresFullAddress) {
-      if (!bankFormData.streetAddress || !bankFormData.city || !bankFormData.state || !bankFormData.postalCode) {
-        setError('For US bank accounts, street address, city, state and ZIP code are required');
-        setSaving(false);
-        return;
-      }
+    // Require full address for payout setup
+    if (!bankFormData.streetAddress || !bankFormData.city || !bankFormData.state || !bankFormData.postalCode) {
+      setError('Street address, city, state and postal/ZIP code are required');
+      setSaving(false);
+      return;
     }
 
     // Routing / Sort code format validation
@@ -952,12 +949,12 @@ export default function SettingsPage() {
                   {/* User's Personal Address */}
                   <div>
                     <label htmlFor="streetAddress" className="block text-sm font-medium text-gray-900 mb-2">
-                      Your Street Address {bankFormData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                      Your Street Address <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="streetAddress"
                       type="text"
-                      required={bankFormData.bankCountry === 'US'}
+                      required
                       value={bankFormData.streetAddress}
                       onChange={(e) => setBankFormData({ ...bankFormData, streetAddress: e.target.value })}
                       placeholder="123 Main Street, Apt 4B"
@@ -969,12 +966,12 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label htmlFor="city" className="block text-sm font-medium text-gray-900 mb-2">
-                        City {bankFormData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                        City <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="city"
                         type="text"
-                        required={bankFormData.bankCountry === 'US'}
+                        required
                         value={bankFormData.city}
                         onChange={(e) => setBankFormData({ ...bankFormData, city: e.target.value })}
                         placeholder="New York"
@@ -983,12 +980,12 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label htmlFor="state" className="block text-sm font-medium text-gray-900 mb-2">
-                        State/Province {bankFormData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                        State/Province <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="state"
                         type="text"
-                        required={bankFormData.bankCountry === 'US'}
+                        required
                         value={bankFormData.state}
                         onChange={(e) => setBankFormData({ ...bankFormData, state: e.target.value })}
                         placeholder="NY"
@@ -997,12 +994,12 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label htmlFor="postalCode" className="block text-sm font-medium text-gray-900 mb-2">
-                        Postal/ZIP Code {bankFormData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                        Postal/ZIP Code <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="postalCode"
                         type="text"
-                        required={bankFormData.bankCountry === 'US'}
+                        required
                         value={bankFormData.postalCode}
                         onChange={(e) => setBankFormData({ ...bankFormData, postalCode: e.target.value })}
                         placeholder="10001"

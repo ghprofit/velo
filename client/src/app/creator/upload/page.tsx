@@ -135,8 +135,8 @@ export default function UploadContentPage() {
             canvas.width = width;
             canvas.height = height;
             
-            // Apply CSS blur filter for strong, visible blur
-            ctx.filter = 'blur(25px)'; // Strong blur effect
+            // Apply CSS blur filter with lower intensity
+            ctx.filter = 'blur(8px)'; // Reduced blur effect
             ctx.drawImage(img, 0, 0, width, height);
             ctx.filter = 'none'; // Reset filter
 

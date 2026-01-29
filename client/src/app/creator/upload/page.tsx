@@ -118,7 +118,7 @@ export default function UploadContentPage() {
 
             let width = img.width;
             let height = img.height;
-            const maxSize = 600; // Increased from 300 for better quality
+            const maxSize = 1200; // Large enough for OG image previews on social platforms
 
             if (width > height) {
               if (width > maxSize) {
@@ -136,7 +136,7 @@ export default function UploadContentPage() {
             canvas.height = height;
             
             // Apply CSS blur filter with lower intensity
-            ctx.filter = 'blur(4px)'; // Reduced blur effect
+            ctx.filter = 'blur(7px)'; // Reduced blur effect
             ctx.drawImage(img, 0, 0, width, height);
             ctx.filter = 'none'; // Reset filter
 
@@ -198,8 +198,8 @@ export default function UploadContentPage() {
               throw new Error('Invalid video dimensions');
             }
             
-            // Reduce thumbnail size for faster generation (300px instead of 600px)
-            const maxWidth = 300;
+            // Large enough for OG image previews on social platforms
+            const maxWidth = 1200;
             let width = video.videoWidth;
             let height = video.videoHeight;
             
@@ -217,7 +217,7 @@ export default function UploadContentPage() {
             }
             
             // Apply blur to video thumbnail as well
-            ctx.filter = 'blur(20px)'; // Blur for video thumbnails
+            ctx.filter = 'blur(7px)'; // Blur for video thumbnails
             ctx.drawImage(video, 0, 0, width, height);
             ctx.filter = 'none';
 

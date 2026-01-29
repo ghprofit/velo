@@ -18,7 +18,17 @@ export default function VerificationStatusBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    checkVerificationStatus();
+    // Only auto-check verification status on a full page reload
+    try {
+      const nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')) || [];
+      const navigationType = nav[0]?.type || (performance as any).navigation?.type || null;
+      // navigationType === 'reload' covers full page refreshes
+      if (navigationType === 'reload') {
+        checkVerificationStatus();
+      }
+    } catch (e) {
+      // Fallback: do not auto-refresh if we cannot determine navigation type
+    }
   }, []);
 
   const checkVerificationStatus = async () => {
@@ -121,6 +131,12 @@ export default function VerificationStatusBanner() {
             >
               {config.actionText}
             </Link>
+            <button
+              onClick={checkVerificationStatus}
+              className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Refresh Status
+            </button>
             <button
               onClick={() => setDismissed(true)}
               className="text-sm text-gray-600 hover:text-gray-900 transition-colors"

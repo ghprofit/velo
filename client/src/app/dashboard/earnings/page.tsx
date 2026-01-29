@@ -31,7 +31,7 @@ export default function EarningsPage() {
       title: 'Payout to Bank Account',
       date: 'Dec 15, 2024',
       time: '10:42 AM',
-      amount: '$1,500.00',
+      amount: 1500.0,
       status: 'Completed',
       statusColor: 'text-green-600',
       iconBg: 'bg-green-100',
@@ -40,7 +40,7 @@ export default function EarningsPage() {
       title: 'Payout to Bank Account',
       date: 'Dec 8, 2024',
       time: '3:15 PM',
-      amount: '$980.00',
+      amount: 980.0,
       status: 'Processing',
       statusColor: 'text-yellow-600',
       iconBg: 'bg-yellow-100',
@@ -49,7 +49,7 @@ export default function EarningsPage() {
       title: 'Payout to Bank Account',
       date: 'Dec 1, 2024',
       time: '9:20 AM',
-      amount: '$2,200.00',
+      amount: 2200.0,
       status: 'Completed',
       statusColor: 'text-green-600',
       iconBg: 'bg-green-100',
@@ -66,7 +66,7 @@ export default function EarningsPage() {
       content: 'Premium UI Design Course',
       buyer: 'buyer***47',
       method: 'Stripe Card',
-      amount: '+$149.00',
+      amount: 149.0,
       amountColor: 'text-green-600',
     },
     {
@@ -90,7 +90,7 @@ export default function EarningsPage() {
       content: 'N/A',
       buyer: 'Bank Payout',
       method: 'Bank Transfer',
-      amount: '-$1,500.00',
+      amount: 1500.0,
       amountColor: 'text-gray-900',
     },
     {
@@ -102,7 +102,7 @@ export default function EarningsPage() {
       content: 'Workshop Series Access',
       buyer: 'buyer***23',
       method: 'Google Pay',
-      amount: '+$199.00',
+      amount: 199.0,
       amountColor: 'text-green-600',
     },
     {
@@ -114,7 +114,7 @@ export default function EarningsPage() {
       content: 'Platform Fee',
       buyer: 'VELO Platform',
       method: 'Auto-deduct',
-      amount: '-$14.90',
+      amount: 14.9,
       amountColor: 'text-gray-900',
     },
     {
@@ -126,7 +126,7 @@ export default function EarningsPage() {
       content: 'Premium UI Design Course',
       buyer: 'buyer***88',
       method: 'Stripe Card',
-      amount: '+$149.00',
+      amount: 149.0,
       amountColor: 'text-green-600',
     },
     {
@@ -138,7 +138,7 @@ export default function EarningsPage() {
       content: 'Design Template Bundle',
       buyer: 'buyer***34',
       method: 'Stripe Card',
-      amount: '-$79.99',
+      amount: 79.99,
       amountColor: 'text-red-600',
     },
     {
@@ -150,10 +150,25 @@ export default function EarningsPage() {
       content: 'Workshop Series Access',
       buyer: 'buyer***61',
       method: 'PayPal',
-      amount: '+$199.00',
+      amount: 199.0,
       amountColor: 'text-green-600',
     },
   ];
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const isOutgoing = (item: any, typeField = 'type', methodField = 'method') => {
+    const t = (item[typeField] || '').toString().toLowerCase();
+    const m = (item[methodField] || '').toString().toLowerCase();
+    if (/payout|withdraw|fee|refund|bank transfer|bank_transfer/.test(t)) return true;
+    if (/payout|withdraw|bank transfer|bank_transfer/.test(m)) return true;
+    return false;
+  };
 
   const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
     const icons: Record<string, JSX.Element> = {
@@ -360,7 +375,7 @@ export default function EarningsPage() {
             </div>
 
             <div className="space-y-4">
-              {payoutActivity.map((payout, index) => (
+                {payoutActivity.map((payout, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 ${payout.iconBg} rounded-full flex items-center justify-center`}>
@@ -380,7 +395,7 @@ export default function EarningsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-semibold text-gray-900">{payout.amount}</p>
+                    <p className="text-lg font-semibold text-gray-900">-{formatCurrency(Math.abs(payout.amount))}</p>
                     <p className={`text-sm ${payout.statusColor} font-medium`}>{payout.status}</p>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LogoutModal from '@/components/LogoutModal';
 import Image from 'next/image';
+import { payoutApi } from '@/lib/api-client';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -14,6 +15,100 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState('Alex Johnson');
   const [email, setEmail] = useState('alex.johnson@email.com');
   const [dateOfBirth, setDateOfBirth] = useState('January 15, 1990');
+  // Payout form state
+  const [bankCountry, setBankCountry] = useState('US');
+  const [bankNameValue, setBankNameValue] = useState('');
+  const [routingNumberValue, setRoutingNumberValue] = useState('');
+  const [accountNumberValue, setAccountNumberValue] = useState('');
+  const [confirmAccountNumberValue, setConfirmAccountNumberValue] = useState('');
+  const [streetAddress, setStreetAddress] = useState('');
+  const [cityValue, setCityValue] = useState('');
+  const [stateValue, setStateValue] = useState('');
+  const [postalCodeValue, setPostalCodeValue] = useState('');
+  const [payoutError, setPayoutError] = useState('');
+  const [isSavingPayout, setIsSavingPayout] = useState(false);
+
+  const handleUpdatePayout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPayoutError('');
+
+    // Basic per-country validation
+    if (!bankNameValue) {
+      setPayoutError('Bank name is required.');
+      return;
+    }
+
+    if (!accountNumberValue) {
+      setPayoutError('Account number is required.');
+      return;
+    }
+
+    if (accountNumberValue !== confirmAccountNumberValue) {
+      setPayoutError('Account numbers do not match.');
+      return;
+    }
+
+    const onlyDigits = (s: string) => (s || '').replace(/\D/g, '');
+
+    if (bankCountry === 'US') {
+      if (!routingNumberValue) {
+        setPayoutError('Routing number is required for US accounts.');
+        return;
+      }
+      // routing must be exactly 9 digits
+      if (onlyDigits(routingNumberValue).length !== 9) {
+        setPayoutError('Routing number must be 9 digits.');
+        return;
+      }
+
+      if (!streetAddress || !cityValue || !stateValue || !postalCodeValue) {
+        setPayoutError('Full address (street, city, state, postal code) is required for US accounts.');
+        return;
+      }
+
+      // US ZIP: 5 or 5-4
+      if (!/^[0-9]{5}(-[0-9]{4})?$/.test(postalCodeValue)) {
+        setPayoutError('Invalid US ZIP code format.');
+        return;
+      }
+    }
+
+    if (bankCountry === 'GB') {
+      if (!routingNumberValue) {
+        setPayoutError('Sort code is required for UK accounts.');
+        return;
+      }
+      // accept 6 digits or formats like 12-34-56 or 12 34 56
+      const digits = onlyDigits(routingNumberValue);
+      if (digits.length !== 6) {
+        setPayoutError('Sort code must be 6 digits.');
+        return;
+      }
+    }
+
+    setIsSavingPayout(true);
+
+    try {
+      const payload: any = {
+        bankAccountName: fullName, // pulled from KYC
+        bankName: bankNameValue,
+        bankAccountNumber: accountNumberValue,
+        bankCountry,
+        bankCurrency: 'USD',
+      };
+      if (routingNumberValue) payload.bankRoutingNumber = routingNumberValue;
+      await payoutApi.setupBankAccount(payload);
+      setPayoutError('');
+      // Optionally show a toast or reload
+      window.location.reload();
+    } catch (err: unknown) {
+      console.error('Failed to update payout details:', err);
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      setPayoutError(apiErr.response?.data?.message || 'Failed to update payout details.');
+    } finally {
+      setIsSavingPayout(false);
+    }
+  };
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
@@ -313,7 +408,13 @@ export default function SettingsPage() {
                   <p className="text-sm text-green-800">Your financial data is encrypted and stored securely.</p>
                 </div>
 
-                <form className="space-y-6">
+                {payoutError && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-4">
+                    {payoutError}
+                  </div>
+                )}
+
+                <form onSubmit={handleUpdatePayout} className="space-y-6">
                   {/* Account Holder Name */}
                   <div>
                     <label htmlFor="accountHolder" className="block text-sm font-medium text-gray-900 mb-2">
@@ -329,6 +430,27 @@ export default function SettingsPage() {
                     <p className="mt-1 text-xs text-gray-500">This name is automatically pulled from your verified KYC information</p>
                   </div>
 
+                  {/* Country of Bank Account */}
+                  <div>
+                    <label htmlFor="bankCountry" className="block text-sm font-medium text-gray-900 mb-2">
+                      Country of Bank Account
+                    </label>
+                    <select
+                      id="bankCountry"
+                      value={bankCountry}
+                      onChange={(e) => setBankCountry(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    >
+                      <option value="US">United States</option>
+                      <option value="GB">United Kingdom</option>
+                      <option value="CA">Canada</option>
+                      <option value="DE">Germany</option>
+                      <option value="FR">France</option>
+                      <option value="AU">Australia</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+
                   {/* Bank Name */}
                   <div>
                     <label htmlFor="bankName" className="block text-sm font-medium text-gray-900 mb-2">
@@ -337,12 +459,14 @@ export default function SettingsPage() {
                     <input
                       id="bankName"
                       type="text"
+                      value={bankNameValue}
+                      onChange={(e) => setBankNameValue(e.target.value)}
                       placeholder="Enter your bank name"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     />
                   </div>
 
-                  {/* Routing Number */}
+                  {/* Routing/Sort Code (for US/GB) */}
                   <div>
                     <label htmlFor="routingNumber" className="block text-sm font-medium text-gray-900 mb-2">
                       Routing Number
@@ -350,10 +474,12 @@ export default function SettingsPage() {
                     <input
                       id="routingNumber"
                       type="text"
-                      placeholder="9-digit routing number"
+                      value={routingNumberValue}
+                      onChange={(e) => setRoutingNumberValue(e.target.value)}
+                      placeholder={bankCountry === 'US' ? '9-digit routing number' : 'Sort code / routing number'}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     />
-                    <p className="mt-1 text-xs text-gray-500">9-digit code found on your checks or bank statements</p>
+                    <p className="mt-1 text-xs text-gray-500">{bankCountry === 'US' ? '9-digit code found on your checks or bank statements' : 'Sort code for UK banks or routing for other countries'}</p>
                   </div>
 
                   {/* Account Number */}
@@ -364,6 +490,8 @@ export default function SettingsPage() {
                     <input
                       id="accountNumber"
                       type="text"
+                      value={accountNumberValue}
+                      onChange={(e) => setAccountNumberValue(e.target.value)}
                       placeholder="Enter account number"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     />
@@ -377,20 +505,73 @@ export default function SettingsPage() {
                     <input
                       id="confirmAccountNumber"
                       type="text"
+                      value={confirmAccountNumberValue}
+                      onChange={(e) => setConfirmAccountNumberValue(e.target.value)}
                       placeholder="Re-enter account number"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     />
                   </div>
 
+                  {/* Address fields - required for certain countries like US */}
+                  {bankCountry === 'US' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="streetAddress" className="block text-sm font-medium text-gray-900 mb-2">Your Street Address</label>
+                        <input
+                          id="streetAddress"
+                          type="text"
+                          value={streetAddress}
+                          onChange={(e) => setStreetAddress(e.target.value)}
+                          placeholder="123 Main Street, Apt 4B"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="city" className="block text-sm font-medium text-gray-900 mb-2">City</label>
+                        <input
+                          id="city"
+                          type="text"
+                          value={cityValue}
+                          onChange={(e) => setCityValue(e.target.value)}
+                          placeholder="New York"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="stateProv" className="block text-sm font-medium text-gray-900 mb-2">State/Province</label>
+                        <input
+                          id="stateProv"
+                          type="text"
+                          value={stateValue}
+                          onChange={(e) => setStateValue(e.target.value)}
+                          placeholder="NY"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="postalCode" className="block text-sm font-medium text-gray-900 mb-2">Postal/ZIP Code</label>
+                        <input
+                          id="postalCode"
+                          type="text"
+                          value={postalCodeValue}
+                          onChange={(e) => setPostalCodeValue(e.target.value)}
+                          placeholder="10001"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Update Button */}
                   <button
                     type="submit"
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                    disabled={isSavingPayout}
+                    className={`px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2 ${isSavingPayout ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                     </svg>
-                    Update Payout Details
+                    {isSavingPayout ? 'Saving...' : 'Update Payout Details'}
                   </button>
                 </form>
               </div>

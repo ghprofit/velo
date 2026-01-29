@@ -49,6 +49,34 @@ export default function PayoutSetupPage() {
         return;
       }
 
+      // Format checks
+      const onlyDigits = (s: string) => (s || '').replace(/\D/g, '');
+      if (formData.bankCountry === 'US') {
+        if (!formData.bankRoutingNumber) {
+          setError('Routing number is required for US accounts');
+          setIsLoading(false);
+          return;
+        }
+        if (onlyDigits(formData.bankRoutingNumber).length !== 9) {
+          setError('Routing number must be 9 digits');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      if (formData.bankCountry === 'GB') {
+        if (!formData.bankRoutingNumber) {
+          setError('Sort code is required for UK accounts');
+          setIsLoading(false);
+          return;
+        }
+        if (onlyDigits(formData.bankRoutingNumber).length !== 6) {
+          setError('Sort code must be 6 digits');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Prepare payload - only send non-empty optional fields
       const payload: {
         bankAccountName: string;

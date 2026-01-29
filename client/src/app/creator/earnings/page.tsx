@@ -193,6 +193,19 @@ export default function EarningsPage() {
     }
   };
 
+  const isOutgoingTransaction = (transaction: Transaction) => {
+    const t = (transaction.type || '').toString();
+    const pm = (transaction.paymentMethod || '').toString();
+    const desc = (transaction.description || '').toString();
+
+    // Treat payouts, withdrawals, bank transfers and refunds as outgoing (show minus)
+    if (/payout|withdrawal|bank_transfer|withdraw/i.test(t)) return true;
+    if (/bank_transfer|payout|withdrawal/i.test(pm)) return true;
+    if (/payout/i.test(desc)) return true;
+    if (t.toUpperCase() === 'REFUND') return true;
+    return false;
+  };
+
   const getPayoutStatusStyles = (status: string) => {
     switch (status) {
       case 'COMPLETED':
@@ -381,7 +394,7 @@ export default function EarningsPage() {
                         </div>
                       </div>
                       <div className="text-left sm:text-right pl-12 sm:pl-0">
-                        <p className="text-base sm:text-lg font-semibold text-gray-900">{formatCurrency(payout.amount)}</p>
+                        <p className="text-base sm:text-lg font-semibold text-gray-900">-{formatCurrency(Math.abs(payout.amount))}</p>
                         <p className={`text-xs sm:text-sm ${styles.statusColor} font-medium`}>
                           {payout.status.charAt(0) + payout.status.slice(1).toLowerCase()}
                         </p>
@@ -462,6 +475,7 @@ export default function EarningsPage() {
               ) : (
                 filteredTransactions.map((transaction: Transaction) => {
                   const styles = getTransactionTypeStyles(transaction.type);
+                  const outgoing = isOutgoingTransaction(transaction);
                   return (
                     <div key={transaction.id} className="p-4 hover:bg-gray-50 transition-colors">
                       <div className="flex items-start justify-between gap-3 mb-2">
@@ -474,7 +488,7 @@ export default function EarningsPage() {
                           </p>
                         </div>
                         <span className={`text-sm font-semibold ${styles.amountColor} whitespace-nowrap`}>
-                          {transaction.type === 'PAYOUT' || transaction.type === 'REFUND' ? '-' : '+'}
+                          {outgoing ? '-' : '+'}
                           {formatCurrency(Math.abs(transaction.amount))}
                         </span>
                       </div>
@@ -542,9 +556,10 @@ export default function EarningsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredTransactions.map((transaction: Transaction) => {
-                      const styles = getTransactionTypeStyles(transaction.type);
-                      return (
+                        filteredTransactions.map((transaction: Transaction) => {
+                          const styles = getTransactionTypeStyles(transaction.type);
+                          const outgoing = isOutgoingTransaction(transaction);
+                          return (
                         <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                             <div>
@@ -574,7 +589,7 @@ export default function EarningsPage() {
                           </td>
                           <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
                             <span className={`text-sm font-semibold ${styles.amountColor}`}>
-                              {transaction.type === 'PAYOUT' || transaction.type === 'REFUND' ? '-' : '+'}
+                              {outgoing ? '-' : '+'}
                               {formatCurrency(Math.abs(transaction.amount))}
                             </span>
                           </td>

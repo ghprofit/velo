@@ -939,12 +939,12 @@ export default function UploadContentPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Content Submitted for Review</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Content Uploaded Successfully</h2>
                 <p className="text-sm sm:text-base text-gray-600 mb-4">
-                  Your content has been uploaded successfully and is now being reviewed.
+                  Your content has been uploaded and approved. It is now live and available for purchase.
                 </p>
                 <p className="text-sm text-gray-500">
-                  We&apos;ll send you an email once your content is approved with your shareable link.
+                  Share your content link to start earning!
                 </p>
               </div>
 
@@ -962,15 +962,18 @@ export default function UploadContentPage() {
                   </div>
                 </div>
 
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
                   <div className="flex items-start gap-2">
-                    <svg className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg className="w-5 h-5 text-green-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
-                      <p className="text-sm font-medium text-amber-800">Review in Progress</p>
-                      <p className="text-xs text-amber-700 mt-1">
-                        Typical review time is 1-2 minutes for images and up to 5 minutes for videos. You&apos;ll receive an email notification when approved.
+                      <p className="text-sm font-medium text-green-800">Content Approved</p>
+                      <p className="text-xs text-green-700 mt-1">
+                        Your content is live. Share the link below to start earning.
+                      </p>
+                      <p className="text-xs font-mono text-green-800 mt-2 break-all">
+                        {`https://velolink.club/c/${shortId}`}
                       </p>
                     </div>
                   </div>

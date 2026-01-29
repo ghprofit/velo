@@ -651,7 +651,7 @@ export default function EarningsPage() {
                           </p>
                         </div>
                         <span className={`text-sm font-semibold ${styles.amountColor} whitespace-nowrap`}>
-                          {transaction.type === 'PAYOUT' || transaction.type === 'REFUND' ? '-' : '+'}
+                          {transaction.status === 'FAILED' ? '' : (transaction.type === 'PAYOUT' || transaction.type === 'REFUND' ? '-' : '+')}
                           {formatCurrency(Math.abs(transaction.amount))}
                         </span>
                       </div>
@@ -751,7 +751,7 @@ export default function EarningsPage() {
                           </td>
                           <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
                             <span className={`text-sm font-semibold ${styles.amountColor}`}>
-                              {transaction.type === 'PAYOUT' || transaction.type === 'REFUND' ? '-' : '+'}
+                              {transaction.status === 'FAILED' ? '' : (transaction.type === 'PAYOUT' || transaction.type === 'REFUND' ? '-' : '+')}
                               {formatCurrency(Math.abs(transaction.amount))}
                             </span>
                           </td>

@@ -13,7 +13,7 @@ export interface BalanceResponse {
 
 export interface Transaction {
   id: string;
-  type: 'purchase' | 'payout';
+  type: 'PURCHASE' | 'PAYOUT';
   amount: number;
   currency: string;
   status: string;
@@ -173,14 +173,14 @@ export class EarningsService {
     userId: string,
     page: number = 1,
     limit: number = 10,
-    type?: 'purchase' | 'payout',
+    type?: string,
     search?: string,
   ): Promise<PaginatedTransactions> {
     const creatorProfile = await this.getCreatorProfile(userId);
 
     // Fetch purchases if type is not 'payout'
     const purchases =
-      type !== 'payout'
+      type?.toUpperCase() !== 'PAYOUT'
         ? await this.prisma.purchase.findMany({
             where: {
               content: {
@@ -209,7 +209,7 @@ export class EarningsService {
 
     // Fetch payouts if type is not 'purchase'
     const payouts =
-      type !== 'purchase'
+      type?.toUpperCase() !== 'PURCHASE'
         ? await this.prisma.payout.findMany({
             where: {
               creatorId: creatorProfile.id,
@@ -223,7 +223,7 @@ export class EarningsService {
     // Transform to unified transaction format
     const purchaseTransactions: Transaction[] = purchases.map((purchase) => ({
       id: purchase.id,
-      type: 'purchase' as const,
+      type: 'PURCHASE' as const,
       amount: (purchase.basePrice && purchase.basePrice > 0)
         ? purchase.basePrice * 0.9
         : (purchase.amount / 1.1) * 0.9, // Derive base price from amount, then take 90%
@@ -237,7 +237,7 @@ export class EarningsService {
 
     const payoutTransactions: Transaction[] = payouts.map((payout) => ({
       id: payout.id,
-      type: 'payout' as const,
+      type: 'PAYOUT' as const,
       amount: payout.amount,
       currency: payout.currency,
       status: payout.status,

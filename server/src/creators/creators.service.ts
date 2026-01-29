@@ -704,7 +704,7 @@ export class CreatorsService {
       }
 
       const requests = await this.prisma.payoutRequest.findMany({
-        where: { creatorId: user.creatorProfile.id },
+        where: { creatorId: user.creatorProfile.id, status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] } },
         orderBy: { createdAt: 'desc' },
         include: {
           payout: {

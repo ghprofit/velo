@@ -45,18 +45,22 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
         
         // Look up purchase by payment intent ID
         const result = await buyerApi.verifyPurchaseByPaymentIntent(paymentIntentId as string);
-        
-        if (result.data && result.data.accessToken) {
+
+        // Only redirect when purchase status is COMPLETED (not PENDING)
+        if (result.data && result.data.accessToken && result.data.status === 'COMPLETED') {
           console.log('[SUCCESS] ✅ Purchase completed! Access token received');
           setFinalAccessToken(result.data.accessToken);
           setStatus('completed');
-          
+
           // Redirect after a short delay to show the success screen
           const timer = setTimeout(() => {
             router.push(`/c/${id}?token=${result.data.accessToken}`);
           }, 3000);
-          
+
           return () => clearTimeout(timer);
+        } else if (result.data && result.data.status === 'PENDING') {
+          // Purchase exists but webhook hasn't confirmed it yet, keep polling
+          console.log(`[SUCCESS] ⏳ Purchase PENDING (attempt ${attempts}/${maxAttempts}), waiting for webhook confirmation...`);
         }
         
         if (attempts < maxAttempts) {

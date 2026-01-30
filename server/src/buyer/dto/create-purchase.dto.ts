@@ -2,7 +2,7 @@ import { IsString, IsNotEmpty, IsEmail, IsOptional, MinLength, MaxLength, IsUUID
 
 export class CreatePurchaseDto {
   @IsNotEmpty()
-  @IsUUID()
+  @IsString()
   contentId: string;
 
   @IsNotEmpty()

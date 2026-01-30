@@ -421,13 +421,13 @@ export default function PayoutSetupPage() {
               {/* User's Personal Address */}
               <div>
                 <label htmlFor="streetAddress" className="block text-sm font-medium text-gray-700 mb-2">
-                  Your Street Address {formData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                  Your Street Address <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="streetAddress"
                   name="streetAddress"
                   type="text"
-                  required={formData.bankCountry === 'US'}
+                  required
                   value={formData.streetAddress}
                   onChange={handleChange}
                   placeholder="123 Main Street, Apt 4B"
@@ -439,13 +439,13 @@ export default function PayoutSetupPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                      City {formData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                      City <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="city"
                       name="city"
                       type="text"
-                      required={formData.bankCountry === 'US'}
+                      required
                       value={formData.city}
                       onChange={handleChange}
                       placeholder="New York"
@@ -454,13 +454,13 @@ export default function PayoutSetupPage() {
                   </div>
                   <div>
                     <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
-                      State/Province {formData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                      State/Province <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="state"
                       name="state"
                       type="text"
-                      required={formData.bankCountry === 'US'}
+                      required
                       value={formData.state}
                       onChange={handleChange}
                       placeholder="NY"
@@ -469,13 +469,13 @@ export default function PayoutSetupPage() {
                   </div>
                   <div>
                     <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-2">
-                      Postal/ZIP Code {formData.bankCountry === 'US' ? (<span className="text-red-500">*</span>) : '(Optional)'}
+                      Postal/ZIP Code <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="postalCode"
                       name="postalCode"
                       type="text"
-                      required={formData.bankCountry === 'US'}
+                      required
                       value={formData.postalCode}
                       onChange={handleChange}
                       placeholder="10001"

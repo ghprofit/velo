@@ -7,7 +7,19 @@ export declare class WebhookEventDto {
 }
 export declare class WebhookDecisionDto {
     status: string;
-    verification: {
+    sessionId?: string;
+    vendorData?: string;
+    eventType?: string;
+    data: {
+        verification: {
+            decision: string;
+            decisionScore?: number;
+            person?: any;
+            document?: any;
+            insights?: any[];
+        };
+    };
+    verification?: {
         id: string;
         code: number;
         status: string;

@@ -105,10 +105,63 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             if (!user || !user.creatorProfile) {
                 throw new common_1.NotFoundException('Creator profile not found');
             }
+            const profile = user.creatorProfile;
+            if (profile.verificationStatus === client_1.VerificationStatus.IN_PROGRESS &&
+                profile.veriffSessionId) {
+                try {
+                    this.logger.log(`Checking Veriff API directly for session: ${profile.veriffSessionId}`);
+                    const veriffStatus = await this.veriffService.getVerificationStatus(profile.veriffSessionId);
+                    const status = veriffStatus.verification.status;
+                    const code = veriffStatus.verification.code;
+                    const reason = veriffStatus.verification.reason || 'N/A';
+                    this.logger.log(`Veriff API returned: status=${status}, code=${code}, reason=${reason}, full response: ${JSON.stringify(veriffStatus)}`);
+                    let newStatus = null;
+                    let verifiedAt = null;
+                    if (status === 'approved' && code === 9001) {
+                        newStatus = client_1.VerificationStatus.VERIFIED;
+                        verifiedAt = new Date();
+                        this.logger.log('Verification approved - updating status to VERIFIED');
+                    }
+                    else if (status === 'declined' || code === 9103 || code === 9102 || code === 9104) {
+                        newStatus = client_1.VerificationStatus.REJECTED;
+                        this.logger.log(`Verification declined/rejected - updating status to REJECTED (code: ${code})`);
+                    }
+                    else if (status === 'resubmission_requested' || code === 9121) {
+                        newStatus = client_1.VerificationStatus.REJECTED;
+                        this.logger.log('Verification requires resubmission - updating status to REJECTED');
+                    }
+                    else if (status === 'expired' || code === 9120) {
+                        newStatus = client_1.VerificationStatus.EXPIRED;
+                        this.logger.log('Verification session expired - updating status to EXPIRED');
+                    }
+                    if (newStatus) {
+                        await this.prisma.creatorProfile.update({
+                            where: { id: profile.id },
+                            data: {
+                                verificationStatus: newStatus,
+                                verifiedAt,
+                                veriffDecisionId: profile.veriffSessionId,
+                            },
+                        });
+                        return {
+                            verificationStatus: newStatus,
+                            veriffSessionId: profile.veriffSessionId,
+                            verifiedAt,
+                            emailVerified: user.emailVerified,
+                        };
+                    }
+                    else {
+                        this.logger.warn(`Veriff status '${status}' (code ${code}) not handled - verification still in progress`);
+                    }
+                }
+                catch (veriffError) {
+                    this.logger.warn(`Failed to check Veriff API for session ${profile.veriffSessionId}:`, veriffError);
+                }
+            }
             return {
-                verificationStatus: user.creatorProfile.verificationStatus,
-                veriffSessionId: user.creatorProfile.veriffSessionId,
-                verifiedAt: user.creatorProfile.verifiedAt,
+                verificationStatus: profile.verificationStatus,
+                veriffSessionId: profile.veriffSessionId,
+                verifiedAt: profile.verifiedAt,
                 emailVerified: user.emailVerified,
             };
         }
@@ -226,17 +279,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
             if (user.creatorProfile.verificationStatus !== client_1.VerificationStatus.VERIFIED) {
                 throw new common_1.BadRequestException('Creator must be verified before setting up payout');
             }
-            let stripeAccountId = user.creatorProfile.stripeAccountId;
-            if (!stripeAccountId) {
-                this.logger.log(`Creating Stripe Connect account for user: ${userId}`);
-                const stripeAccount = await this.stripeService.createConnectAccount(user.email, {
-                    userId: user.id,
-                    creatorId: user.creatorProfile.id,
-                    displayName: user.creatorProfile.displayName,
-                });
-                stripeAccountId = stripeAccount.id;
-                this.logger.log(`Stripe Connect account created: ${stripeAccountId}`);
-            }
+            this.logger.log(`Setting up manual payout bank account for user: ${userId}`);
             const updatedProfile = await this.prisma.creatorProfile.update({
                 where: { id: user.creatorProfile.id },
                 data: {
@@ -248,7 +291,10 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                     bankIban: bankAccountDto.bankIban,
                     bankCountry: bankAccountDto.bankCountry,
                     bankCurrency: bankAccountDto.bankCurrency || 'USD',
-                    stripeAccountId,
+                    streetAddress: bankAccountDto.streetAddress,
+                    city: bankAccountDto.city,
+                    state: bankAccountDto.state,
+                    postalCode: bankAccountDto.postalCode,
                     payoutSetupCompleted: true,
                 },
             });
@@ -260,7 +306,6 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 bankCountry: updatedProfile.bankCountry,
                 bankCurrency: updatedProfile.bankCurrency,
                 payoutSetupCompleted: updatedProfile.payoutSetupCompleted,
-                stripeAccountId: updatedProfile.stripeAccountId,
             };
         }
         catch (error) {
@@ -292,6 +337,10 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 bankCurrency: profile.bankCurrency,
                 payoutSetupCompleted: profile.payoutSetupCompleted,
                 stripeAccountId: profile.stripeAccountId || undefined,
+                streetAddress: profile.streetAddress || undefined,
+                city: profile.city || undefined,
+                state: profile.state || undefined,
+                postalCode: profile.postalCode || undefined,
             };
         }
         catch (error) {
@@ -470,7 +519,7 @@ let CreatorsService = CreatorsService_1 = class CreatorsService {
                 throw new common_1.NotFoundException('Creator profile not found');
             }
             const requests = await this.prisma.payoutRequest.findMany({
-                where: { creatorId: user.creatorProfile.id },
+                where: { creatorId: user.creatorProfile.id, status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] } },
                 orderBy: { createdAt: 'desc' },
                 include: {
                     payout: {

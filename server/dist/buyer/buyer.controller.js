@@ -21,6 +21,8 @@ const create_purchase_dto_1 = require("./dto/create-purchase.dto");
 const verify_access_dto_1 = require("./dto/verify-access.dto");
 const confirm_purchase_dto_1 = require("./dto/confirm-purchase.dto");
 const check_eligibility_dto_1 = require("./dto/check-eligibility.dto");
+const request_device_verification_dto_1 = require("./dto/request-device-verification.dto");
+const verify_device_code_dto_1 = require("./dto/verify-device-code.dto");
 let BuyerController = class BuyerController {
     constructor(buyerService) {
         this.buyerService = buyerService;
@@ -41,51 +43,23 @@ let BuyerController = class BuyerController {
     async verifyPurchaseByPaymentIntent(paymentIntentId) {
         return this.buyerService.verifyPurchaseByPaymentIntent(paymentIntentId);
     }
-    async getContentAccess(dto) {
-        console.log('[BUYER CONTROLLER] getContentAccess called with token:', dto.accessToken?.substring(0, 20) + '...');
-        const result = await this.buyerService.getContentAccess(dto.accessToken);
-        console.log('[BUYER CONTROLLER] getContentAccess result:', {
-            contentId: result.content.id,
-            contentType: result.content.contentType,
-            itemsCount: result.content.contentItems?.length || 0,
-            firstItemHasSignedUrl: result.content.contentItems?.[0]?.signedUrl ? 'YES' : 'NO',
-            firstItemSignedUrlPreview: result.content.contentItems?.[0]?.signedUrl?.substring(0, 100),
-        });
-        console.log('[BUYER CONTROLLER] Full contentItems:', JSON.stringify(result.content.contentItems, null, 2));
-        return result;
+    async getContentAccess(dto, ipAddress) {
+        return this.buyerService.getContentAccess(dto.accessToken, ipAddress);
     }
     async checkAccessEligibility(dto) {
-        console.log('[BUYER CONTROLLER] checkAccessEligibility called with:', {
-            hasAccessToken: !!dto.accessToken,
-            accessTokenPreview: dto.accessToken?.substring(0, 20) + '...',
-            hasFingerprint: !!dto.fingerprint,
-            fingerprintPreview: dto.fingerprint?.substring(0, 20) + '...',
-        });
-        try {
-            const result = await this.buyerService.checkAccessEligibility(dto.accessToken, dto.fingerprint);
-            console.log('[BUYER CONTROLLER] checkAccessEligibility result:', result);
-            return result;
-        }
-        catch (error) {
-            console.error('[BUYER CONTROLLER] checkAccessEligibility error:', error);
-            throw error;
-        }
+        return this.buyerService.checkAccessEligibility(dto.accessToken, dto.fingerprint);
     }
     async getSessionPurchases(sessionToken) {
         return this.buyerService.getSessionPurchases(sessionToken);
     }
     async confirmPurchase(dto) {
-        console.log('[BUYER CONTROLLER] confirmPurchase called');
-        console.log('[BUYER CONTROLLER] DTO:', JSON.stringify(dto, null, 2));
-        console.log('[BUYER CONTROLLER] purchaseId:', dto.purchaseId);
-        console.log('[BUYER CONTROLLER] paymentIntentId:', dto.paymentIntentId);
         return this.buyerService.confirmPurchase(dto.purchaseId, dto.paymentIntentId);
     }
     async requestDeviceCode(dto) {
-        return this.buyerService.requestDeviceVerification(dto.purchaseId, dto.fingerprint);
+        return this.buyerService.requestDeviceVerification(dto.accessToken, dto.fingerprint, dto.email);
     }
     async verifyDevice(dto) {
-        return this.buyerService.verifyDeviceCode(dto.purchaseId, dto.code, dto.fingerprint);
+        return this.buyerService.verifyDeviceCode(dto.accessToken, dto.fingerprint, dto.verificationCode);
     }
     async resendInvoice(dto) {
         return this.buyerService.resendInvoice(dto.purchaseId, dto.email);
@@ -110,6 +84,8 @@ __decorate([
 ], BuyerController.prototype, "getContentDetails", null);
 __decorate([
     (0, common_1.Post)('purchase'),
+    (0, common_1.UseGuards)(throttler_1.ThrottlerGuard),
+    (0, throttler_1.Throttle)({ default: { limit: 10, ttl: 60000 } }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_purchase_dto_1.CreatePurchaseDto]),
@@ -132,8 +108,9 @@ __decorate([
 __decorate([
     (0, common_1.Post)('access'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Ip)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [verify_access_dto_1.VerifyAccessDto]),
+    __metadata("design:paramtypes", [verify_access_dto_1.VerifyAccessDto, String]),
     __metadata("design:returntype", Promise)
 ], BuyerController.prototype, "getContentAccess", null);
 __decorate([
@@ -163,7 +140,7 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 300000 } }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [request_device_verification_dto_1.RequestDeviceVerificationDto]),
     __metadata("design:returntype", Promise)
 ], BuyerController.prototype, "requestDeviceCode", null);
 __decorate([
@@ -172,7 +149,7 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [verify_device_code_dto_1.VerifyDeviceCodeDto]),
     __metadata("design:returntype", Promise)
 ], BuyerController.prototype, "verifyDevice", null);
 __decorate([

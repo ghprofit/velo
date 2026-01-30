@@ -82,7 +82,7 @@ export declare class BuyerService {
             contentType: string;
         };
     }>;
-    getContentAccess(accessToken: string): Promise<{
+    getContentAccess(accessToken: string, ipAddress?: string): Promise<{
         content: {
             id: string;
             title: string;
@@ -96,13 +96,13 @@ export declare class BuyerService {
                 displayName: string;
                 profileImage: string | null;
             };
-            contentItems: {
+            contentItems: ({
                 id: string;
                 s3Key: string;
                 s3Bucket: string;
                 order: number;
                 signedUrl: string;
-            }[];
+            } | null)[];
         };
         purchase: {
             viewCount: number;
@@ -159,7 +159,7 @@ export declare class BuyerService {
         needsEmailVerification?: undefined;
         canAddMoreDevices?: undefined;
     }>;
-    requestDeviceVerification(accessToken: string, fingerprint: string): Promise<{
+    requestDeviceVerification(accessToken: string, fingerprint: string, email: string): Promise<{
         success: boolean;
     }>;
     verifyDeviceCode(accessToken: string, fingerprint: string, verificationCode: string): Promise<{

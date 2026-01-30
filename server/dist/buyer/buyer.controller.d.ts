@@ -5,6 +5,8 @@ import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { VerifyAccessDto } from './dto/verify-access.dto';
 import { ConfirmPurchaseDto } from './dto/confirm-purchase.dto';
 import { CheckEligibilityDto } from './dto/check-eligibility.dto';
+import { RequestDeviceVerificationDto } from './dto/request-device-verification.dto';
+import { VerifyDeviceCodeDto } from './dto/verify-device-code.dto';
 export declare class BuyerController {
     private readonly buyerService;
     constructor(buyerService: BuyerService);
@@ -66,7 +68,7 @@ export declare class BuyerController {
             contentType: string;
         };
     }>;
-    getContentAccess(dto: VerifyAccessDto): Promise<{
+    getContentAccess(dto: VerifyAccessDto, ipAddress: string): Promise<{
         content: {
             id: string;
             title: string;
@@ -80,13 +82,13 @@ export declare class BuyerController {
                 displayName: string;
                 profileImage: string | null;
             };
-            contentItems: {
+            contentItems: ({
                 id: string;
                 s3Key: string;
                 s3Bucket: string;
                 order: number;
                 signedUrl: string;
-            }[];
+            } | null)[];
         };
         purchase: {
             viewCount: number;
@@ -143,17 +145,10 @@ export declare class BuyerController {
         accessToken: string;
         status: string;
     }>;
-    requestDeviceCode(dto: {
-        purchaseId: string;
-        fingerprint: string;
-    }): Promise<{
+    requestDeviceCode(dto: RequestDeviceVerificationDto): Promise<{
         success: boolean;
     }>;
-    verifyDevice(dto: {
-        purchaseId: string;
-        code: string;
-        fingerprint: string;
-    }): Promise<{
+    verifyDevice(dto: VerifyDeviceCodeDto): Promise<{
         success: boolean;
     }>;
     resendInvoice(dto: {

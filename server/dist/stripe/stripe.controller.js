@@ -80,7 +80,7 @@ let StripeController = StripeController_1 = class StripeController {
     }
     async handlePaymentIntentSucceeded(paymentIntent) {
         this.logger.log(`Payment succeeded: ${paymentIntent.id}`);
-        const idempotencyKey = `webhook_${paymentIntent.id}_${Date.now()}`;
+        const idempotencyKey = `webhook_${paymentIntent.id}`;
         let purchaseData = null;
         try {
             await this.prisma.$transaction(async (tx) => {
@@ -119,6 +119,10 @@ let StripeController = StripeController_1 = class StripeController {
                         ]);
                         if (!content || !buyerSession) {
                             this.logger.error(`Cannot create purchase - content or session not found. Content: ${!!content}, Session: ${!!buyerSession}`);
+                            return;
+                        }
+                        if (!content.isPublished || content.status !== 'APPROVED') {
+                            this.logger.error(`Cannot create purchase from webhook - content not available. isPublished: ${content.isPublished}, status: ${content.status}`);
                             return;
                         }
                         if (!buyerSession.email) {
@@ -401,6 +405,10 @@ let StripeController = StripeController_1 = class StripeController {
             }
         }
         catch (error) {
+            if (error.code === 'P2002' && error.meta?.target?.includes('completionIdempotencyKey')) {
+                this.logger.log(`Purchase confirmation race detected - already completed by client for payment intent ${paymentIntent.id}`);
+                return;
+            }
             this.logger.error(`Failed to process payment_intent.succeeded webhook:`, error);
             throw error;
         }

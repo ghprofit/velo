@@ -113,6 +113,10 @@ export declare class PaymentsController {
                 bankIban: string | null;
                 bankCountry: string | null;
                 bankCurrency: string | null;
+                streetAddress: string | null;
+                city: string | null;
+                state: string | null;
+                postalCode: string | null;
                 user: {
                     email: string;
                     displayName: string | null;
@@ -231,6 +235,10 @@ export declare class PaymentsController {
                 bankIban: string | null;
                 bankCountry: string | null;
                 bankCurrency: string | null;
+                streetAddress: string | null;
+                city: string | null;
+                state: string | null;
+                postalCode: string | null;
                 payoutSetupCompleted: boolean;
                 paypalEmail: string | null;
                 stripeAccountId: string | null;

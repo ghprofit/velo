@@ -119,81 +119,123 @@ let VeriffController = VeriffController_1 = class VeriffController {
     async handleWebhook(request) {
         this.logger.log('Received Veriff webhook');
         this.logger.log(`Headers: ${JSON.stringify(request.headers)}`);
+        this.logger.log(`Body type: ${typeof request.body}, isBuffer: ${Buffer.isBuffer(request.body)}`);
         try {
+            let webhookData;
+            let rawBody;
+            if (typeof request.body === 'object' && !Buffer.isBuffer(request.body)) {
+                this.logger.warn('Body received as parsed JSON object instead of Buffer');
+                webhookData = request.body;
+                rawBody = Buffer.from(JSON.stringify(webhookData));
+            }
+            else if (Buffer.isBuffer(request.body)) {
+                rawBody = request.body;
+                webhookData = JSON.parse(rawBody.toString('utf-8'));
+            }
+            else {
+                this.logger.error(`Unexpected body type: ${typeof request.body}`);
+                throw new common_1.BadRequestException('Invalid request body format');
+            }
+            this.logger.log(`Webhook data parsed: ${JSON.stringify(webhookData, null, 2)}`);
             const signature = request.headers['x-hmac-signature'];
-            if (!signature) {
-                this.logger.error('Webhook received without signature - REJECTED');
-                if (process.env.NODE_ENV === 'development') {
-                    this.logger.warn('DEVELOPMENT MODE: Processing webhook without signature verification');
-                    const rawBody = request.body;
-                    this.logger.log(`Webhook body: ${rawBody.toString('utf-8')}`);
+            if (signature) {
+                try {
+                    const isValid = this.veriffService.verifyWebhookSignature(rawBody, signature);
+                    if (!isValid) {
+                        this.logger.error('Invalid webhook signature - REJECTED');
+                        throw new common_1.UnauthorizedException('Invalid webhook signature');
+                    }
+                    this.logger.log('Webhook signature verified successfully');
                 }
-                else {
+                catch (signatureError) {
+                    this.logger.error('Signature verification error:', signatureError);
+                    if (process.env.NODE_ENV !== 'development') {
+                        throw signatureError;
+                    }
+                    this.logger.warn('DEVELOPMENT MODE: Continuing despite signature verification error');
+                }
+            }
+            else {
+                this.logger.warn('Webhook received without signature');
+                if (process.env.NODE_ENV !== 'development') {
                     throw new common_1.UnauthorizedException('Missing webhook signature');
                 }
+                this.logger.warn('DEVELOPMENT MODE: Proceeding without signature');
             }
-            const rawBody = request.body;
-            if (!Buffer.isBuffer(rawBody)) {
-                this.logger.error('Raw body not available - check main.ts configuration');
-                this.logger.error(`Body type: ${typeof request.body}`);
-                throw new common_1.BadRequestException('Raw body parser not configured');
+            let sessionId;
+            let decision;
+            let webhookId;
+            if (webhookData.data?.verification?.decision) {
+                sessionId = webhookData.sessionId || webhookData.vendorData || '';
+                decision = webhookData.data.verification.decision;
+                webhookId = `${sessionId}_${webhookData.eventType || 'decision'}`;
+                this.logger.log(`📦 New format webhook - SessionId: ${sessionId}, Decision: ${decision}`);
             }
-            if (signature) {
-                const isValid = this.veriffService.verifyWebhookSignature(rawBody, signature);
-                if (!isValid) {
-                    this.logger.error('Invalid webhook signature - REJECTED');
-                    throw new common_1.UnauthorizedException('Invalid webhook signature');
-                }
-                this.logger.log('Webhook signature verified successfully');
+            else if (webhookData.verification) {
+                sessionId = webhookData.verification.id;
+                decision = webhookData.verification.status;
+                webhookId = webhookData.verification.id;
+                this.logger.log(`📦 Legacy format webhook - SessionId: ${sessionId}, Status: ${decision}, Code: ${webhookData.verification.code}`);
             }
-            const webhookData = JSON.parse(rawBody.toString('utf-8'));
-            const webhookId = webhookData.verification.id;
+            else {
+                this.logger.error('❌ Unknown webhook format - cannot extract session ID or decision');
+                this.logger.error(`Webhook data: ${JSON.stringify(webhookData, null, 2)}`);
+                return { received: true };
+            }
             const existingWebhook = await this.prisma.processedWebhook.findUnique({
                 where: { webhookId },
             });
             if (existingWebhook) {
-                this.logger.log(`Webhook already processed: ${webhookId}`);
+                this.logger.log(`✓ Webhook already processed: ${webhookId}`);
                 return { received: true };
             }
-            this.logger.log(`Processing webhook for session: ${webhookData.verification.id}`);
-            this.logger.log(`Verification status: ${webhookData.verification.status}`);
-            this.logger.log(`Verification code: ${webhookData.verification.code}`);
-            const sessionId = webhookData.verification.id;
-            const status = webhookData.verification.status;
-            const code = webhookData.verification.code;
             await this.prisma.$transaction(async (tx) => {
                 await tx.processedWebhook.create({
                     data: {
                         webhookId,
                         provider: 'VERIFF',
-                        eventType: `${status}_${code}`,
+                        eventType: `${decision}`,
                         payload: webhookData,
                     },
                 });
-                const creatorProfile = await tx.creatorProfile.findUnique({
+                let creatorProfile = await tx.creatorProfile.findUnique({
                     where: { veriffSessionId: sessionId },
                 });
+                if (!creatorProfile && webhookData.vendorData) {
+                    creatorProfile = await tx.creatorProfile.findUnique({
+                        where: { id: webhookData.vendorData },
+                    });
+                    this.logger.log(`Found creator by vendorData: ${webhookData.vendorData}`);
+                }
                 if (!creatorProfile) {
-                    this.logger.warn(`No creator profile found for session: ${sessionId}`);
+                    this.logger.warn(`❌ No creator profile found for session: ${sessionId}`);
                     return;
                 }
                 let verificationStatus;
                 let verifiedAt = null;
-                if (status === 'approved' && code === 9001) {
-                    this.logger.log('Verification approved');
+                if (decision === 'approved') {
+                    this.logger.log('✅ Verification APPROVED');
                     verificationStatus = client_1.VerificationStatus.VERIFIED;
                     verifiedAt = new Date();
                 }
-                else if (status === 'declined' && code === 9103) {
-                    this.logger.log(`Verification declined: ${webhookData.verification.reason}`);
+                else if (decision === 'declined' || decision === 'rejected') {
+                    this.logger.log(`❌ Verification DECLINED/REJECTED`);
                     verificationStatus = client_1.VerificationStatus.REJECTED;
                 }
-                else if (code === 9102) {
-                    this.logger.log('Verification requires resubmission');
-                    verificationStatus = client_1.VerificationStatus.IN_PROGRESS;
+                else if (decision === 'resubmission_requested') {
+                    this.logger.log('⚠️  Verification RESUBMISSION REQUESTED');
+                    verificationStatus = client_1.VerificationStatus.REJECTED;
+                }
+                else if (decision === 'submitted' || decision === 'started') {
+                    this.logger.log('⏳ Verification still SUBMITTED/IN_PROGRESS - no final decision yet');
+                    return;
+                }
+                else if (decision === 'expired') {
+                    this.logger.log('⏱️  Verification session EXPIRED');
+                    verificationStatus = client_1.VerificationStatus.EXPIRED;
                 }
                 else {
-                    this.logger.log(`Unknown status/code: ${status}/${code}`);
+                    this.logger.log(`ℹ️  Unknown decision: ${decision}`);
                     return;
                 }
                 await tx.creatorProfile.update({
@@ -204,13 +246,23 @@ let VeriffController = VeriffController_1 = class VeriffController {
                         veriffDecisionId: sessionId,
                     },
                 });
-                this.logger.log(`Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`);
+                this.logger.log(`✅ Updated verification status for creator ${creatorProfile.id}: ${verificationStatus}`);
+                const user = await tx.user.findUnique({
+                    where: { id: creatorProfile.userId },
+                    select: { email: true },
+                });
+                this.logger.log(`User email: ${user?.email}, Final Status: ${verificationStatus}`);
             });
             return { received: true };
         }
         catch (error) {
             this.logger.error('Failed to process webhook:', error);
-            throw error;
+            if (error instanceof Error) {
+                this.logger.error(`Error message: ${error.message}`);
+                this.logger.error(`Error stack: ${error.stack}`);
+            }
+            this.logger.warn('Returning 200 OK despite error - webhook was received, may need manual review');
+            return { received: true };
         }
     }
     healthCheck() {
@@ -226,7 +278,44 @@ let VeriffController = VeriffController_1 = class VeriffController {
             apiKeyConfigured: process.env.VERIFF_API_KEY ? 'SET (hidden)' : 'NOT SET',
             apiSecretConfigured: process.env.VERIFF_API_SECRET ? 'SET (hidden)' : 'NOT SET',
             webhookSecretConfigured: process.env.VERIFF_WEBHOOK_SECRET ? 'SET (hidden)' : 'NOT SET',
+            webhookUrl: `${process.env.API_URL || process.env.BACKEND_URL}/api/veriff/webhooks/decision`,
             note: 'If any value shows NOT SET, check your .env file',
+        };
+    }
+    async debugWebhookStatus(sessionId) {
+        this.logger.log(`Checking webhook status for session: ${sessionId}`);
+        const webhook = await this.prisma.processedWebhook.findUnique({
+            where: { webhookId: sessionId },
+        });
+        const creatorProfile = await this.prisma.creatorProfile.findUnique({
+            where: { veriffSessionId: sessionId },
+            select: {
+                id: true,
+                verificationStatus: true,
+                verifiedAt: true,
+                user: {
+                    select: {
+                        email: true,
+                    },
+                },
+            },
+        });
+        return {
+            sessionId,
+            webhookReceived: !!webhook,
+            webhookData: webhook
+                ? {
+                    eventType: webhook.eventType,
+                    processedAt: webhook.createdAt,
+                }
+                : null,
+            creatorProfile: creatorProfile
+                ? {
+                    email: creatorProfile.user.email,
+                    status: creatorProfile.verificationStatus,
+                    verifiedAt: creatorProfile.verifiedAt,
+                }
+                : 'NOT FOUND',
         };
     }
 };
@@ -303,6 +392,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Object)
 ], VeriffController.prototype, "debugConfig", null);
+__decorate([
+    (0, common_1.Get)('debug/webhook/:sessionId'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Param)('sessionId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], VeriffController.prototype, "debugWebhookStatus", null);
 exports.VeriffController = VeriffController = VeriffController_1 = __decorate([
     (0, common_1.Controller)('veriff'),
     __metadata("design:paramtypes", [veriff_service_1.VeriffService,

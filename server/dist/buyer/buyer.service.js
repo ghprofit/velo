@@ -47,6 +47,7 @@ exports.BuyerService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const schedule_1 = require("@nestjs/schedule");
+const crypto_1 = require("crypto");
 const prisma_service_1 = require("../prisma/prisma.service");
 const stripe_service_1 = require("../stripe/stripe.service");
 const email_service_1 = require("../email/email.service");
@@ -150,8 +151,8 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 const session = typeof cachedSession === 'string' ? JSON.parse(cachedSession) : cachedSession;
                 if (new Date(session.expiresAt) > new Date()) {
                     if (session.fingerprint !== expectedFingerprint) {
-                        this.logger.warn(`Fingerprint mismatch for cached session ${sessionToken}: expected ${session.fingerprint}, got ${expectedFingerprint}`);
-                        throw new common_1.UnauthorizedException('Session fingerprint mismatch - possible session hijacking');
+                        this.logger.warn(`Fingerprint mismatch for cached session ${sessionToken}`);
+                        throw new common_1.UnauthorizedException('Session authentication failed');
                     }
                     return session;
                 }
@@ -167,15 +168,21 @@ let BuyerService = BuyerService_1 = class BuyerService {
             throw new common_1.UnauthorizedException('Session expired');
         }
         if (session.fingerprint !== expectedFingerprint) {
-            this.logger.warn(`Fingerprint mismatch for session ${sessionToken}: expected ${session.fingerprint}, got ${expectedFingerprint}`);
-            throw new common_1.UnauthorizedException('Session fingerprint mismatch - possible session hijacking');
+            this.logger.warn(`Fingerprint mismatch for session ${sessionToken}`);
+            throw new common_1.UnauthorizedException('Session authentication failed');
         }
         if (ipAddress && session.ipAddress && session.ipAddress !== ipAddress) {
             this.logger.warn(`IP address changed for session ${sessionToken}: ${session.ipAddress} → ${ipAddress}`);
-            await this.prisma.buyerSession.update({
+            const updatedSession = await this.prisma.buyerSession.update({
                 where: { id: session.id },
                 data: { ipAddress },
             });
+            if (this.redisService.isAvailable()) {
+                const cacheKey = `buyer_session:${sessionToken}`;
+                await this.redisService.del(cacheKey);
+                await this.redisService.set(cacheKey, JSON.stringify(updatedSession), 300);
+            }
+            return updatedSession;
         }
         if (this.redisService.isAvailable()) {
             const cacheKey = `buyer_session:${sessionToken}`;
@@ -278,9 +285,9 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 this.logger.error(`[PURCHASE] Content not available: isPublished=${content.isPublished}, status=${content.status}`);
                 throw new common_1.BadRequestException('Content not available for purchase');
             }
-            if (!content.price || content.price <= 0) {
+            if (!content.price || content.price <= 0 || content.price > 9999999.99) {
                 this.logger.error(`[PURCHASE] Invalid price: $${content.price}`);
-                throw new common_1.BadRequestException('This content is free or price is not set correctly');
+                throw new common_1.BadRequestException('Invalid content price');
             }
             this.logger.log(`[PURCHASE] Checking for existing purchase`);
             const existingPurchase = await this.prisma.purchase.findFirst({
@@ -389,8 +396,8 @@ let BuyerService = BuyerService_1 = class BuyerService {
             content: purchase.content,
         };
     }
-    async getContentAccess(accessToken) {
-        const purchase = await this.prisma.purchase.findUnique({
+    async getContentAccess(accessToken, ipAddress) {
+        let purchase = await this.prisma.purchase.findUnique({
             where: { accessToken },
             include: {
                 content: {
@@ -405,6 +412,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
                         contentItems: true,
                     },
                 },
+                buyerSession: true,
             },
         });
         if (!purchase) {
@@ -412,6 +420,9 @@ let BuyerService = BuyerService_1 = class BuyerService {
         }
         if (purchase.status !== 'COMPLETED') {
             throw new common_1.UnauthorizedException('Purchase not completed');
+        }
+        if (purchase.buyerSession && purchase.buyerSession.expiresAt < new Date()) {
+            throw new common_1.UnauthorizedException('Session has expired');
         }
         if (purchase.accessExpiresAt && purchase.accessExpiresAt < new Date()) {
             throw new common_1.UnauthorizedException('Access has expired');
@@ -425,18 +436,17 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 where: { id: purchase.id },
                 data: {
                     accessWindowStartedAt: now,
-                    accessExpiresAt: expiry,
-                    firstAccessIpAddress: null,
+                    firstAccessIpAddress: ipAddress,
+                    accessExpiresAt: expiry
                 },
             });
         }
         const now = new Date();
-        const VIEW_COOLDOWN_MS = 5 * 60 * 1000;
         const shouldIncrementView = !purchase.lastViewedAt ||
-            now.getTime() - purchase.lastViewedAt.getTime() > VIEW_COOLDOWN_MS;
+            now.getTime() - purchase.lastViewedAt.getTime() > this.VIEW_COOLDOWN_MS;
         if (shouldIncrementView) {
-            await this.prisma.$transaction(async (tx) => {
-                await tx.purchase.update({
+            const updatedPurchase = await this.prisma.$transaction(async (tx) => {
+                const updated = await tx.purchase.update({
                     where: { id: purchase.id },
                     data: {
                         viewCount: { increment: 1 },
@@ -449,7 +459,9 @@ let BuyerService = BuyerService_1 = class BuyerService {
                         viewCount: { increment: 1 },
                     },
                 });
+                return updated;
             });
+            purchase = { ...purchase, viewCount: updatedPurchase.viewCount, lastViewedAt: updatedPurchase.lastViewedAt };
             this.logger.log(`View count incremented for purchase ${purchase.id} and content ${purchase.contentId}`);
         }
         else {
@@ -468,11 +480,9 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 displayName: purchase.content.creator.displayName,
                 profileImage: null,
             };
-        console.log('[BUYER SERVICE] Generating signed URLs for', purchase.content.contentItems.length, 'content items');
-        const contentItemsWithUrls = await Promise.all(purchase.content.contentItems.map(async (item, index) => {
-            console.log(`[BUYER SERVICE] Generating signed URL for item ${index}:`, item.s3Key);
+        this.logger.debug(`Generating signed URLs for ${purchase.content.contentItems.length} content items`);
+        const urlResults = await Promise.allSettled(purchase.content.contentItems.map(async (item) => {
             const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400);
-            console.log(`[BUYER SERVICE] Generated signed URL for item ${index}:`, signedUrl?.substring(0, 100) + '...');
             return {
                 id: item.id,
                 s3Key: item.s3Key,
@@ -481,11 +491,18 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 signedUrl,
             };
         }));
-        console.log('[BUYER SERVICE] Content items with URLs:', contentItemsWithUrls.map(item => ({
-            id: item.id,
-            hasSignedUrl: !!item.signedUrl,
-            signedUrlPreview: item.signedUrl?.substring(0, 100),
-        })));
+        const contentItemsWithUrls = urlResults
+            .map((result, index) => {
+            if (result.status === 'fulfilled') {
+                return result.value;
+            }
+            else {
+                this.logger.error(`Failed to generate signed URL for item ${index}: ${result.reason}`);
+                return null;
+            }
+        })
+            .filter(Boolean);
+        this.logger.debug(`Generated ${contentItemsWithUrls.length}/${purchase.content.contentItems.length} signed URLs successfully`);
         return {
             content: {
                 id: purchase.content.id,
@@ -500,7 +517,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 contentItems: contentItemsWithUrls,
             },
             purchase: {
-                viewCount: purchase.viewCount + 1,
+                viewCount: purchase.viewCount,
                 purchasedAt: purchase.createdAt,
             },
         };
@@ -541,198 +558,219 @@ let BuyerService = BuyerService_1 = class BuyerService {
     }
     async confirmPurchase(purchaseId, paymentIntentId) {
         this.logger.log(`Confirming purchase ${purchaseId} with payment intent ${paymentIntentId}`);
-        const idempotencyKey = `client_${paymentIntentId}_${Date.now()}`;
-        const result = await this.prisma.$transaction(async (tx) => {
-            const purchase = await tx.purchase.findUnique({
-                where: { id: purchaseId },
-                include: {
-                    content: {
-                        include: { creator: true },
+        const idempotencyKey = `client_${paymentIntentId}`;
+        try {
+            const result = await this.prisma.$transaction(async (tx) => {
+                const purchase = await tx.purchase.findUnique({
+                    where: { id: purchaseId },
+                    include: {
+                        content: {
+                            include: { creator: true },
+                        },
                     },
-                },
-            });
-            if (!purchase) {
-                this.logger.error(`Purchase not found: ${purchaseId}`);
-                throw new common_1.NotFoundException('Purchase not found');
-            }
-            if (!purchase.content.isPublished) {
-                this.logger.error(`Cannot complete purchase ${purchaseId}: content ${purchase.contentId} is no longer published`);
-                throw new common_1.BadRequestException('Content is no longer available for purchase');
-            }
-            if (purchase.content.status !== 'APPROVED') {
-                this.logger.error(`Cannot complete purchase ${purchaseId}: content ${purchase.contentId} status is ${purchase.content.status}`);
-                throw new common_1.BadRequestException('Content is not approved for purchase');
-            }
-            if (purchase.paymentIntentId !== paymentIntentId) {
-                this.logger.error(`Payment intent mismatch for purchase ${purchaseId}: expected ${purchase.paymentIntentId}, got ${paymentIntentId}`);
-                throw new common_1.BadRequestException('Payment intent mismatch');
-            }
-            if (purchase.status === 'COMPLETED') {
-                this.logger.log(`Purchase ${purchaseId} already completed by ${purchase.completedBy}`);
+                });
+                if (!purchase) {
+                    this.logger.error(`Purchase not found: ${purchaseId}`);
+                    throw new common_1.NotFoundException('Purchase not found');
+                }
+                if (!purchase.content.isPublished) {
+                    this.logger.error(`Cannot complete purchase ${purchaseId}: content ${purchase.contentId} is no longer published`);
+                    throw new common_1.BadRequestException('Content is no longer available for purchase');
+                }
+                if (purchase.content.status !== 'APPROVED') {
+                    this.logger.error(`Cannot complete purchase ${purchaseId}: content ${purchase.contentId} status is ${purchase.content.status}`);
+                    throw new common_1.BadRequestException('Content is not approved for purchase');
+                }
+                if (purchase.paymentIntentId !== paymentIntentId) {
+                    this.logger.error(`Payment intent mismatch for purchase ${purchaseId}: expected ${purchase.paymentIntentId}, got ${paymentIntentId}`);
+                    throw new common_1.BadRequestException('Payment intent mismatch');
+                }
+                if (purchase.status === 'COMPLETED') {
+                    this.logger.log(`Purchase ${purchaseId} already completed by ${purchase.completedBy}`);
+                    return {
+                        purchaseId: purchase.id,
+                        accessToken: purchase.accessToken,
+                        status: 'COMPLETED',
+                    };
+                }
+                const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);
+                if (paymentIntent.status !== 'succeeded') {
+                    this.logger.error(`Payment intent ${paymentIntentId} status is ${paymentIntent.status}, expected succeeded`);
+                    throw new common_1.BadRequestException('Payment not completed');
+                }
+                const updatedPurchase = await tx.purchase.update({
+                    where: { id: purchase.id },
+                    data: {
+                        status: 'COMPLETED',
+                        transactionId: paymentIntentId,
+                        completionIdempotencyKey: idempotencyKey,
+                        completedBy: 'CLIENT',
+                        completedAt: new Date(),
+                    },
+                });
+                this.logger.log(`✅ Purchase ${updatedPurchase.id} updated to COMPLETED status`);
+                this.logger.log(`💾 Transaction ID: ${updatedPurchase.transactionId}`);
+                this.logger.log(`🔑 Access Token: ${updatedPurchase.accessToken.substring(0, 20)}...`);
+                await tx.content.update({
+                    where: { id: purchase.contentId },
+                    data: {
+                        purchaseCount: { increment: 1 },
+                        totalRevenue: { increment: purchase.amount },
+                    },
+                });
+                const creatorEarnings = purchase.basePrice
+                    ? purchase.basePrice * 0.9
+                    : purchase.amount * 0.85;
+                const earningsPendingUntil = new Date();
+                earningsPendingUntil.setHours(earningsPendingUntil.getHours() + 24);
+                await tx.purchase.update({
+                    where: { id: purchase.id },
+                    data: {
+                        earningsPendingUntil,
+                        earningsReleased: false,
+                    },
+                });
+                await tx.creatorProfile.update({
+                    where: { id: purchase.content.creatorId },
+                    data: {
+                        totalEarnings: { increment: creatorEarnings },
+                        pendingBalance: { increment: creatorEarnings },
+                        totalPurchases: { increment: 1 },
+                    },
+                });
+                this.logger.log(`Purchase ${purchaseId} confirmed by CLIENT with idempotency key ${idempotencyKey}`);
+                this.logger.log(`💰 Creator earnings updated: +$${creatorEarnings.toFixed(2)}`);
                 return {
                     purchaseId: purchase.id,
                     accessToken: purchase.accessToken,
                     status: 'COMPLETED',
+                    _internal: {
+                        contentId: purchase.contentId,
+                        creatorId: purchase.content.creatorId,
+                        creatorEarnings,
+                        amount: purchase.amount,
+                    },
                 };
-            }
-            const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);
-            if (paymentIntent.status !== 'succeeded') {
-                this.logger.error(`Payment intent ${paymentIntentId} status is ${paymentIntent.status}, expected succeeded`);
-                throw new common_1.BadRequestException('Payment not completed');
-            }
-            const updatedPurchase = await tx.purchase.update({
-                where: { id: purchase.id },
-                data: {
-                    status: 'COMPLETED',
-                    transactionId: paymentIntentId,
-                    completionIdempotencyKey: idempotencyKey,
-                    completedBy: 'CLIENT',
-                    completedAt: new Date(),
-                },
-            });
-            this.logger.log(`✅ Purchase ${updatedPurchase.id} updated to COMPLETED status`);
-            this.logger.log(`💾 Transaction ID: ${updatedPurchase.transactionId}`);
-            this.logger.log(`🔑 Access Token: ${updatedPurchase.accessToken.substring(0, 20)}...`);
-            await tx.content.update({
-                where: { id: purchase.contentId },
-                data: {
-                    purchaseCount: { increment: 1 },
-                    totalRevenue: { increment: purchase.amount },
-                },
-            });
-            const creatorEarnings = purchase.basePrice
-                ? purchase.basePrice * 0.9
-                : purchase.amount * 0.85;
-            const earningsPendingUntil = new Date();
-            earningsPendingUntil.setHours(earningsPendingUntil.getHours() + 24);
-            await tx.purchase.update({
-                where: { id: purchase.id },
-                data: {
-                    earningsPendingUntil,
-                    earningsReleased: false,
-                },
-            });
-            await tx.creatorProfile.update({
-                where: { id: purchase.content.creatorId },
-                data: {
-                    totalEarnings: { increment: creatorEarnings },
-                    pendingBalance: { increment: creatorEarnings },
-                    totalPurchases: { increment: 1 },
-                },
-            });
-            this.logger.log(`Purchase ${purchaseId} confirmed by CLIENT with idempotency key ${idempotencyKey}`);
-            this.logger.log(`💰 Creator earnings updated: +$${creatorEarnings.toFixed(2)}`);
-            return {
-                purchaseId: purchase.id,
-                accessToken: purchase.accessToken,
-                status: 'COMPLETED',
-                _internal: {
-                    contentId: purchase.contentId,
-                    creatorId: purchase.content.creatorId,
-                    creatorEarnings,
-                    amount: purchase.amount,
-                },
-            };
-        }, { maxWait: 5000, timeout: 10000 });
-        if (result.status === 'COMPLETED') {
-            this.logger.log(`[EMAIL] Processing emails for completed purchase ${result.purchaseId}`);
-            const purchaseWithRelations = await this.prisma.purchase.findUnique({
-                where: { id: result.purchaseId },
-                include: {
-                    content: {
-                        include: {
-                            creator: {
-                                include: { user: true },
+            }, { maxWait: 5000, timeout: 10000 });
+            if (result.status === 'COMPLETED') {
+                this.logger.log(`[EMAIL] Processing emails for completed purchase ${result.purchaseId}`);
+                const purchaseWithRelations = await this.prisma.purchase.findUnique({
+                    where: { id: result.purchaseId },
+                    include: {
+                        content: {
+                            include: {
+                                creator: {
+                                    include: { user: true },
+                                },
                             },
                         },
+                        buyerSession: true,
                     },
-                    buyerSession: true,
-                },
-            });
-            if (!purchaseWithRelations) {
-                this.logger.error(`[EMAIL] ❌ Could not fetch purchase ${result.purchaseId} for email sending`);
-            }
-            else if (!purchaseWithRelations.content) {
-                this.logger.error(`[EMAIL] ❌ Purchase ${result.purchaseId} has no content`);
-            }
-            else {
-                const clientUrl = this.config.get('CLIENT_URL') || 'http://localhost:3000';
-                const content = purchaseWithRelations.content;
-                const creator = content.creator;
-                const creatorEarnings = purchaseWithRelations.basePrice
-                    ? purchaseWithRelations.basePrice * 0.9
-                    : purchaseWithRelations.amount * 0.85;
-                const buyerEmail = purchaseWithRelations.buyerSession?.email;
-                if (buyerEmail) {
-                    try {
-                        await this.emailService.sendPurchaseReceipt(buyerEmail, {
-                            buyer_email: buyerEmail,
-                            content_title: content.title,
-                            amount: purchaseWithRelations.amount.toFixed(2),
-                            date: new Date().toLocaleDateString(),
-                            access_link: `${clientUrl}/c/${purchaseWithRelations.contentId}?token=${purchaseWithRelations.accessToken}`,
-                            transaction_id: paymentIntentId,
-                        });
-                        this.logger.log(`[EMAIL] ✅ Purchase receipt sent to ${buyerEmail}`);
-                    }
-                    catch (error) {
-                        this.logger.error(`[EMAIL] ❌ Failed to send purchase receipt:`, error);
-                    }
+                });
+                if (!purchaseWithRelations) {
+                    this.logger.error(`[EMAIL] ❌ Could not fetch purchase ${result.purchaseId} for email sending`);
+                }
+                else if (!purchaseWithRelations.content) {
+                    this.logger.error(`[EMAIL] ❌ Purchase ${result.purchaseId} has no content`);
                 }
                 else {
-                    this.logger.warn(`[EMAIL] ⚠️ No buyer email found for purchase ${result.purchaseId}`);
-                }
-                if (creator && creator.user) {
-                    const creatorUser = creator.user;
-                    const creatorEmail = creatorUser.email;
-                    const creatorName = creator.displayName;
-                    try {
-                        await this.emailService.sendCreatorSaleNotification(creatorEmail, {
-                            creator_name: creatorName,
-                            content_title: content.title,
-                            sale_amount: (purchaseWithRelations.basePrice || purchaseWithRelations.amount).toFixed(2),
-                            creator_earnings: creatorEarnings.toFixed(2),
-                            date: new Date().toLocaleDateString(),
-                        });
-                        this.logger.log(`[EMAIL] ✅ Creator sale notification sent to ${creatorEmail}`);
+                    const clientUrl = this.config.get('CLIENT_URL') || 'http://localhost:3000';
+                    const content = purchaseWithRelations.content;
+                    const creator = content.creator;
+                    const creatorEarnings = purchaseWithRelations.basePrice
+                        ? purchaseWithRelations.basePrice * 0.9
+                        : purchaseWithRelations.amount * 0.85;
+                    const buyerEmail = purchaseWithRelations.buyerSession?.email;
+                    if (buyerEmail) {
+                        try {
+                            await this.emailService.sendPurchaseReceipt(buyerEmail, {
+                                buyer_email: buyerEmail,
+                                content_title: content.title,
+                                amount: purchaseWithRelations.amount.toFixed(2),
+                                date: new Date().toLocaleDateString(),
+                                access_link: `${clientUrl}/c/${purchaseWithRelations.contentId}?token=${purchaseWithRelations.accessToken}`,
+                                transaction_id: paymentIntentId,
+                            });
+                            this.logger.log(`[EMAIL] ✅ Purchase receipt sent to ${buyerEmail}`);
+                        }
+                        catch (error) {
+                            this.logger.error(`[EMAIL] ❌ Failed to send purchase receipt:`, error);
+                        }
                     }
-                    catch (error) {
-                        this.logger.error(`[EMAIL] ❌ Failed to send creator sale notification:`, error);
+                    else {
+                        this.logger.warn(`[EMAIL] ⚠️ No buyer email found for purchase ${result.purchaseId}`);
                     }
-                    try {
-                        await this.notificationsService.notify(creatorUser.id, create_notification_dto_1.NotificationType.PURCHASE_MADE, 'Your Content Was Purchased!', `Your content "${content.title}" was purchased! You earned $${creatorEarnings.toFixed(2)}`, {
-                            purchaseId: result.purchaseId,
-                            contentId: purchaseWithRelations.contentId,
-                            earnings: creatorEarnings,
-                        });
-                        this.logger.log(`[NOTIFICATION] ✅ Creator notification created`);
+                    if (creator && creator.user) {
+                        const creatorUser = creator.user;
+                        const creatorEmail = creatorUser.email;
+                        const creatorName = creator.displayName;
+                        try {
+                            await this.emailService.sendCreatorSaleNotification(creatorEmail, {
+                                creator_name: creatorName,
+                                content_title: content.title,
+                                sale_amount: (purchaseWithRelations.basePrice || purchaseWithRelations.amount).toFixed(2),
+                                creator_earnings: creatorEarnings.toFixed(2),
+                                date: new Date().toLocaleDateString(),
+                            });
+                            this.logger.log(`[EMAIL] ✅ Creator sale notification sent to ${creatorEmail}`);
+                        }
+                        catch (error) {
+                            this.logger.error(`[EMAIL] ❌ Failed to send creator sale notification:`, error);
+                        }
+                        try {
+                            await this.notificationsService.notify(creatorUser.id, create_notification_dto_1.NotificationType.PURCHASE_MADE, 'Your Content Was Purchased!', `Your content "${content.title}" was purchased! You earned $${creatorEarnings.toFixed(2)}`, {
+                                purchaseId: result.purchaseId,
+                                contentId: purchaseWithRelations.contentId,
+                                earnings: creatorEarnings,
+                            });
+                            this.logger.log(`[NOTIFICATION] ✅ Creator notification created`);
+                        }
+                        catch (error) {
+                            this.logger.error(`[NOTIFICATION] ❌ Failed to create creator notification:`, error);
+                        }
+                        try {
+                            await this.notificationsService.notifyAdmins(create_notification_dto_1.NotificationType.PURCHASE_MADE, 'New Purchase on Platform', `A new purchase was made: "${content.title}" by ${creatorName} for $${purchaseWithRelations.amount.toFixed(2)}`, {
+                                purchaseId: result.purchaseId,
+                                contentId: purchaseWithRelations.contentId,
+                                creatorName,
+                                amount: purchaseWithRelations.amount,
+                            });
+                            this.logger.log(`[NOTIFICATION] ✅ Admin notifications created`);
+                        }
+                        catch (error) {
+                            this.logger.error(`[NOTIFICATION] ❌ Failed to notify admins:`, error);
+                        }
                     }
-                    catch (error) {
-                        this.logger.error(`[NOTIFICATION] ❌ Failed to create creator notification:`, error);
+                    else {
+                        this.logger.warn(`[EMAIL] ⚠️ No creator found for purchase ${result.purchaseId}`);
                     }
-                    try {
-                        await this.notificationsService.notifyAdmins(create_notification_dto_1.NotificationType.PURCHASE_MADE, 'New Purchase on Platform', `A new purchase was made: "${content.title}" by ${creatorName} for $${purchaseWithRelations.amount.toFixed(2)}`, {
-                            purchaseId: result.purchaseId,
-                            contentId: purchaseWithRelations.contentId,
-                            creatorName,
-                            amount: purchaseWithRelations.amount,
-                        });
-                        this.logger.log(`[NOTIFICATION] ✅ Admin notifications created`);
-                    }
-                    catch (error) {
-                        this.logger.error(`[NOTIFICATION] ❌ Failed to notify admins:`, error);
-                    }
-                }
-                else {
-                    this.logger.warn(`[EMAIL] ⚠️ No creator found for purchase ${result.purchaseId}`);
                 }
             }
+            return {
+                purchaseId: result.purchaseId,
+                accessToken: result.accessToken,
+                status: result.status,
+            };
         }
-        return {
-            purchaseId: result.purchaseId,
-            accessToken: result.accessToken,
-            status: result.status,
-        };
+        catch (error) {
+            if (error.code === 'P2002' && error.meta?.target?.includes('completionIdempotencyKey')) {
+                this.logger.log(`Purchase confirmation race detected - already completed by webhook for payment intent ${paymentIntentId}`);
+                const existingPurchase = await this.prisma.purchase.findFirst({
+                    where: {
+                        id: purchaseId,
+                        paymentIntentId,
+                    },
+                });
+                if (existingPurchase && existingPurchase.status === 'COMPLETED') {
+                    return {
+                        purchaseId: existingPurchase.id,
+                        accessToken: existingPurchase.accessToken,
+                        status: 'COMPLETED',
+                    };
+                }
+            }
+            throw error;
+        }
     }
     async checkAccessEligibility(accessToken, fingerprint) {
         this.logger.log(`Checking access eligibility for token: ${accessToken?.substring(0, 10)}...`);
@@ -777,24 +815,20 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 : null,
         };
     }
-    async requestDeviceVerification(accessToken, fingerprint) {
+    async requestDeviceVerification(accessToken, fingerprint, email) {
         const purchase = await this.prisma.purchase.findUnique({
             where: { accessToken },
-            include: {
-                buyerSession: true,
-            },
         });
         if (!purchase) {
             throw new common_1.NotFoundException('Purchase not found');
         }
-        const email = purchase.buyerSession.email;
         if (!email) {
-            throw new common_1.BadRequestException('No email associated with this purchase');
+            throw new common_1.BadRequestException('No email provided');
         }
         if (purchase.trustedFingerprints.length >= this.MAX_TRUSTED_DEVICES) {
             throw new common_1.BadRequestException('Maximum devices reached');
         }
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const code = ((0, crypto_1.randomBytes)(3).readUIntBE(0, 3) % 900000 + 100000).toString();
         const expiresAt = new Date(Date.now() + this.VERIFICATION_CODE_EXPIRY_MINUTES * 60 * 1000);
         const codes = purchase.deviceVerificationCodes || [];
         codes.push({ code, fingerprint, expiresAt: expiresAt.toISOString() });
@@ -834,7 +868,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
             where: { id: purchase.id },
             data: {
                 trustedFingerprints: [...purchase.trustedFingerprints, fingerprint],
-                deviceVerificationCodes: codes.filter((c) => c.code !== verificationCode),
+                deviceVerificationCodes: codes.filter((c) => c.code !== verificationCode && new Date(c.expiresAt) > new Date()),
             },
         });
         return { success: true };

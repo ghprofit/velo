@@ -16,6 +16,8 @@ import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { VerifyAccessDto } from './dto/verify-access.dto';
 import { ConfirmPurchaseDto } from './dto/confirm-purchase.dto';
 import { CheckEligibilityDto } from './dto/check-eligibility.dto';
+import { RequestDeviceVerificationDto } from './dto/request-device-verification.dto';
+import { VerifyDeviceCodeDto } from './dto/verify-device-code.dto';
 
 @Controller('buyer')
 export class BuyerController {
@@ -46,6 +48,8 @@ export class BuyerController {
    * Create a purchase
    */
   @Post('purchase')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // Bug #23: 10 purchases per minute
   async createPurchase(@Body() dto: CreatePurchaseDto) {
     return this.buyerService.createPurchase(dto);
   }
@@ -70,18 +74,8 @@ export class BuyerController {
    * Get content access after purchase
    */
   @Post('access')
-  async getContentAccess(@Body() dto: VerifyAccessDto) {
-    console.log('[BUYER CONTROLLER] getContentAccess called with token:', dto.accessToken?.substring(0, 20) + '...');
-    const result = await this.buyerService.getContentAccess(dto.accessToken);
-    console.log('[BUYER CONTROLLER] getContentAccess result:', {
-      contentId: result.content.id,
-      contentType: result.content.contentType,
-      itemsCount: result.content.contentItems?.length || 0,
-      firstItemHasSignedUrl: result.content.contentItems?.[0]?.signedUrl ? 'YES' : 'NO',
-      firstItemSignedUrlPreview: result.content.contentItems?.[0]?.signedUrl?.substring(0, 100),
-    });
-    console.log('[BUYER CONTROLLER] Full contentItems:', JSON.stringify(result.content.contentItems, null, 2));
-    return result;
+  async getContentAccess(@Body() dto: VerifyAccessDto, @Ip() ipAddress: string) {
+    return this.buyerService.getContentAccess(dto.accessToken, ipAddress);
   }
 
   /**
@@ -90,21 +84,7 @@ export class BuyerController {
    */
   @Post('access/check-eligibility')
   async checkAccessEligibility(@Body() dto: CheckEligibilityDto) {
-    console.log('[BUYER CONTROLLER] checkAccessEligibility called with:', {
-      hasAccessToken: !!dto.accessToken,
-      accessTokenPreview: dto.accessToken?.substring(0, 20) + '...',
-      hasFingerprint: !!dto.fingerprint,
-      fingerprintPreview: dto.fingerprint?.substring(0, 20) + '...',
-    });
-    
-    try {
-      const result = await this.buyerService.checkAccessEligibility(dto.accessToken, dto.fingerprint);
-      console.log('[BUYER CONTROLLER] checkAccessEligibility result:', result);
-      return result;
-    } catch (error) {
-      console.error('[BUYER CONTROLLER] checkAccessEligibility error:', error);
-      throw error;
-    }
+    return this.buyerService.checkAccessEligibility(dto.accessToken, dto.fingerprint);
   }
 
   /**
@@ -120,10 +100,6 @@ export class BuyerController {
    */
   @Post('purchase/confirm')
   async confirmPurchase(@Body() dto: ConfirmPurchaseDto) {
-    console.log('[BUYER CONTROLLER] confirmPurchase called');
-    console.log('[BUYER CONTROLLER] DTO:', JSON.stringify(dto, null, 2));
-    console.log('[BUYER CONTROLLER] purchaseId:', dto.purchaseId);
-    console.log('[BUYER CONTROLLER] paymentIntentId:', dto.paymentIntentId);
     return this.buyerService.confirmPurchase(dto.purchaseId, dto.paymentIntentId);
   }
 
@@ -135,11 +111,12 @@ export class BuyerController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 requests per 5 minutes
   async requestDeviceCode(
-    @Body() dto: { purchaseId: string; fingerprint: string },
+    @Body() dto: RequestDeviceVerificationDto,
   ) {
     return this.buyerService.requestDeviceVerification(
-      dto.purchaseId,
+      dto.accessToken,
       dto.fingerprint,
+      dto.email,
     );
   }
 
@@ -151,12 +128,12 @@ export class BuyerController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   async verifyDevice(
-    @Body() dto: { purchaseId: string; code: string; fingerprint: string },
+    @Body() dto: VerifyDeviceCodeDto,
   ) {
     return this.buyerService.verifyDeviceCode(
-      dto.purchaseId,
-      dto.code,
+      dto.accessToken,
       dto.fingerprint,
+      dto.verificationCode,
     );
   }
 

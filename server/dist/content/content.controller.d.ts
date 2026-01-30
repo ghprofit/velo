@@ -67,6 +67,10 @@ export declare class ContentController {
                     bankIban: string | null;
                     bankCountry: string | null;
                     bankCurrency: string | null;
+                    streetAddress: string | null;
+                    city: string | null;
+                    state: string | null;
+                    postalCode: string | null;
                     payoutSetupCompleted: boolean;
                     paypalEmail: string | null;
                     stripeAccountId: string | null;
@@ -162,6 +166,10 @@ export declare class ContentController {
                     bankIban: string | null;
                     bankCountry: string | null;
                     bankCurrency: string | null;
+                    streetAddress: string | null;
+                    city: string | null;
+                    state: string | null;
+                    postalCode: string | null;
                     payoutSetupCompleted: boolean;
                     paypalEmail: string | null;
                     stripeAccountId: string | null;
@@ -216,7 +224,7 @@ export declare class ContentController {
             };
             link: string;
             shortId: string;
-            status: "PENDING_REVIEW";
+            status: "APPROVED";
         };
     }>;
     createContentMultipart(req: any, createContentDto: CreateContentMultipartDto, uploadedFiles: {
@@ -261,6 +269,10 @@ export declare class ContentController {
                     bankIban: string | null;
                     bankCountry: string | null;
                     bankCurrency: string | null;
+                    streetAddress: string | null;
+                    city: string | null;
+                    state: string | null;
+                    postalCode: string | null;
                     payoutSetupCompleted: boolean;
                     paypalEmail: string | null;
                     stripeAccountId: string | null;
@@ -314,7 +326,7 @@ export declare class ContentController {
                 totalRevenue: number;
             };
             shortId: string;
-            status: "PENDING_REVIEW";
+            status: "APPROVED";
             message: string;
         };
     }>;
@@ -408,6 +420,10 @@ export declare class ContentController {
                 bankIban: string | null;
                 bankCountry: string | null;
                 bankCurrency: string | null;
+                streetAddress: string | null;
+                city: string | null;
+                state: string | null;
+                postalCode: string | null;
                 payoutSetupCompleted: boolean;
                 paypalEmail: string | null;
                 stripeAccountId: string | null;

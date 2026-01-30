@@ -7,6 +7,10 @@ export declare class SetupBankAccountDto {
     bankIban?: string;
     bankCountry: string;
     bankCurrency?: string;
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
 }
 export declare class BankAccountResponseDto {
     bankAccountName: string;
@@ -16,5 +20,9 @@ export declare class BankAccountResponseDto {
     bankCurrency: string;
     payoutSetupCompleted: boolean;
     stripeAccountId?: string;
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
 }
 //# sourceMappingURL=bank-account.dto.d.ts.map

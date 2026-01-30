@@ -16,7 +16,7 @@ class CreatePurchaseDto {
 exports.CreatePurchaseDto = CreatePurchaseDto;
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsUUID)(),
     __metadata("design:type", String)
 ], CreatePurchaseDto.prototype, "contentId", void 0);
 __decorate([
@@ -27,6 +27,8 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.MinLength)(5),
+    (0, class_validator_1.MaxLength)(254),
     __metadata("design:type", String)
 ], CreatePurchaseDto.prototype, "email", void 0);
 __decorate([

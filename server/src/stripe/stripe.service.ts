@@ -16,12 +16,12 @@ export class StripeService {
     }
 
     this.stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2025-11-17.clover' as any,
-      timeout: 30000, // Bug #24 fix: 30 seconds timeout
+      apiVersion: '2024-11-20.acacia' as any,
+      timeout: 60000, // Bug #24 fix: 60 seconds timeout for slow connections
       maxNetworkRetries: 2, // Bug #24 fix: Retry failed requests twice
     });
 
-    this.logger.log('✓ Stripe SDK initialized with 30s timeout and 2 retries');
+    this.logger.log('✓ Stripe SDK initialized with 60s timeout and 2 retries');
 
     // Validate webhook secret at startup (Bug #2)
     const webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');

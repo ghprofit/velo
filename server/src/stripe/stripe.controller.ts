@@ -46,6 +46,7 @@ export class StripeController {
     @Headers('stripe-signature') signature: string,
     @Req() request: RawBodyRequest<Request>,
   ): Promise<{ received: boolean }> {
+    const webhookStartTime = Date.now();
     const rawBody = request.rawBody;
 
     if (!rawBody) {
@@ -99,6 +100,9 @@ export class StripeController {
       // Log the error for manual investigation
     }
 
+    const webhookDuration = Date.now() - webhookStartTime;
+    this.logger.log(`Webhook ${event.type} processed in ${webhookDuration}ms`);
+
     return { received: true };
   }
 
@@ -109,7 +113,7 @@ export class StripeController {
   private async handlePaymentIntentSucceeded(paymentIntent: any) {
     this.logger.log(`Payment succeeded: ${paymentIntent.id}`);
 
-    const idempotencyKey = `webhook_${paymentIntent.id}_${Date.now()}`;
+    const idempotencyKey = `webhook_${paymentIntent.id}`;
 
     // Variable to store purchase data for email notifications
     let purchaseData: any = null;
@@ -167,6 +171,14 @@ export class StripeController {
               if (!content || !buyerSession) {
                 this.logger.error(
                   `Cannot create purchase - content or session not found. Content: ${!!content}, Session: ${!!buyerSession}`,
+                );
+                return;
+              }
+
+              // Bug #11 fix: Validate content is available for purchase
+              if (!content.isPublished || content.status !== 'APPROVED') {
+                this.logger.error(
+                  `Cannot create purchase from webhook - content not available. isPublished: ${content.isPublished}, status: ${content.status}`,
                 );
                 return;
               }
@@ -566,7 +578,16 @@ export class StripeController {
       } else {
         this.logger.warn(`[EMAIL] No purchase data available for email notifications`);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Handle unique constraint violation (P2002) - means already completed by client
+      if (error.code === 'P2002' && error.meta?.target?.includes('completionIdempotencyKey')) {
+        this.logger.log(
+          `Purchase confirmation race detected - already completed by client for payment intent ${paymentIntent.id}`,
+        );
+        // This is expected and okay - client got there first
+        return;
+      }
+
       this.logger.error(
         `Failed to process payment_intent.succeeded webhook:`,
         error,

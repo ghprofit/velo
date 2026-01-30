@@ -701,3 +701,22 @@ model Waitlist {
   @@index([email])
   @@map("waitlist")
 }
+
+// Email Job Queue (Bug #4)
+model EmailJob {
+  id             String    @id @default(cuid())
+  type           String // 'PURCHASE_RECEIPT', 'CREATOR_SALE_NOTIFICATION', 'DEVICE_VERIFICATION', etc.
+  recipientEmail String
+  templateData   Json // Email-specific data (purchase info, verification code, etc.)
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3)
+  status         String    @default("PENDING") // PENDING, PROCESSING, SENT, FAILED
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  nextRetryAt    DateTime?
+  sentAt         DateTime?
+
+  @@index([status, nextRetryAt])
+  @@index([createdAt])
+  @@map("email_jobs")
+}

@@ -362,20 +362,10 @@ export function ContentClient({ id }: { id: string }) {
 
   // Render purchased content view
   if (isPurchased && purchasedContent) {
-    console.log('[CONTENT] Rendering purchased content view');
-    console.log('[CONTENT] Purchased content data:', JSON.stringify(purchasedContent, null, 2));
-    console.log('[CONTENT] Content type:', purchasedContent.contentType);
-    console.log('[CONTENT] Content items:', purchasedContent.contentItems);
-    console.log('[CONTENT] First content item signedUrl:', purchasedContent.contentItems?.[0]?.signedUrl);
-    
     // Detect actual file type from the first content item
     const firstItem = purchasedContent.contentItems?.[0];
     const actualFileType = firstItem ? getActualFileType(firstItem.s3Key) : 'UNKNOWN';
     const effectiveContentType = actualFileType !== 'UNKNOWN' ? actualFileType : purchasedContent.contentType;
-    
-    console.log('[CONTENT] Declared content type:', purchasedContent.contentType);
-    console.log('[CONTENT] Detected file type:', actualFileType);
-    console.log('[CONTENT] Effective content type:', effectiveContentType);
     
     return (
       <div className="min-h-screen bg-linear-to-br from-gray-50 to-indigo-50/30 flex flex-col relative">

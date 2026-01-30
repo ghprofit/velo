@@ -21,5 +21,6 @@ export declare class VeriffController {
         timestamp: string;
     };
     debugConfig(): any;
+    debugWebhookStatus(sessionId: string): Promise<any>;
 }
 //# sourceMappingURL=veriff.controller.d.ts.map

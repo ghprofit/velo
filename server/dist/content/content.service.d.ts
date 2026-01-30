@@ -50,6 +50,10 @@ export declare class ContentService {
                 bankIban: string | null;
                 bankCountry: string | null;
                 bankCurrency: string | null;
+                streetAddress: string | null;
+                city: string | null;
+                state: string | null;
+                postalCode: string | null;
                 payoutSetupCompleted: boolean;
                 paypalEmail: string | null;
                 stripeAccountId: string | null;
@@ -104,7 +108,7 @@ export declare class ContentService {
         };
         link: string;
         shortId: string;
-        status: "PENDING_REVIEW";
+        status: "APPROVED";
     }>;
     createContentMultipart(userId: string, createContentDto: CreateContentMultipartDto, files: Express.Multer.File[], thumbnailFile: Express.Multer.File, filesMetadata: Array<{
         fileName: string;
@@ -147,6 +151,10 @@ export declare class ContentService {
                 bankIban: string | null;
                 bankCountry: string | null;
                 bankCurrency: string | null;
+                streetAddress: string | null;
+                city: string | null;
+                state: string | null;
+                postalCode: string | null;
                 payoutSetupCompleted: boolean;
                 paypalEmail: string | null;
                 stripeAccountId: string | null;
@@ -200,7 +208,7 @@ export declare class ContentService {
             totalRevenue: number;
         };
         shortId: string;
-        status: "PENDING_REVIEW";
+        status: "APPROVED";
         message: string;
     }>;
     processVideoModerationJobs(): Promise<void>;
@@ -283,6 +291,10 @@ export declare class ContentService {
             bankIban: string | null;
             bankCountry: string | null;
             bankCurrency: string | null;
+            streetAddress: string | null;
+            city: string | null;
+            state: string | null;
+            postalCode: string | null;
             payoutSetupCompleted: boolean;
             paypalEmail: string | null;
             stripeAccountId: string | null;
@@ -429,6 +441,10 @@ export declare class ContentService {
                 bankIban: string | null;
                 bankCountry: string | null;
                 bankCurrency: string | null;
+                streetAddress: string | null;
+                city: string | null;
+                state: string | null;
+                postalCode: string | null;
                 payoutSetupCompleted: boolean;
                 paypalEmail: string | null;
                 stripeAccountId: string | null;

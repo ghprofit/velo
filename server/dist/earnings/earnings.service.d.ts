@@ -10,7 +10,7 @@ export interface BalanceResponse {
 }
 export interface Transaction {
     id: string;
-    type: 'purchase' | 'payout';
+    type: 'PURCHASE' | 'PAYOUT';
     amount: number;
     currency: string;
     status: string;
@@ -44,6 +44,6 @@ export declare class EarningsService {
     private getCreatorProfile;
     getBalance(userId: string): Promise<BalanceResponse>;
     getPayouts(userId: string, page?: number, limit?: number): Promise<PaginatedPayouts>;
-    getTransactions(userId: string, page?: number, limit?: number, type?: 'purchase' | 'payout', search?: string): Promise<PaginatedTransactions>;
+    getTransactions(userId: string, page?: number, limit?: number, type?: string, search?: string): Promise<PaginatedTransactions>;
 }
 //# sourceMappingURL=earnings.service.d.ts.map

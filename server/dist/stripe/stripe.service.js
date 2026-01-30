@@ -27,11 +27,11 @@ let StripeService = StripeService_1 = class StripeService {
             throw new Error('STRIPE_SECRET_KEY is required');
         }
         this.stripe = new stripe_1.default(stripeSecretKey, {
-            apiVersion: '2025-11-17.clover',
-            timeout: 30000,
+            apiVersion: '2024-11-20.acacia',
+            timeout: 60000,
             maxNetworkRetries: 2,
         });
-        this.logger.log('✓ Stripe SDK initialized with 30s timeout and 2 retries');
+        this.logger.log('✓ Stripe SDK initialized with 60s timeout and 2 retries');
         const webhookSecret = this.config.get('STRIPE_WEBHOOK_SECRET');
         if (!webhookSecret) {
             this.logger.error('⚠️  CRITICAL: STRIPE_WEBHOOK_SECRET is not configured!');

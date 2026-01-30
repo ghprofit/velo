@@ -563,6 +563,10 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
                 bankIban: request.creator.bankIban,
                 bankCountry: request.creator.bankCountry,
                 bankCurrency: request.creator.bankCurrency,
+                streetAddress: request.creator.streetAddress,
+                city: request.creator.city,
+                state: request.creator.state,
+                postalCode: request.creator.postalCode,
             },
         }));
         return {

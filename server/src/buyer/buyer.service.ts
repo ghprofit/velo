@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../stripe/stripe.service';
 import { EmailService } from '../email/email.service';
@@ -171,10 +172,11 @@ export class BuyerService {
         if (new Date(session.expiresAt) > new Date()) {
           // Bug #13 fix: ALWAYS validate fingerprint (no longer optional)
           if (session.fingerprint !== expectedFingerprint) {
+            // Bug #12 fix: Don't log fingerprint values (security)
             this.logger.warn(
-              `Fingerprint mismatch for cached session ${sessionToken}: expected ${session.fingerprint}, got ${expectedFingerprint}`,
+              `Fingerprint mismatch for cached session ${sessionToken}`,
             );
-            throw new UnauthorizedException('Session fingerprint mismatch - possible session hijacking');
+            throw new UnauthorizedException('Session authentication failed');
           }
           return session;
         }
@@ -196,10 +198,11 @@ export class BuyerService {
 
     // Bug #13 fix: ALWAYS validate fingerprint (no longer optional!)
     if (session.fingerprint !== expectedFingerprint) {
+      // Bug #12 fix: Don't log fingerprint values (security)
       this.logger.warn(
-        `Fingerprint mismatch for session ${sessionToken}: expected ${session.fingerprint}, got ${expectedFingerprint}`,
+        `Fingerprint mismatch for session ${sessionToken}`,
       );
-      throw new UnauthorizedException('Session fingerprint mismatch - possible session hijacking');
+      throw new UnauthorizedException('Session authentication failed');
     }
 
     // Bug #17 fix: Validate IP address (soft check - log warning but allow)
@@ -209,10 +212,21 @@ export class BuyerService {
       );
 
       // Update session with new IP for tracking
-      await this.prisma.buyerSession.update({
+      const updatedSession = await this.prisma.buyerSession.update({
         where: { id: session.id },
         data: { ipAddress },
       });
+
+      // Invalidate old cache to prevent stale data (Bug #5)
+      if (this.redisService.isAvailable()) {
+        const cacheKey = `buyer_session:${sessionToken}`;
+        await this.redisService.del(cacheKey);
+
+        // Cache updated session
+        await this.redisService.set(cacheKey, JSON.stringify(updatedSession), 300);
+      }
+
+      return updatedSession;
     }
 
     // Cache valid session for 5 minutes
@@ -347,10 +361,10 @@ export class BuyerService {
       }
 
       // Bug #20 fix: Validate content has a valid price
-      if (!content.price || content.price <= 0) {
+      if (!content.price || content.price <= 0 || content.price > 9999999.99) {
         this.logger.error(`[PURCHASE] Invalid price: $${content.price}`);
         throw new BadRequestException(
-          'This content is free or price is not set correctly',
+          'Invalid content price',
         );
       }
 
@@ -503,8 +517,8 @@ export class BuyerService {
   /**
    * Get content access with signed URL (after purchase)
    */
-  async getContentAccess(accessToken: string) {
-    const purchase = await this.prisma.purchase.findUnique({
+  async getContentAccess(accessToken: string, ipAddress?: string) {
+    let purchase = await this.prisma.purchase.findUnique({
       where: { accessToken },
       include: {
         content: {
@@ -519,6 +533,7 @@ export class BuyerService {
             contentItems: true,
           },
         },
+        buyerSession: true, // Bug #36: Include session for expiry check
       },
     });
 
@@ -528,6 +543,11 @@ export class BuyerService {
 
     if (purchase.status !== 'COMPLETED') {
       throw new UnauthorizedException('Purchase not completed');
+    }
+
+    // Bug #36: Check if buyer session has expired
+    if (purchase.buyerSession && purchase.buyerSession.expiresAt < new Date()) {
+      throw new UnauthorizedException('Session has expired');
     }
 
     // Check if access has expired (if expiration is set)
@@ -549,26 +569,25 @@ export class BuyerService {
         where: { id: purchase.id },
         data: {
           accessWindowStartedAt: now,
-          accessExpiresAt: expiry,
-          firstAccessIpAddress: null, // IP tracking would require passing IP from controller
+          firstAccessIpAddress: ipAddress, // Bug #17: Track IP for fraud detection
+          accessExpiresAt: expiry
         },
       });
     }
 
     // Update view count and last viewed (Bug #11 & #21 fixes)
     const now = new Date();
-    const VIEW_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
-    // Check if we should increment view count (Bug #21 - cooldown logic)
+    // Check if we should increment view count (Bug #21 - use config)
     const shouldIncrementView =
       !purchase.lastViewedAt ||
-      now.getTime() - purchase.lastViewedAt.getTime() > VIEW_COOLDOWN_MS;
+      now.getTime() - purchase.lastViewedAt.getTime() > this.VIEW_COOLDOWN_MS;
 
     if (shouldIncrementView) {
       // Bug #11 fix: Wrap both updates in transaction
-      await this.prisma.$transaction(async (tx) => {
-        await tx.purchase.update({
-          where: { id: purchase.id },
+      const updatedPurchase = await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.purchase.update({
+          where: { id: purchase!.id },
           data: {
             viewCount: { increment: 1 },
             lastViewedAt: now,
@@ -576,12 +595,17 @@ export class BuyerService {
         });
 
         await tx.content.update({
-          where: { id: purchase.contentId },
+          where: { id: purchase!.contentId },
           data: {
             viewCount: { increment: 1 },
           },
         });
+
+        return updated;
       });
+
+      // Update purchase object with fresh data (Bug #8 fix)
+      purchase = { ...purchase, viewCount: updatedPurchase.viewCount, lastViewedAt: updatedPurchase.lastViewedAt };
 
       this.logger.log(
         `View count incremented for purchase ${purchase.id} and content ${purchase.contentId}`,
@@ -610,12 +634,11 @@ export class BuyerService {
         };
 
     // Generate signed URLs for content items (24-hour expiry)
-    console.log('[BUYER SERVICE] Generating signed URLs for', purchase.content.contentItems.length, 'content items');
-    const contentItemsWithUrls = await Promise.all(
-      purchase.content.contentItems.map(async (item, index) => {
-        console.log(`[BUYER SERVICE] Generating signed URL for item ${index}:`, item.s3Key);
+    // Bug #39: Use Promise.allSettled to handle individual S3 failures gracefully
+    this.logger.debug(`Generating signed URLs for ${purchase.content.contentItems.length} content items`);
+    const urlResults = await Promise.allSettled(
+      purchase.content.contentItems.map(async (item) => {
         const signedUrl = await this.s3Service.getSignedUrl(item.s3Key, 86400);
-        console.log(`[BUYER SERVICE] Generated signed URL for item ${index}:`, signedUrl?.substring(0, 100) + '...');
         return {
           id: item.id,
           s3Key: item.s3Key,
@@ -626,11 +649,19 @@ export class BuyerService {
       })
     );
 
-    console.log('[BUYER SERVICE] Content items with URLs:', contentItemsWithUrls.map(item => ({
-      id: item.id,
-      hasSignedUrl: !!item.signedUrl,
-      signedUrlPreview: item.signedUrl?.substring(0, 100),
-    })));
+    // Filter out failed results and log errors
+    const contentItemsWithUrls = urlResults
+      .map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          this.logger.error(`Failed to generate signed URL for item ${index}: ${result.reason}`);
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    this.logger.debug(`Generated ${contentItemsWithUrls.length}/${purchase.content.contentItems.length} signed URLs successfully`);
 
     // Return content info with signed URLs
     return {
@@ -647,7 +678,7 @@ export class BuyerService {
         contentItems: contentItemsWithUrls,
       },
       purchase: {
-        viewCount: purchase.viewCount + 1,
+        viewCount: purchase.viewCount,
         purchasedAt: purchase.createdAt,
       },
     };
@@ -705,9 +736,10 @@ export class BuyerService {
   ): Promise<{ purchaseId: string; accessToken: string; status: string }> {
     this.logger.log(`Confirming purchase ${purchaseId} with payment intent ${paymentIntentId}`);
 
-    const idempotencyKey = `client_${paymentIntentId}_${Date.now()}`;
+    const idempotencyKey = `client_${paymentIntentId}`;
 
-    const result = await this.prisma.$transaction(
+    try {
+      const result = await this.prisma.$transaction(
       async (tx) => {
         const purchase = await tx.purchase.findUnique({
           where: { id: purchaseId },
@@ -977,6 +1009,33 @@ export class BuyerService {
       accessToken: result.accessToken,
       status: result.status,
     };
+    } catch (error: any) {
+      // Handle unique constraint violation (P2002) - means already completed by webhook
+      if (error.code === 'P2002' && error.meta?.target?.includes('completionIdempotencyKey')) {
+        this.logger.log(
+          `Purchase confirmation race detected - already completed by webhook for payment intent ${paymentIntentId}`,
+        );
+
+        // Fetch and return the existing completed purchase
+        const existingPurchase = await this.prisma.purchase.findFirst({
+          where: {
+            id: purchaseId,
+            paymentIntentId,
+          },
+        });
+
+        if (existingPurchase && existingPurchase.status === 'COMPLETED') {
+          return {
+            purchaseId: existingPurchase.id,
+            accessToken: existingPurchase.accessToken,
+            status: 'COMPLETED',
+          };
+        }
+      }
+
+      // Re-throw other errors
+      throw error;
+    }
   }
 
   /**
@@ -1041,22 +1100,18 @@ export class BuyerService {
   async requestDeviceVerification(
     accessToken: string,
     fingerprint: string,
+    email: string,
   ) {
     const purchase = await this.prisma.purchase.findUnique({
       where: { accessToken },
-      include: {
-        buyerSession: true,
-      },
     });
 
     if (!purchase) {
       throw new NotFoundException('Purchase not found');
     }
 
-    const email = purchase.buyerSession.email;
-
     if (!email) {
-      throw new BadRequestException('No email associated with this purchase');
+      throw new BadRequestException('No email provided');
     }
 
     // Check device limit
@@ -1064,8 +1119,8 @@ export class BuyerService {
       throw new BadRequestException('Maximum devices reached');
     }
 
-    // Generate 6-digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit code (Bug #15: crypto-secure random)
+    const code = (randomBytes(3).readUIntBE(0, 3) % 900000 + 100000).toString();
     const expiresAt = new Date(
       Date.now() + this.VERIFICATION_CODE_EXPIRY_MINUTES * 60 * 1000,
     );
@@ -1125,13 +1180,13 @@ export class BuyerService {
       throw new UnauthorizedException('Invalid or expired verification code');
     }
 
-    // Add to trusted fingerprints and remove used verification code (Bug #22)
+    // Add to trusted fingerprints and remove used verification code (Bug #14 & #22)
     await this.prisma.purchase.update({
       where: { id: purchase.id },
       data: {
         trustedFingerprints: [...purchase.trustedFingerprints, fingerprint],
         deviceVerificationCodes: codes.filter(
-          (c) => c.code !== verificationCode, // Remove used code for security
+          (c) => c.code !== verificationCode && new Date(c.expiresAt) > new Date(), // Remove used code and expired codes
         ),
       },
     });

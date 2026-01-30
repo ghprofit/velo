@@ -1,8 +1,8 @@
-import { IsString, IsNotEmpty, IsEmail, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsOptional, MinLength, MaxLength, IsUUID } from 'class-validator';
 
 export class CreatePurchaseDto {
   @IsNotEmpty()
-  @IsString()
+  @IsUUID()
   contentId: string;
 
   @IsNotEmpty()
@@ -11,6 +11,8 @@ export class CreatePurchaseDto {
 
   @IsNotEmpty() // Email is required for invoice sending
   @IsEmail()
+  @MinLength(5)
+  @MaxLength(254)
   email: string;
 
   @IsNotEmpty() // Bug #13 fix: Make fingerprint REQUIRED

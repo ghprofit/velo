@@ -36,7 +36,7 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
     }
 
     let attempts = 0;
-    const maxAttempts = 30; // 30 seconds (1 second interval)
+    const maxAttempts = 60; // 60 seconds (1 second interval) - increased for webhook reliability
     
     const pollForPurchase = async () => {
       try {
@@ -63,11 +63,11 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
           // Keep polling
           setTimeout(pollForPurchase, 1000);
         } else {
-          // Timeout after 30 seconds
+          // Timeout after 60 seconds
           console.error('[SUCCESS] ❌ Timeout waiting for purchase webhook');
           setStatus('error');
           setErrorMessage(
-            'Payment was processed but purchase confirmation timed out. Please check your email or contact support.'
+            'Your payment was successful! We\'re still processing your purchase. Please check your email for the access link, or wait a moment and refresh this page.'
           );
         }
       } catch (error) {
@@ -77,7 +77,9 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
           setTimeout(pollForPurchase, 1000);
         } else {
           setStatus('error');
-          setErrorMessage('Failed to confirm purchase. Please contact support.');
+          setErrorMessage(
+            'Your payment was successful! We\'re still processing your purchase. Please check your email for the access link, or wait a moment and refresh this page.'
+          );
         }
       }
     };
@@ -95,18 +97,18 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
           </svg>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Purchase Confirmation Issue</h1>
           <p className="text-gray-600 mb-6">{errorMessage}</p>
-          <div className="flex gap-4 justify-center">
-            <Link
-              href="/"
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => window.location.reload()}
               className="inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
             >
-              Go Home
-            </Link>
+              Refresh Page
+            </button>
             <Link
-              href={`/checkout/${id}`}
+              href="/"
               className="inline-block px-6 py-3 bg-gray-300 text-gray-900 font-medium rounded-lg hover:bg-gray-400 transition-colors"
             >
-              Try Again
+              Go Home
             </Link>
           </div>
         </div>

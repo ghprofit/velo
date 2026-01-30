@@ -109,12 +109,12 @@ export declare class AnalyticsService {
         id: string;
         createdAt: Date;
         country: string | null;
+        city: string | null;
         ipAddress: string | null;
         userAgent: string | null;
         contentId: string;
         region: string | null;
         countryCode: string | null;
-        city: string | null;
         deviceType: string | null;
         browser: string | null;
         os: string | null;

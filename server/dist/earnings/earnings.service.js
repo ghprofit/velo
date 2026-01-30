@@ -103,7 +103,7 @@ let EarningsService = class EarningsService {
     }
     async getTransactions(userId, page = 1, limit = 10, type, search) {
         const creatorProfile = await this.getCreatorProfile(userId);
-        const purchases = type !== 'payout'
+        const purchases = type?.toUpperCase() !== 'PAYOUT'
             ? await this.prisma.purchase.findMany({
                 where: {
                     content: {
@@ -129,7 +129,7 @@ let EarningsService = class EarningsService {
                 },
             })
             : [];
-        const payouts = type !== 'purchase'
+        const payouts = type?.toUpperCase() !== 'PURCHASE'
             ? await this.prisma.payout.findMany({
                 where: {
                     creatorId: creatorProfile.id,
@@ -141,7 +141,7 @@ let EarningsService = class EarningsService {
             : [];
         const purchaseTransactions = purchases.map((purchase) => ({
             id: purchase.id,
-            type: 'purchase',
+            type: 'PURCHASE',
             amount: (purchase.basePrice && purchase.basePrice > 0)
                 ? purchase.basePrice * 0.9
                 : (purchase.amount / 1.1) * 0.9,
@@ -154,7 +154,7 @@ let EarningsService = class EarningsService {
         }));
         const payoutTransactions = payouts.map((payout) => ({
             id: payout.id,
-            type: 'payout',
+            type: 'PAYOUT',
             amount: payout.amount,
             currency: payout.currency,
             status: payout.status,

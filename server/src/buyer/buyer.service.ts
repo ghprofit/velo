@@ -418,10 +418,33 @@ export class BuyerService {
         );
       }
 
-      this.logger.log(`[PURCHASE] ✅ Payment intent created, purchase will be created after payment succeeds`);
+      // Create PENDING purchase record immediately
+      // This ensures the content and session exist when webhook fires
+      this.logger.log(`[PURCHASE] Creating PENDING purchase record for PaymentIntent ${paymentIntent.id}`);
 
-      // Return only payment details - NO purchase record created yet
-      // Purchase will be created when webhook fires with payment_intent.succeeded
+      const crypto = require('crypto');
+      const accessToken = crypto.randomBytes(32).toString('hex');
+
+      const pendingPurchase = await this.prisma.purchase.create({
+        data: {
+          contentId: dto.contentId,
+          buyerSessionId: session.id,
+          amount: buyerAmount,
+          basePrice: content.price,
+          currency: 'USD',
+          paymentProvider: 'STRIPE',
+          paymentIntentId: paymentIntent.id,
+          status: 'PENDING', // Will be updated to COMPLETED by webhook
+          accessToken,
+          purchaseFingerprint: dto.fingerprint,
+          trustedFingerprints: dto.fingerprint ? [dto.fingerprint] : [],
+          purchaseIpAddress: ipAddress,
+        },
+      });
+
+      this.logger.log(`[PURCHASE] ✅ PENDING purchase created: ${pendingPurchase.id}. Webhook will confirm after payment succeeds.`);
+
+      // Return payment details
       return {
         clientSecret: paymentIntent.client_secret,
         amount: buyerAmount, // Return total buyer pays (110%)

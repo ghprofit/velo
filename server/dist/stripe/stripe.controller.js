@@ -36,6 +36,7 @@ let StripeController = StripeController_1 = class StripeController {
         };
     }
     async handleWebhook(signature, request) {
+        const webhookStartTime = Date.now();
         const rawBody = request.rawBody;
         if (!rawBody) {
             this.logger.error('No raw body found in webhook request');
@@ -76,6 +77,8 @@ let StripeController = StripeController_1 = class StripeController {
         catch (error) {
             this.logger.error(`Error processing webhook ${event.type}:`, error);
         }
+        const webhookDuration = Date.now() - webhookStartTime;
+        this.logger.log(`Webhook ${event.type} processed in ${webhookDuration}ms`);
         return { received: true };
     }
     async handlePaymentIntentSucceeded(paymentIntent) {
@@ -102,7 +105,7 @@ let StripeController = StripeController_1 = class StripeController {
                     const { contentId, sessionId } = paymentIntent.metadata || {};
                     if (!contentId || !sessionId) {
                         this.logger.error(`Cannot create purchase from webhook - missing metadata. ContentId: ${contentId}, SessionId: ${sessionId}`);
-                        return;
+                        throw new Error(`Cannot create purchase from webhook - missing metadata. ContentId: ${contentId}, SessionId: ${sessionId}`);
                     }
                     this.logger.log(`Attempting to create purchase from webhook for payment intent: ${paymentIntent.id}`);
                     try {
@@ -117,13 +120,21 @@ let StripeController = StripeController_1 = class StripeController {
                             }),
                             tx.buyerSession.findUnique({ where: { id: sessionId } }),
                         ]);
+                        this.logger.log(`[WEBHOOK] Content lookup result: ${content ? `Found "${content.title}"` : 'NOT FOUND'}`);
+                        this.logger.log(`[WEBHOOK] Session lookup result: ${buyerSession ? `Found session ${buyerSession.id}` : 'NOT FOUND'}`);
                         if (!content || !buyerSession) {
                             this.logger.error(`Cannot create purchase - content or session not found. Content: ${!!content}, Session: ${!!buyerSession}`);
-                            return;
+                            this.logger.error(`[WEBHOOK] ContentId searched: ${contentId}`);
+                            this.logger.error(`[WEBHOOK] SessionId searched: ${sessionId}`);
+                            const contentCount = await tx.content.count();
+                            const sessionCount = await tx.buyerSession.count();
+                            this.logger.error(`[WEBHOOK] Total Content records in database: ${contentCount}`);
+                            this.logger.error(`[WEBHOOK] Total BuyerSession records in database: ${sessionCount}`);
+                            throw new Error(`Cannot create purchase - content or session not found. Content: ${!!content}, Session: ${!!buyerSession}`);
                         }
                         if (!content.isPublished || content.status !== 'APPROVED') {
                             this.logger.error(`Cannot create purchase from webhook - content not available. isPublished: ${content.isPublished}, status: ${content.status}`);
-                            return;
+                            throw new Error(`Cannot create purchase from webhook - content not available. isPublished: ${content.isPublished}, status: ${content.status}`);
                         }
                         if (!buyerSession.email) {
                             this.logger.warn(`INVOICE EMAIL ISSUE: No email found for buyerSession ${sessionId}. Invoice will NOT be sent! Payment Intent: ${paymentIntent.id}`);
@@ -201,13 +212,14 @@ let StripeController = StripeController_1 = class StripeController {
                     }
                     catch (createError) {
                         this.logger.error(`Failed to create purchase from webhook:`, createError);
-                        return;
+                        throw createError;
                     }
                 }
                 if (purchase.status === 'COMPLETED') {
                     this.logger.log(`Purchase ${purchase.id} already completed by ${purchase.completedBy}`);
                     return;
                 }
+                this.logger.log(`[WEBHOOK] Updating purchase ${purchase.id} from ${purchase.status} to COMPLETED`);
                 await tx.purchase.update({
                     where: { id: purchase.id },
                     data: {

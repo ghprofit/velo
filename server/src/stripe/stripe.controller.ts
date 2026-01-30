@@ -147,7 +147,7 @@ export class StripeController {
               this.logger.error(
                 `Cannot create purchase from webhook - missing metadata. ContentId: ${contentId}, SessionId: ${sessionId}`,
               );
-              return;
+              throw new Error(`Cannot create purchase from webhook - missing metadata. ContentId: ${contentId}, SessionId: ${sessionId}`);
             }
 
             this.logger.log(
@@ -168,11 +168,24 @@ export class StripeController {
                 tx.buyerSession.findUnique({ where: { id: sessionId } }),
               ]);
 
+              // Add detailed logging
+              this.logger.log(`[WEBHOOK] Content lookup result: ${content ? `Found "${content.title}"` : 'NOT FOUND'}`);
+              this.logger.log(`[WEBHOOK] Session lookup result: ${buyerSession ? `Found session ${buyerSession.id}` : 'NOT FOUND'}`);
+
               if (!content || !buyerSession) {
                 this.logger.error(
                   `Cannot create purchase - content or session not found. Content: ${!!content}, Session: ${!!buyerSession}`,
                 );
-                return;
+                this.logger.error(`[WEBHOOK] ContentId searched: ${contentId}`);
+                this.logger.error(`[WEBHOOK] SessionId searched: ${sessionId}`);
+
+                // Check total record counts for debugging
+                const contentCount = await tx.content.count();
+                const sessionCount = await tx.buyerSession.count();
+                this.logger.error(`[WEBHOOK] Total Content records in database: ${contentCount}`);
+                this.logger.error(`[WEBHOOK] Total BuyerSession records in database: ${sessionCount}`);
+
+                throw new Error(`Cannot create purchase - content or session not found. Content: ${!!content}, Session: ${!!buyerSession}`);
               }
 
               // Bug #11 fix: Validate content is available for purchase
@@ -180,7 +193,7 @@ export class StripeController {
                 this.logger.error(
                   `Cannot create purchase from webhook - content not available. isPublished: ${content.isPublished}, status: ${content.status}`,
                 );
-                return;
+                throw new Error(`Cannot create purchase from webhook - content not available. isPublished: ${content.isPublished}, status: ${content.status}`);
               }
 
               //CRITICAL: Check if buyer email is present
@@ -288,7 +301,7 @@ export class StripeController {
                 `Failed to create purchase from webhook:`,
                 createError,
               );
-              return;
+              throw createError; // Re-throw to trigger Stripe retry
             }
           }
 
@@ -299,6 +312,11 @@ export class StripeController {
             );
             return;
           }
+
+          // Log the current status before updating
+          this.logger.log(
+            `[WEBHOOK] Updating purchase ${purchase.id} from ${purchase.status} to COMPLETED`,
+          );
 
           // Update purchase status
           await tx.purchase.update({

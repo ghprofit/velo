@@ -324,7 +324,26 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 this.logger.error('[PURCHASE] Stripe payment intent creation failed:', stripeError);
                 throw new common_1.BadRequestException('Failed to initialize payment. Please try again.');
             }
-            this.logger.log(`[PURCHASE] ✅ Payment intent created, purchase will be created after payment succeeds`);
+            this.logger.log(`[PURCHASE] Creating PENDING purchase record for PaymentIntent ${paymentIntent.id}`);
+            const crypto = require('crypto');
+            const accessToken = crypto.randomBytes(32).toString('hex');
+            const pendingPurchase = await this.prisma.purchase.create({
+                data: {
+                    contentId: dto.contentId,
+                    buyerSessionId: session.id,
+                    amount: buyerAmount,
+                    basePrice: content.price,
+                    currency: 'USD',
+                    paymentProvider: 'STRIPE',
+                    paymentIntentId: paymentIntent.id,
+                    status: 'PENDING',
+                    accessToken,
+                    purchaseFingerprint: dto.fingerprint,
+                    trustedFingerprints: dto.fingerprint ? [dto.fingerprint] : [],
+                    purchaseIpAddress: ipAddress,
+                },
+            });
+            this.logger.log(`[PURCHASE] ✅ PENDING purchase created: ${pendingPurchase.id}. Webhook will confirm after payment succeeds.`);
             return {
                 clientSecret: paymentIntent.client_secret,
                 amount: buyerAmount,

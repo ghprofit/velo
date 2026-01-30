@@ -185,18 +185,29 @@ export default function UploadContentPage() {
 
         video.onloadedmetadata = () => {
           console.log(`[THUMBNAIL] Metadata loaded for ${file.name}`);
-          // Don't seek, just capture first frame immediately
-          video.currentTime = 0;
+          console.log(`[THUMBNAIL] Video duration: ${video.duration}s`);
+
+          // Seek to a non-zero time to avoid black first frames and ensure onseeked fires
+          // For videos longer than 1s, seek to 1 second
+          // For shorter videos, seek to 10% of duration (minimum 0.1s)
+          const seekTime = video.duration > 1 ? 1.0 : Math.max(0.1, video.duration * 0.1);
+          video.currentTime = seekTime;
+
+          console.log(`[THUMBNAIL] Seeking to ${seekTime.toFixed(2)}s for thumbnail`);
         };
 
         video.onseeked = () => {
           clearTimeout(timeoutId);
+          console.log(`[THUMBNAIL] onseeked event fired at time ${video.currentTime.toFixed(2)}s`);
           try {
             const canvas = document.createElement('canvas');
-            
+
             if (!video.videoWidth || !video.videoHeight) {
+              console.error(`[THUMBNAIL] Invalid video dimensions: ${video.videoWidth}x${video.videoHeight}`);
               throw new Error('Invalid video dimensions');
             }
+
+            console.log(`[THUMBNAIL] Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
             
             // Large enough for OG image previews on social platforms
             const maxWidth = 1200;
@@ -230,12 +241,13 @@ export default function UploadContentPage() {
             
             // Lower quality for faster generation (0.7 instead of 0.9)
             const dataURL = canvas.toDataURL('image/jpeg', 0.7);
-            
+
             if (!dataURL || !dataURL.startsWith('data:image/jpeg')) {
               throw new Error('Failed to generate JPEG');
             }
-            
-            console.log(`[THUMBNAIL] ✅ Generated for ${file.name}`);
+
+            const thumbnailSize = Math.round(dataURL.length / 1024);
+            console.log(`[THUMBNAIL] ✅ Generated for ${file.name} (${width}x${height}, ${thumbnailSize}KB)`);
             resolve(dataURL);
           } catch (err) {
             console.error(`[THUMBNAIL] Error:`, err);

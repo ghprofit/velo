@@ -13,12 +13,13 @@ async function bootstrap() {
   // Cookie Parser - Must be before routes
   app.use(cookieParser());
 
-  // Veriff webhook needs raw body for HMAC signature verification
-  app.use('/api/veriff/webhooks/decision', bodyParser.raw({ type: 'application/json' }));
-
-  // Increase payload size limit for base64-encoded content uploads
-  // Video uploads: 500MB max file size → ~750MB with base64 overhead (33%) + metadata
-  app.use(bodyParser.json({ limit: '750mb' }));
+  // Skip external body parser for webhook routes (NestJS rawBody handles them)
+  app.use((req, res, next) => {
+    if (req.path === '/api/stripe/webhook' || req.path === '/api/veriff/webhooks/decision') {
+      return next();
+    }
+    bodyParser.json({ limit: '750mb' })(req, res, next);
+  });
   app.use(bodyParser.urlencoded({ limit: '750mb', extended: true }));
 
   // Security Headers

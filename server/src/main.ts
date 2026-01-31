@@ -13,10 +13,6 @@ async function bootstrap() {
   // Cookie Parser - Must be before routes
   app.use(cookieParser());
 
-  // Stripe webhook needs raw body for signature verification
-  // Use raw body parser for webhook endpoint
-  app.use('/api/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
-
   // Veriff webhook needs raw body for HMAC signature verification
   app.use('/api/veriff/webhooks/decision', bodyParser.raw({ type: 'application/json' }));
 

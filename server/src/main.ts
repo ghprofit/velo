@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
-import * as bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -13,14 +12,9 @@ async function bootstrap() {
   // Cookie Parser - Must be before routes
   app.use(cookieParser());
 
-  // Skip external body parser for webhook routes (NestJS rawBody handles them)
-  app.use((req, res, next) => {
-    if (req.path === '/api/stripe/webhook' || req.path === '/api/veriff/webhooks/decision') {
-      return next();
-    }
-    bodyParser.json({ limit: '750mb' })(req, res, next);
-  });
-  app.use(bodyParser.urlencoded({ limit: '750mb', extended: true }));
+  // Use NestJS built-in body parser with increased limits (preserves rawBody for webhooks)
+  app.useBodyParser('json', { limit: '750mb' });
+  app.useBodyParser('urlencoded', { limit: '750mb', extended: true });
 
   // Security Headers
   app.use(helmet());

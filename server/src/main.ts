@@ -2,19 +2,25 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
+import * as bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    rawBody: true, // Enable raw body for webhook signature verification
+    rawBody: true,
   });
 
   // Cookie Parser - Must be before routes
   app.use(cookieParser());
 
-  // Use NestJS built-in body parser with increased limits (preserves rawBody for webhooks)
-  app.useBodyParser('json', { limit: '750mb' });
-  app.useBodyParser('urlencoded', { limit: '750mb', extended: true });
+  // Capture raw body for webhook signature verification via verify callback
+  app.use(bodyParser.json({
+    limit: '750mb',
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }));
+  app.use(bodyParser.urlencoded({ limit: '750mb', extended: true }));
 
   // Security Headers
   app.use(helmet());

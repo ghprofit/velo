@@ -47,9 +47,12 @@ async function bootstrap() {
         rawBody: true,
     });
     app.use((0, cookie_parser_1.default)());
-    app.use('/api/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
-    app.use('/api/veriff/webhooks/decision', bodyParser.raw({ type: 'application/json' }));
-    app.use(bodyParser.json({ limit: '750mb' }));
+    app.use(bodyParser.json({
+        limit: '750mb',
+        verify: (req, _res, buf) => {
+            req.rawBody = buf;
+        },
+    }));
     app.use(bodyParser.urlencoded({ limit: '750mb', extended: true }));
     app.use((0, helmet_1.default)());
     app.use(helmet_1.default.crossOriginResourcePolicy({ policy: 'cross-origin' }));

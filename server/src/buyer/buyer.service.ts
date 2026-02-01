@@ -45,11 +45,9 @@ export class BuyerService {
     this.SESSION_EXPIRY_MS =
       (this.config.get<number>('BUYER_SESSION_EXPIRY_HOURS') || 24) * 60 * 60 * 1000;
 
-    this.ACCESS_WINDOW_HOURS =
-      this.config.get<number>('BUYER_ACCESS_WINDOW_HOURS') || 24;
+    this.ACCESS_WINDOW_HOURS = 24;
 
-    this.ACCESS_BUFFER_MINUTES =
-      this.config.get<number>('BUYER_ACCESS_BUFFER_MINUTES') || 30;
+    this.ACCESS_BUFFER_MINUTES = 30;
 
     this.MAX_TRUSTED_DEVICES =
       this.config.get<number>('BUYER_MAX_DEVICES') || 3;

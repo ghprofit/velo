@@ -97,8 +97,10 @@ export function ContentClient({ id }: { id: string }) {
         return;
       }
 
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      // Cap display at 24 hours
+      const cappedDiff = Math.min(diff, 24 * 60 * 60 * 1000);
+      const hours = Math.floor(cappedDiff / (1000 * 60 * 60));
+      const minutes = Math.floor((cappedDiff % (1000 * 60 * 60)) / (1000 * 60));
 
       if (hours > 0) {
         setTimeRemaining(`${hours}h ${minutes}m remaining`);

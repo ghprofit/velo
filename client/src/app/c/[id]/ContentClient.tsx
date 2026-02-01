@@ -79,6 +79,39 @@ export function ContentClient({ id }: { id: string }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
+  // Countdown state for access expiration
+  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    if (!accessEligibility?.accessExpiresAt) return;
+
+    const update = () => {
+      const now = Date.now();
+      const expiresAt = new Date(accessEligibility.accessExpiresAt!).getTime();
+      const diff = expiresAt - now;
+
+      if (diff <= 0) {
+        setIsExpired(true);
+        setTimeRemaining(null);
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (hours > 0) {
+        setTimeRemaining(`${hours}h ${minutes}m remaining`);
+      } else {
+        setTimeRemaining(`${minutes}m remaining`);
+      }
+    };
+
+    update();
+    const interval = setInterval(update, 60_000);
+    return () => clearInterval(interval);
+  }, [accessEligibility?.accessExpiresAt]);
+
   useEffect(() => {
     const initializeSession = async () => {
       let session = getBuyerSession();
@@ -642,14 +675,30 @@ export function ContentClient({ id }: { id: string }) {
             </div>
 
             {/* Access Info */}
-            <div className="bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm">
+            <div className={`bg-linear-to-r ${isExpired ? 'from-red-50 to-rose-50 border-red-200' : 'from-blue-50 to-indigo-50 border-blue-200'} border rounded-xl p-4 shadow-sm`}>
               <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg className={`w-5 h-5 ${isExpired ? 'text-red-600' : 'text-blue-600'} shrink-0 mt-0.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-900">You have lifetime access to this content</p>
-                  <p className="text-xs text-blue-700 mt-1">Bookmark this page to return anytime</p>
+                  {isExpired ? (
+                    <>
+                      <p className="text-sm font-medium text-red-900">Your access has expired</p>
+                      <p className="text-xs text-red-700 mt-1">Your 24-hour access window has ended</p>
+                    </>
+                  ) : timeRemaining ? (
+                    <>
+                      <p className="text-sm font-medium text-blue-900">{timeRemaining}</p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        Expires: {new Date(accessEligibility!.accessExpiresAt!).toLocaleString()}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-blue-900">You have access to this content</p>
+                      <p className="text-xs text-blue-700 mt-1">Bookmark this page to return</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

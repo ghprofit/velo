@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { buyerApi, stripeApi } from '@/lib/api-client';
-import { getBuyerSession, getOrGenerateBrowserFingerprint, clearCachedBuyerFingerprint, savePurchaseToken } from '@/lib/buyer-session';
+import { getBuyerSession, getOrGenerateBrowserFingerprint, savePurchaseToken } from '@/lib/buyer-session';
 import CheckoutForm from '@/components/CheckoutForm';
 import Footer from '@/components/Footer';
 import Image from 'next/image';
@@ -189,9 +189,6 @@ export function PaymentClient({ id }: { id: string }) {
       
       // Payment is successful, webhook will create the purchase and send emails
       // We redirect to success page where they'll wait for webhook processing
-      console.log('[PAYMENT] 💾 Clearing cached fingerprint...');
-      clearCachedBuyerFingerprint();
-      
       console.log('[PAYMENT] 🔄 Redirecting to success page...');
       // Pass the payment intent ID so success page can poll for purchase completion
       router.push(`/checkout/${id}/success?paymentIntentId=${paymentIntentId}`);

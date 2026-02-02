@@ -3,15 +3,21 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useGetCreatorByIdQuery } from '@/state/api';
+import { useGetCreatorByIdQuery, useSuspendCreatorMutation, useReactivateCreatorMutation } from '@/state/api';
 
 export default function CreatorAuditPage() {
   const params = useParams();
   const creatorId = params.id as string;
   const [showKycModal, setShowKycModal] = useState(false);
   const [showPayoutsModal, setShowPayoutsModal] = useState(false);
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [showBanModal, setShowBanModal] = useState(false);
+  const [actionReason, setActionReason] = useState('');
+  const [actionSuccess, setActionSuccess] = useState('');
 
   const { data: creatorResponse, isLoading, error } = useGetCreatorByIdQuery(creatorId);
+  const [suspendCreator, { isLoading: isSuspending }] = useSuspendCreatorMutation();
+  const [reactivateCreator, { isLoading: isReactivating }] = useReactivateCreatorMutation();
   const creator = creatorResponse?.data;
 
   const formatDate = (dateString: string | Date | null | undefined) => {
@@ -69,6 +75,42 @@ export default function CreatorAuditPage() {
         return 'text-red-600 border-red-300';
       default:
         return 'text-gray-600 border-gray-300';
+    }
+  };
+
+  const handleSuspend = async () => {
+    if (!actionReason.trim()) return;
+    try {
+      await suspendCreator({ id: creatorId, reason: actionReason }).unwrap();
+      setShowSuspendModal(false);
+      setActionReason('');
+      setActionSuccess('Creator suspended successfully');
+      setTimeout(() => setActionSuccess(''), 3000);
+    } catch {
+      alert('Failed to suspend creator. Please try again.');
+    }
+  };
+
+  const handleBan = async () => {
+    if (!actionReason.trim()) return;
+    try {
+      await suspendCreator({ id: creatorId, reason: `PERMANENT BAN: ${actionReason}` }).unwrap();
+      setShowBanModal(false);
+      setActionReason('');
+      setActionSuccess('Creator banned permanently');
+      setTimeout(() => setActionSuccess(''), 3000);
+    } catch {
+      alert('Failed to ban creator. Please try again.');
+    }
+  };
+
+  const handleReactivate = async () => {
+    try {
+      await reactivateCreator(creatorId).unwrap();
+      setActionSuccess('Creator reactivated successfully');
+      setTimeout(() => setActionSuccess(''), 3000);
+    } catch {
+      alert('Failed to reactivate creator. Please try again.');
     }
   };
 
@@ -130,19 +172,44 @@ export default function CreatorAuditPage() {
             <span className={`px-4 py-2 bg-white rounded-full text-sm font-medium border ${getKycStatusColor(creator.kycStatus)}`}>
               KYC {creator.kycStatus}
             </span>
-            <button className="flex items-center gap-2 px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-              </svg>
-              Suspend Account
-            </button>
-            <button className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              Ban Permanently
-            </button>
-            <button className="flex items-center gap-2 px-6 py-2 bg-white text-red-600 rounded-lg font-semibold border border-red-300 hover:bg-red-50 transition-colors">
+            {creator.isActive ? (
+              <>
+                <button
+                  onClick={() => { setActionReason(''); setShowSuspendModal(true); }}
+                  className="flex items-center gap-2 px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                  Suspend Account
+                </button>
+                <button
+                  onClick={() => { setActionReason(''); setShowBanModal(true); }}
+                  className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Ban Permanently
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleReactivate}
+                disabled={isReactivating}
+                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {isReactivating ? 'Reactivating...' : 'Reactivate Account'}
+              </button>
+            )}
+            <button
+              disabled
+              className="flex items-center gap-2 px-6 py-2 bg-white text-gray-400 rounded-lg font-semibold border border-gray-200 cursor-not-allowed"
+              title="Override KYC is not available yet"
+            >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
@@ -430,6 +497,77 @@ export default function CreatorAuditPage() {
           <p className="text-gray-500 text-center py-8">No payouts yet</p>
         )}
       </div>
+
+      {/* Success Banner */}
+      {actionSuccess && (
+        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg font-medium">
+          {actionSuccess}
+        </div>
+      )}
+
+      {/* Suspend Confirmation Modal */}
+      {showSuspendModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Suspend Creator Account</h3>
+            <p className="text-gray-600 mb-4">This will deactivate the creator&apos;s account and suspend their payouts. They will not be able to access their dashboard.</p>
+            <textarea
+              value={actionReason}
+              onChange={(e) => setActionReason(e.target.value)}
+              placeholder="Enter reason for suspension (required)"
+              className="w-full border border-gray-300 rounded-lg p-3 mb-4 text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-red-500"
+              rows={3}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowSuspendModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSuspend}
+                disabled={!actionReason.trim() || isSuspending}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {isSuspending ? 'Suspending...' : 'Confirm Suspend'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ban Confirmation Modal */}
+      {showBanModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-red-600 mb-2">Ban Creator Permanently</h3>
+            <p className="text-gray-600 mb-4">This will permanently ban the creator. Their account will be deactivated and payouts suspended. This action should only be used for serious policy violations.</p>
+            <textarea
+              value={actionReason}
+              onChange={(e) => setActionReason(e.target.value)}
+              placeholder="Enter reason for permanent ban (required)"
+              className="w-full border border-gray-300 rounded-lg p-3 mb-4 text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-red-500"
+              rows={3}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowBanModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBan}
+                disabled={!actionReason.trim() || isSuspending}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {isSuspending ? 'Banning...' : 'Confirm Ban'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KYC Documents Modal */}
       {showKycModal && (

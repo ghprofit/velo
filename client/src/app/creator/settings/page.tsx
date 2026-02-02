@@ -383,7 +383,15 @@ export default function SettingsPage() {
       setCustomCountry('');
       await loadUserData();
     } catch (err: unknown) {
-      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to update bank account');
+      const errData = (err as { response?: { data?: { message?: string; errors?: Array<{ constraints?: Record<string, string> }> } } }).response?.data;
+      if (errData?.errors?.length) {
+        const messages = errData.errors
+          .flatMap(e => e.constraints ? Object.values(e.constraints) : [])
+          .filter(Boolean);
+        setError(messages.length ? messages.join('. ') : errData.message || 'Failed to update bank account');
+      } else {
+        setError(errData?.message || 'Failed to update bank account');
+      }
     } finally {
       setSaving(false);
     }

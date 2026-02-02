@@ -12,8 +12,8 @@ export class SetupBankAccountDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(4)
-  @Matches(/^[0-9]{4,17}$/, {
-    message: 'Bank account number must be 4-17 digits',
+  @Matches(/^[A-Za-z0-9]{4,34}$/, {
+    message: 'Bank account number must be 4-34 alphanumeric characters',
   })
   bankAccountNumber: string;
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useGetCreatorByIdQuery, useSuspendCreatorMutation, useReactivateCreatorMutation } from '@/state/api';
+import { useGetCreatorByIdQuery, useSuspendCreatorMutation, useReactivateCreatorMutation, useUpdateCreatorMutation } from '@/state/api';
 
 export default function CreatorAuditPage() {
   const params = useParams();
@@ -14,10 +14,13 @@ export default function CreatorAuditPage() {
   const [showBanModal, setShowBanModal] = useState(false);
   const [actionReason, setActionReason] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
+  const [showKycOverrideModal, setShowKycOverrideModal] = useState(false);
+  const [kycOverrideNotes, setKycOverrideNotes] = useState('');
 
   const { data: creatorResponse, isLoading, error } = useGetCreatorByIdQuery(creatorId);
   const [suspendCreator, { isLoading: isSuspending }] = useSuspendCreatorMutation();
   const [reactivateCreator, { isLoading: isReactivating }] = useReactivateCreatorMutation();
+  const [updateCreator, { isLoading: isOverridingKyc }] = useUpdateCreatorMutation();
   const creator = creatorResponse?.data;
 
   const formatDate = (dateString: string | Date | null | undefined) => {
@@ -101,6 +104,24 @@ export default function CreatorAuditPage() {
       setTimeout(() => setActionSuccess(''), 3000);
     } catch {
       alert('Failed to ban creator. Please try again.');
+    }
+  };
+
+  const handleOverrideKyc = async () => {
+    try {
+      await updateCreator({
+        id: creatorId,
+        data: {
+          verificationStatus: 'VERIFIED',
+          verificationNotes: kycOverrideNotes.trim() ? `ADMIN OVERRIDE: ${kycOverrideNotes}` : 'ADMIN OVERRIDE: KYC manually verified by superadmin',
+        },
+      }).unwrap();
+      setShowKycOverrideModal(false);
+      setKycOverrideNotes('');
+      setActionSuccess('KYC verification overridden successfully');
+      setTimeout(() => setActionSuccess(''), 3000);
+    } catch {
+      alert('Failed to override KYC. Please try again.');
     }
   };
 
@@ -206,9 +227,8 @@ export default function CreatorAuditPage() {
               </button>
             )}
             <button
-              disabled
-              className="flex items-center gap-2 px-6 py-2 bg-white text-gray-400 rounded-lg font-semibold border border-gray-200 cursor-not-allowed"
-              title="Override KYC is not available yet"
+              onClick={() => { setKycOverrideNotes(''); setShowKycOverrideModal(true); }}
+              className="flex items-center gap-2 px-6 py-2 bg-white text-red-600 rounded-lg font-semibold border border-red-300 hover:bg-red-50 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -563,6 +583,38 @@ export default function CreatorAuditPage() {
                 className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
               >
                 {isSuspending ? 'Banning...' : 'Confirm Ban'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KYC Override Modal */}
+      {showKycOverrideModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Override KYC Verification</h3>
+            <p className="text-gray-600 mb-4">This will manually mark the creator as KYC verified, bypassing the normal verification process. Current status: <span className="font-medium">{creator?.verification?.status || 'N/A'}</span></p>
+            <textarea
+              value={kycOverrideNotes}
+              onChange={(e) => setKycOverrideNotes(e.target.value)}
+              placeholder="Enter notes for this override (optional)"
+              className="w-full border border-gray-300 rounded-lg p-3 mb-4 text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              rows={3}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowKycOverrideModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleOverrideKyc}
+                disabled={isOverridingKyc}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {isOverridingKyc ? 'Overriding...' : 'Confirm Override'}
               </button>
             </div>
           </div>

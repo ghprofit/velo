@@ -64,7 +64,7 @@ export class CreateContentDto {
   description?: string;
 
   @IsNumber()
-  @Min(0.01)
+  @Min(10, { message: 'Price must be at least $10.00' })
   @Max(10000)
   @Validate(IsValidPriceConstraint) // Bug #7: Ensure at most 2 decimal places
   price: number;

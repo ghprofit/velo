@@ -480,12 +480,15 @@ export default function UploadContentPage() {
                   </label>
                   <input
                     id="price"
-                    type="text"
-                    placeholder="Enter the price to unlock"
+                    type="number"
+                    min="10"
+                    step="0.01"
+                    placeholder="10.00"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Minimum price: $10.00</p>
                 </div>
               </div>
             </div>

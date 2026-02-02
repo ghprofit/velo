@@ -28,7 +28,7 @@ export class ConfirmUploadDto {
   category?: string;
 
   @IsNumber()
-  @Min(0)
+  @Min(10, { message: 'Price must be at least $10.00' })
   price: number;
 
   @IsString()

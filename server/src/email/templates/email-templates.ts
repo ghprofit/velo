@@ -1,14 +1,12 @@
 import type { EmailTemplate } from '../interfaces/email.interface';
 
 /**
- * Generate text-based velo logo
- * Always uses text to avoid email spam filters flagging images
+ * Generate logo HTML for email templates
  */
 const getLogoHtml = (): string => {
-  // Text-based velo logo - simple and elegant
   return `
     <div style="margin-bottom: 20px; text-align: center;">
-      <span style="font-size: 42px; font-weight: 700; color: white; letter-spacing: -1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">VeloLink</span>
+      <img src="https://velolink-content.s3.eu-north-1.amazonaws.com/Secondary_Logo(white).svg" alt="VeloLink" style="height: 40px;" />
     </div>
   `;
 };
@@ -37,7 +35,7 @@ export const EMAIL_TEMPLATES = {
     id: SENDGRID_TEMPLATE_ID,
     name: 'Creator Welcome Email',
     description: 'Welcome new creators with optional waitlist bonus info',
-    subject: 'Welcome to Velo, Creator!',
+    subject: 'Welcome to VeloLink, Creator!',
     requiredVariables: ['creator_name', 'has_waitlist_bonus', 'bonus_amount', 'sales_required'],
   } as EmailTemplate,
 
@@ -173,7 +171,7 @@ export const EMAIL_TEMPLATES = {
     id: SENDGRID_TEMPLATE_ID,
     name: 'Newsletter',
     description: 'Monthly newsletter',
-    subject: 'Velo Newsletter',
+    subject: 'VeloLink Newsletter',
     requiredVariables: ['user_name', 'newsletter_content'],
   } as EmailTemplate,
 
@@ -247,7 +245,7 @@ export const HTML_TEMPLATES = {
         <p style="margin: 0;"><strong>✨ Your journey starts here!</strong></p>
       </div>
 
-      <p>Velo is the premier platform for sharing and monetizing digital content. Whether you're a creator looking to share your work or a buyer seeking exclusive content, you're in the right place.</p>
+      <p>VeloLink is the premier platform for sharing and monetizing digital content. Whether you're a creator looking to share your work or a buyer seeking exclusive content, you're in the right place.</p>
 
       <h3>What you can do:</h3>
       <ul style="color: #4b5563; line-height: 1.8;">
@@ -258,7 +256,7 @@ export const HTML_TEMPLATES = {
       </ul>
 
       <div class="text-center mt-20">
-        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}" class="button">Explore Velo</a>
+        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}" class="button">Explore VeloLink</a>
       </div>
 
       <p class="text-sm" style="margin-top: 30px;">If you have any questions, our support team is always here to help!</p>
@@ -289,11 +287,11 @@ export const HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       ${getLogoHtml()}
-      <h1>Welcome to Velo, Creator!</h1>
+      <h1>Welcome to VeloLink, Creator!</h1>
     </div>
     <div class="content">
       <p>Hi <strong>${data.creator_name}</strong>,</p>
-      <p>Congratulations on joining Velo as a creator! We're excited to have you on board and can't wait to see what you'll create.</p>
+      <p>Congratulations on joining VeloLink as a creator! We're excited to have you on board and can't wait to see what you'll create.</p>
 
       ${data.has_waitlist_bonus ? `
       <div class="success-box">
@@ -316,7 +314,7 @@ export const HTML_TEMPLATES = {
       </ul>
 
       <div class="text-center mt-20">
-        <a href="${process.env.CLIENT_URL || 'https://velo.com'}/creator/dashboard" class="button">Go to Creator Dashboard</a>
+        <a href="${process.env.CLIENT_URL || 'https://velolink.club'}/creator/dashboard" class="button">Go to Creator Dashboard</a>
       </div>
 
       <div class="divider"></div>
@@ -332,7 +330,7 @@ export const HTML_TEMPLATES = {
       <p class="text-sm" style="margin-top: 30px;">Questions? Our support team is here to help you succeed!</p>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Velo. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
       <p class="text-xs">Welcome to the creator economy!</p>
     </div>
   </div>
@@ -352,7 +350,7 @@ export const HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       ${getLogoHtml()}
-      <h1>🎉 Welcome to Velo, ${data.user_name}!</h1>
+      <h1>🎉 Welcome to VeloLink, ${data.user_name}!</h1>
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
@@ -390,7 +388,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="footer">
       <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
-      <p class="text-xs">Welcome to the Velo creator community!</p>
+      <p class="text-xs">Welcome to the VeloLink creator community!</p>
     </div>
   </div>
 </body>
@@ -409,7 +407,7 @@ export const HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       ${getLogoHtml()}
-      <h1>🎉 Welcome to Velo, ${data.user_name}!</h1>
+      <h1>🎉 Welcome to VeloLink, ${data.user_name}!</h1>
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
@@ -447,7 +445,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="footer">
       <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
-      <p class="text-xs">Welcome to the Velo creator community!</p>
+      <p class="text-xs">Welcome to the VeloLink creator community!</p>
     </div>
   </div>
 </body>
@@ -486,10 +484,10 @@ export const HTML_TEMPLATES = {
       <p class="text-sm">Enter this code on the verification page to activate your account.</p>
 
       <div class="info-box">
-        <p style="margin: 0;"><strong>🔒 Security Tip:</strong> Never share this code with anyone. Velo will never ask for your verification code via phone or email.</p>
+        <p style="margin: 0;"><strong>🔒 Security Tip:</strong> Never share this code with anyone. VeloLink will never ask for your verification code via phone or email.</p>
       </div>
 
-      <p class="text-sm" style="margin-top: 30px; color: #6b7280;">If you didn't create a Velo account, you can safely ignore this email.</p>
+      <p class="text-sm" style="margin-top: 30px; color: #6b7280;">If you didn't create a VeloLink account, you can safely ignore this email.</p>
     </div>
     <div class="footer">
       <p>© ${new Date().getFullYear()} VeloLink. All rights reserved.</p>
@@ -516,7 +514,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>We received a request to reset your password for your Velo account. Click the button below to create a new password:</p>
+      <p>We received a request to reset your password for your VeloLink account. Click the button below to create a new password:</p>
 
       <div class="text-center mt-20">
         <a href="${data.reset_link}" class="button">Reset Password</a>
@@ -558,7 +556,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Two-factor authentication has been successfully enabled on your Velo account.</p>
+      <p>Two-factor authentication has been successfully enabled on your VeloLink account.</p>
 
       <div class="success-box">
         <p style="margin: 0;"><strong>✅ Your account is now more secure!</strong></p>
@@ -600,7 +598,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Two-factor authentication has been disabled on your Velo account.</p>
+      <p>Two-factor authentication has been disabled on your VeloLink account.</p>
 
       <div class="info-box">
         <p style="margin: 0 0 8px 0;"><strong>Activity Details:</strong></p>
@@ -642,7 +640,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Great news! Your Velo account has been successfully verified on ${data.verification_date}.</p>
+      <p>Great news! Your VeloLink account has been successfully verified on ${data.verification_date}.</p>
 
       <div class="success-box">
         <p style="margin: 0;"><strong>🎊 You're all set to start using VeloLink!</strong></p>
@@ -684,7 +682,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Your Velo account password was successfully changed.</p>
+      <p>Your VeloLink account password was successfully changed.</p>
 
       <div class="info-box">
         <p style="margin: 0 0 8px 0;"><strong>Activity Details:</strong></p>
@@ -726,7 +724,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>We detected unusual activity on your Velo account that requires your attention.</p>
+      <p>We detected unusual activity on your VeloLink account that requires your attention.</p>
 
       <div class="danger-box">
         <p style="margin: 0 0 8px 0;"><strong>Suspicious Activity:</strong></p>
@@ -1204,7 +1202,7 @@ export const HTML_TEMPLATES = {
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>
-      <p>Your Velo account has been scheduled for deletion on ${data.deletion_date}.</p>
+      <p>Your VeloLink account has been scheduled for deletion on ${data.deletion_date}.</p>
 
       <div class="warning-box">
         <p style="margin: 0;"><strong>⚠️ This action will permanently delete:</strong></p>
@@ -1244,7 +1242,7 @@ export const HTML_TEMPLATES = {
   <div class="container">
     <div class="header">
       ${getLogoHtml()}
-      <h1>📰 Velo Newsletter</h1>
+      <h1>📰 VeloLink Newsletter</h1>
     </div>
     <div class="content">
       <p>Hi <strong>${data.user_name}</strong>,</p>

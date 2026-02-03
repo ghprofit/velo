@@ -255,8 +255,8 @@ export class EmailService {
         sales_required: salesRequired,
       },
       hasWaitlistBonus
-        ? `Welcome to Velo - Your $${bonusAmount.toFixed(0)} Bonus Awaits!`
-        : `Welcome to Velo, ${creatorName}!`,
+        ? `Welcome to VeloLink - Your $${bonusAmount.toFixed(0)} Bonus Awaits!`
+        : `Welcome to VeloLink, ${creatorName}!`,
     );
   }
 
@@ -354,7 +354,7 @@ export class EmailService {
       to,
       'PURCHASE_RECEIPT',
       data,
-      'Receipt for your purchase on Velo',
+      'Receipt for your purchase on VeloLink',
     );
   }
 
@@ -672,7 +672,7 @@ export class EmailService {
         user_name: userName,
         newsletter_content: newsletterContent,
       },
-      'Velo Newsletter',
+      'VeloLink Newsletter',
     );
   }
 

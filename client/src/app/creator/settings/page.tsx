@@ -72,6 +72,7 @@ export default function SettingsPage() {
     postalCode: '',
   });
   const [confirmAccountNumber, setConfirmAccountNumber] = useState('');
+  const [codeType, setCodeType] = useState<'swift' | 'sort'>('swift');
   const [customCountry, setCustomCountry] = useState('');
 
   // Password state
@@ -318,6 +319,15 @@ export default function SettingsPage() {
     if (bankFormData.bankCountry === 'GB') {
       if (bankFormData.bankRoutingNumber && !isValidGBSort(bankFormData.bankRoutingNumber)) {
         setError('UK sort code should contain 6 digits');
+        setSaving(false);
+        return;
+      }
+    }
+
+    // Validate sort code entered via the dropdown for non-US/GB countries
+    if (bankFormData.bankCountry && bankFormData.bankCountry !== 'US' && bankFormData.bankCountry !== 'GB') {
+      if (codeType === 'sort' && bankFormData.bankRoutingNumber && !isValidGBSort(bankFormData.bankRoutingNumber)) {
+        setError('Sort code should contain 6 digits');
         setSaving(false);
         return;
       }
@@ -882,7 +892,7 @@ export default function SettingsPage() {
                         value={bankFormData.bankRoutingNumber}
                         onChange={(e) => setBankFormData({ ...bankFormData, bankRoutingNumber: e.target.value })}
                         required
-                        placeholder={bankFormData.bankCountry === 'US' ? '9-digit routing number' : '8-digit sort code'}
+                        placeholder={bankFormData.bankCountry === 'US' ? '9-digit routing number' : '6-digit sort code'}
                         className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
                       />
                     </div>
@@ -920,20 +930,47 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  {/* SWIFT (International) */}
+                  {/* SWIFT / Sort Code selector (non-US) */}
                   {bankFormData.bankCountry && bankFormData.bankCountry !== 'US' && (
                     <div>
-                      <label htmlFor="bankSwiftCode" className="block text-sm font-medium text-gray-900 mb-2">
-                        SWIFT/BIC Code/Sort Code
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                        Code Type
                       </label>
-                      <input
-                        id="bankSwiftCode"
-                        type="text"
-                        value={bankFormData.bankSwiftCode}
-                        onChange={(e) => setBankFormData({ ...bankFormData, bankSwiftCode: e.target.value })}
-                        placeholder="Optional for international transfers"
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
-                      />
+                      <select
+                        value={codeType}
+                        onChange={(e) => {
+                          const newType = e.target.value as 'swift' | 'sort';
+                          setCodeType(newType);
+                          if (newType === 'swift') {
+                            setBankFormData({ ...bankFormData, bankRoutingNumber: '' });
+                          } else {
+                            setBankFormData({ ...bankFormData, bankSwiftCode: '' });
+                          }
+                        }}
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base mb-3"
+                      >
+                        <option value="swift">SWIFT/BIC Code</option>
+                        <option value="sort">Sort Code</option>
+                      </select>
+                      {codeType === 'swift' ? (
+                        <input
+                          id="bankSwiftCode"
+                          type="text"
+                          value={bankFormData.bankSwiftCode}
+                          onChange={(e) => setBankFormData({ ...bankFormData, bankSwiftCode: e.target.value })}
+                          placeholder="e.g. BOFAUS3N (8 or 11 characters)"
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
+                        />
+                      ) : (
+                        <input
+                          id="bankSortCode"
+                          type="text"
+                          value={bankFormData.bankRoutingNumber}
+                          onChange={(e) => setBankFormData({ ...bankFormData, bankRoutingNumber: e.target.value })}
+                          placeholder="6-digit sort code"
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm sm:text-base"
+                        />
+                      )}
                     </div>
                   )}
 

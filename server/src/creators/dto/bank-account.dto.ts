@@ -19,10 +19,10 @@ export class SetupBankAccountDto {
 
   @IsString()
   @IsOptional()
-  @Matches(/^[0-9]{9}$/, {
-    message: 'Routing number must be exactly 9 digits',
+  @Matches(/^[0-9]{6}([0-9]{3})?$/, {
+    message: 'Must be a 6-digit sort code or 9-digit routing number',
   })
-  bankRoutingNumber?: string; // For US banks
+  bankRoutingNumber?: string; // For US routing (9 digits) or sort code (6 digits)
 
   @IsString()
   @IsOptional()

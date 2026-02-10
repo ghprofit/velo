@@ -67,7 +67,7 @@ export class FinancialReportsService {
       query.endDate,
     );
 
-    // Total Revenue from purchases
+    // Total Revenue from purchases (amount = what buyer pays, basePrice = original content price)
     const revenueData = await this.prisma.purchase.aggregate({
       where: {
         status: 'COMPLETED',
@@ -78,6 +78,7 @@ export class FinancialReportsService {
       },
       _sum: {
         amount: true,
+        basePrice: true,
       },
       _count: true,
     });
@@ -107,10 +108,18 @@ export class FinancialReportsService {
       _count: true,
     });
 
-    // Platform Commission (20% of total revenue)
+    // Calculate revenue figures
     const totalRevenue = revenueData._sum.amount || 0;
+    const totalBasePrice = revenueData._sum.basePrice || 0;
     const totalPayouts = payoutData._sum.amount || 0;
-    const platformRevenue = totalRevenue * 0.20;
+
+    // Platform Commission: correctly calculated from base prices
+    // New purchases: buyer pays basePrice * 1.1, creator gets basePrice * 0.9, platform gets basePrice * 0.2
+    // Legacy purchases (no basePrice): creator gets amount * 0.85, platform gets amount * 0.15
+    const newPurchasePlatformRevenue = totalBasePrice * 0.2;
+    const legacyRevenue = Math.max(0, totalRevenue - totalBasePrice * 1.1);
+    const legacyPlatformRevenue = legacyRevenue * 0.15;
+    const platformRevenue = newPurchasePlatformRevenue + legacyPlatformRevenue;
 
     // Average transaction value
     const avgTransactionValue =

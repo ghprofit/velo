@@ -24,8 +24,6 @@ export default function SuperAdminDashboardPage() {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -69,7 +67,7 @@ export default function SuperAdminDashboardPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm text-gray-600 font-medium">Total Platform Revenue</p>
+                  <p className="text-sm text-gray-600 font-medium">Total Revenue</p>
                   <p className="text-xs text-gray-500">
                     {timeRange === 'LAST_7_DAYS' ? 'Last 7 Days' : timeRange === 'LAST_30_DAYS' ? 'Last 30 Days' : 'This Month'}
                   </p>

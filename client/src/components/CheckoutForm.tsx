@@ -31,7 +31,8 @@ export default function CheckoutForm({ onSuccess, onError, amount, paymentElemen
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/checkout/${contentId}/success?token=${accessToken}`,
+          // Stripe auto-appends payment_intent, payment_intent_client_secret, and redirect_status params
+          return_url: `${window.location.origin}/checkout/${contentId}/success`,
         },
         redirect: 'if_required',
       });

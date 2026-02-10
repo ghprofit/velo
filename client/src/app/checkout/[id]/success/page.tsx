@@ -12,7 +12,8 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
   const { id } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const paymentIntentId = searchParams.get('paymentIntentId');
+  // 'paymentIntentId' is set by our app on inline payments; 'payment_intent' is set by Stripe on redirect-based payments (3D Secure, bank redirects)
+  const paymentIntentId = searchParams.get('paymentIntentId') || searchParams.get('payment_intent');
   const accessToken = searchParams.get('token'); // Fallback for already-purchased scenario
   
   const [status, setStatus] = useState<'processing' | 'completed' | 'error'>('processing');

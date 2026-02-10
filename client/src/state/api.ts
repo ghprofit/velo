@@ -494,7 +494,8 @@ interface DashboardStats {
     totalCreators: number;
     activeCreators: number;
     inactiveCreators: number;
-    totalEarnings: number;
+    totalRevenue: number;
+    creatorEarnings: number;
     transactionsToday: number;
 }
 

@@ -27,22 +27,28 @@ export class AdminService {
     // Get inactive creators count
     const inactiveCreators = totalCreators - activeCreators;
 
-    // Get total earnings (sum of all creator totalEarnings)
-    const earningsAggregate = await this.prisma.creatorProfile.aggregate({
-      _sum: {
-        totalEarnings: true,
-      },
+    // Get total gross revenue (sum of all completed purchase amounts)
+    const revenueAggregate = await this.prisma.purchase.aggregate({
+      where: { status: 'COMPLETED' },
+      _sum: { amount: true },
     });
-    const totalEarnings = earningsAggregate._sum?.totalEarnings || 0;
+    const totalRevenue = revenueAggregate._sum?.amount || 0;
 
-    // Get today's payouts count (using Payout model as Transaction doesn't exist)
+    // Get total creator earnings (sum of all creator totalEarnings - 90% net)
+    const earningsAggregate = await this.prisma.creatorProfile.aggregate({
+      _sum: { totalEarnings: true },
+    });
+    const creatorEarnings = earningsAggregate._sum?.totalEarnings || 0;
+
+    // Get today's completed purchases count
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const transactionsToday = await this.prisma.payout.count({
+    const transactionsToday = await this.prisma.purchase.count({
       where: {
+        status: 'COMPLETED',
         createdAt: {
           gte: today,
           lt: tomorrow,
@@ -54,7 +60,8 @@ export class AdminService {
       totalCreators,
       activeCreators,
       inactiveCreators,
-      totalEarnings: Math.round(totalEarnings),
+      totalRevenue: Math.round(totalRevenue),
+      creatorEarnings: Math.round(creatorEarnings),
       transactionsToday,
     };
   }

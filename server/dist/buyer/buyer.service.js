@@ -69,10 +69,8 @@ let BuyerService = BuyerService_1 = class BuyerService {
         this.VERIFICATION_CODE_EXPIRY_MINUTES = 15;
         this.SESSION_EXPIRY_MS =
             (this.config.get('BUYER_SESSION_EXPIRY_HOURS') || 24) * 60 * 60 * 1000;
-        this.ACCESS_WINDOW_HOURS =
-            this.config.get('BUYER_ACCESS_WINDOW_HOURS') || 24;
-        this.ACCESS_BUFFER_MINUTES =
-            this.config.get('BUYER_ACCESS_BUFFER_MINUTES') || 30;
+        this.ACCESS_WINDOW_HOURS = 24;
+        this.ACCESS_BUFFER_MINUTES = 30;
         this.MAX_TRUSTED_DEVICES =
             this.config.get('BUYER_MAX_DEVICES') || 3;
         this.VIEW_COOLDOWN_MS =
@@ -304,8 +302,9 @@ let BuyerService = BuyerService_1 = class BuyerService {
                     accessToken: existingPurchase.accessToken,
                 };
             }
-            const buyerAmount = content.price * 1.1;
-            this.logger.log(`[PURCHASE] Calculated amount: base=$${content.price}, buyer pays=$${buyerAmount} (110%)`);
+            const platformFeePercentage = 15;
+            const buyerAmount = content.price * 1.15;
+            this.logger.log(`[PURCHASE] Calculated amount: base=$${content.price}, buyer pays=$${buyerAmount} (115%)`);
             this.logger.log(`[PURCHASE] Creating Stripe PaymentIntent for $${buyerAmount}`);
             let paymentIntent;
             try {
@@ -333,6 +332,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
                     buyerSessionId: session.id,
                     amount: buyerAmount,
                     basePrice: content.price,
+                    platformFeePercentage,
                     currency: 'USD',
                     paymentProvider: 'STRIPE',
                     paymentIntentId: paymentIntent.id,

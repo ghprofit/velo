@@ -34,8 +34,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
   // Animated price counts
   const contentPrice = useCurrencyCountUp(content?.price || 0, '$', 1000);
-  const platformFee = useCurrencyCountUp((content?.price || 0) * 0.10, '$', 1000);
-  const totalPrice = useCurrencyCountUp((content?.price || 0) * 1.10, '$', 1000);
+  const platformFee = useCurrencyCountUp((content?.price || 0) * 0.15, '$', 1000);
+  const totalPrice = useCurrencyCountUp((content?.price || 0) * 1.15, '$', 1000);
 
   useEffect(() => {
     // Check if already purchased

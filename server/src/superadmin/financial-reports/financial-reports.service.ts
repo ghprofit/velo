@@ -113,11 +113,14 @@ export class FinancialReportsService {
     const totalBasePrice = revenueData._sum.basePrice || 0;
     const totalPayouts = payoutData._sum.amount || 0;
 
-    // Platform Commission: correctly calculated from base prices
-    // New purchases: buyer pays basePrice * 1.1, creator gets basePrice * 0.9, platform gets basePrice * 0.2
-    // Legacy purchases (no basePrice): creator gets amount * 0.85, platform gets amount * 0.15
-    const newPurchasePlatformRevenue = totalBasePrice * 0.2;
-    const legacyRevenue = Math.max(0, totalRevenue - totalBasePrice * 1.1);
+    // Platform Commission Breakdown:
+    // - Creator loses 10% of their price to platform
+    // - Buyer pays 15% markup on top of creator's price
+    // - Total platform revenue per sale = basePrice * 0.25 (10% from creator + 15% from buyer)
+    // For purchases with basePrice, platform earns 25% of basePrice
+    // For very old purchases without basePrice, approximate legacy calculation
+    const newPurchasePlatformRevenue = totalBasePrice * 0.25;
+    const legacyRevenue = Math.max(0, totalRevenue - totalBasePrice * 1.15);
     const legacyPlatformRevenue = legacyRevenue * 0.15;
     const platformRevenue = newPurchasePlatformRevenue + legacyPlatformRevenue;
 

@@ -46,8 +46,8 @@ export async function generateMetadata({
     };
   }
 
-  // Calculate buyer price (110% of base price)
-  const buyerPrice = (content.price * 1.1).toFixed(2);
+  // Calculate buyer price (115% of base price)
+  const buyerPrice = (content.price * 1.15).toFixed(2);
 
   // Use thumbnail directly (crawler-friendly) if available, otherwise fallback to default logo
   const imageUrl = content.thumbnailUrl

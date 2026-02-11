@@ -143,12 +143,14 @@ let StripeController = StripeController_1 = class StripeController {
                         const accessToken = crypto.randomBytes(32).toString('hex');
                         const amount = paymentIntent.amount / 100;
                         const basePrice = content.price;
+                        const platformFeePercentage = 15;
                         purchase = await tx.purchase.create({
                             data: {
                                 contentId,
                                 buyerSessionId: sessionId,
                                 amount,
                                 basePrice,
+                                platformFeePercentage,
                                 currency: paymentIntent.currency.toUpperCase(),
                                 paymentProvider: 'STRIPE',
                                 paymentIntentId: paymentIntent.id,

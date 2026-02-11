@@ -10,7 +10,8 @@ export declare class DashboardStatsResponseDto {
     totalCreators: number;
     activeCreators: number;
     inactiveCreators: number;
-    totalEarnings: number;
+    totalRevenue: number;
+    creatorEarnings: number;
     transactionsToday: number;
 }
 export declare class RevenueDataPointDto {

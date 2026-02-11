@@ -46,8 +46,8 @@ export function PaymentClient({ id }: { id: string }) {
 
   // Animated price count-ups
   const contentPriceAnimated = useCurrencyCountUp(content?.price || 0, '$', 1000);
-  const platformFeeAnimated = useCurrencyCountUp((content?.price || 0) * 0.10, '$', 1000);
-  const totalPriceAnimated = useCurrencyCountUp((content?.price || 0) * 1.10, '$', 1000);
+  const platformFeeAnimated = useCurrencyCountUp((content?.price || 0) * 0.15, '$', 1000);
+  const totalPriceAnimated = useCurrencyCountUp((content?.price || 0) * 1.15, '$', 1000);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -451,7 +451,7 @@ export function PaymentClient({ id }: { id: string }) {
                       }}
                     >
                       <CheckoutForm
-                        amount={content.price * 1.10}
+                        amount={content.price * 1.15}
                         onSuccess={handlePaymentSuccess}
                         onError={handlePaymentError}
                         paymentElementOptions={paymentElementOptions}

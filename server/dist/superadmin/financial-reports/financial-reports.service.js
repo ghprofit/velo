@@ -74,6 +74,7 @@ let FinancialReportsService = class FinancialReportsService {
             },
             _sum: {
                 amount: true,
+                basePrice: true,
             },
             _count: true,
         });
@@ -99,8 +100,12 @@ let FinancialReportsService = class FinancialReportsService {
             _count: true,
         });
         const totalRevenue = revenueData._sum.amount || 0;
+        const totalBasePrice = revenueData._sum.basePrice || 0;
         const totalPayouts = payoutData._sum.amount || 0;
-        const platformRevenue = totalRevenue * 0.20;
+        const newPurchasePlatformRevenue = totalBasePrice * 0.25;
+        const legacyRevenue = Math.max(0, totalRevenue - totalBasePrice * 1.15);
+        const legacyPlatformRevenue = legacyRevenue * 0.15;
+        const platformRevenue = newPurchasePlatformRevenue + legacyPlatformRevenue;
         const avgTransactionValue = revenueData._count > 0 ? totalRevenue / revenueData._count : 0;
         const topCreators = await this.prisma.creatorProfile.findMany({
             select: {

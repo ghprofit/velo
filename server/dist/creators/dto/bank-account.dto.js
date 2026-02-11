@@ -28,16 +28,16 @@ __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.MinLength)(4),
-    (0, class_validator_1.Matches)(/^[0-9]{4,17}$/, {
-        message: 'Bank account number must be 4-17 digits',
+    (0, class_validator_1.Matches)(/^[A-Za-z0-9]{4,34}$/, {
+        message: 'Bank account number must be 4-34 alphanumeric characters',
     }),
     __metadata("design:type", String)
 ], SetupBankAccountDto.prototype, "bankAccountNumber", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.Matches)(/^[0-9]{9}$/, {
-        message: 'Routing number must be exactly 9 digits',
+    (0, class_validator_1.Matches)(/^[0-9]{6}([0-9]{3})?$/, {
+        message: 'Must be a 6-digit sort code or 9-digit routing number',
     }),
     __metadata("design:type", String)
 ], SetupBankAccountDto.prototype, "bankRoutingNumber", void 0);

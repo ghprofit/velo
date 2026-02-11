@@ -61,7 +61,7 @@ export async function GET(
     const description = content.description
       ? String(content.description).substring(0, 150) + '...'
       : '';
-    const buyerPrice = (Number(content.price) * 1.1).toFixed(2);
+    const buyerPrice = (Number(content.price) * 1.15).toFixed(2);
 
     // Create an SVG overlay with two lines: description and bold price
     const svg = `<?xml version="1.0" encoding="utf-8"?>

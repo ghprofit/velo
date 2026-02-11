@@ -134,37 +134,37 @@ export declare class AuthController {
                 lastName: string | null;
                 userId: string;
                 country: string | null;
-                bio: string | null;
                 profileImage: string | null;
                 coverImage: string | null;
-                allowBuyerProfileView: boolean;
                 verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
                 veriffSessionId: string | null;
                 veriffDecisionId: string | null;
                 verifiedAt: Date | null;
                 verificationNotes: string | null;
                 dateOfBirth: Date | null;
-                bankAccountName: string | null;
-                bankName: string | null;
-                bankAccountNumber: string | null;
-                bankRoutingNumber: string | null;
-                bankSwiftCode: string | null;
-                bankIban: string | null;
-                bankCountry: string | null;
-                bankCurrency: string | null;
-                streetAddress: string | null;
-                city: string | null;
-                state: string | null;
-                postalCode: string | null;
-                payoutSetupCompleted: boolean;
                 paypalEmail: string | null;
                 stripeAccountId: string | null;
                 payoutStatus: import(".prisma/client").$Enums.PayoutStatus;
                 policyStrikes: number;
-                pendingBalance: number;
-                availableBalance: number;
-                waitlistBonus: number;
+                allowBuyerProfileView: boolean;
+                bankAccountName: string | null;
+                bankAccountNumber: string | null;
+                bankCountry: string | null;
+                bankCurrency: string | null;
+                bankIban: string | null;
+                bankName: string | null;
+                bankRoutingNumber: string | null;
+                bankSwiftCode: string | null;
+                payoutSetupCompleted: boolean;
+                bio: string | null;
                 bonusWithdrawn: boolean;
+                waitlistBonus: number;
+                availableBalance: number;
+                pendingBalance: number;
+                city: string | null;
+                postalCode: string | null;
+                state: string | null;
+                streetAddress: string | null;
             } | null;
         };
     }>;
@@ -294,8 +294,8 @@ export declare class AuthController {
             expiresAt: Date;
             deviceName: string | null;
             ipAddress: string | null;
-            userAgent: string | null;
             lastUsedAt: Date;
+            userAgent: string | null;
         }[];
     }>;
     revokeSession(req: any, sessionId: string): Promise<{
@@ -328,20 +328,20 @@ export declare class AuthController {
     getNotificationPreferences(req: any): Promise<{
         success: boolean;
         data: {
-            notifyPayoutUpdates: boolean;
             notifyContentEngagement: boolean;
-            notifyPlatformAnnouncements: boolean;
             notifyMarketingEmails: boolean;
+            notifyPayoutUpdates: boolean;
+            notifyPlatformAnnouncements: boolean;
         };
     }>;
     updateNotificationPreferences(req: any, dto: any): Promise<{
         success: boolean;
         message: string;
         data: {
-            notifyPayoutUpdates: boolean;
             notifyContentEngagement: boolean;
-            notifyPlatformAnnouncements: boolean;
             notifyMarketingEmails: boolean;
+            notifyPayoutUpdates: boolean;
+            notifyPlatformAnnouncements: boolean;
         };
     }>;
     deactivateAccount(req: any, dto: {

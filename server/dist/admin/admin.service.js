@@ -26,18 +26,22 @@ let AdminService = class AdminService {
             },
         });
         const inactiveCreators = totalCreators - activeCreators;
-        const earningsAggregate = await this.prisma.creatorProfile.aggregate({
-            _sum: {
-                totalEarnings: true,
-            },
+        const revenueAggregate = await this.prisma.purchase.aggregate({
+            where: { status: 'COMPLETED' },
+            _sum: { amount: true },
         });
-        const totalEarnings = earningsAggregate._sum?.totalEarnings || 0;
+        const totalRevenue = revenueAggregate._sum?.amount || 0;
+        const earningsAggregate = await this.prisma.creatorProfile.aggregate({
+            _sum: { totalEarnings: true },
+        });
+        const creatorEarnings = earningsAggregate._sum?.totalEarnings || 0;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const transactionsToday = await this.prisma.payout.count({
+        const transactionsToday = await this.prisma.purchase.count({
             where: {
+                status: 'COMPLETED',
                 createdAt: {
                     gte: today,
                     lt: tomorrow,
@@ -48,7 +52,8 @@ let AdminService = class AdminService {
             totalCreators,
             activeCreators,
             inactiveCreators,
-            totalEarnings: Math.round(totalEarnings),
+            totalRevenue: Math.round(totalRevenue),
+            creatorEarnings: Math.round(creatorEarnings),
             transactionsToday,
         };
     }

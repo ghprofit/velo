@@ -989,7 +989,7 @@ export function ContentClient({ id }: { id: string }) {
                   <div className="mb-6 pb-6 border-b border-gray-200">
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl sm:text-5xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                        ${(content.price * 1.10).toFixed(2)}
+                        ${(content.price * 1.15).toFixed(2)}
                       </span>
                       <span className="text-gray-500 text-sm">one-time</span>
                     </div>

@@ -46,7 +46,7 @@ __decorate([
 ], CreateContentMultipartDto.prototype, "description", void 0);
 __decorate([
     (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(0.01),
+    (0, class_validator_1.Min)(10, { message: 'Price must be at least $10.00' }),
     (0, class_validator_1.Max)(10000),
     (0, class_validator_1.Validate)(IsValidPriceConstraint),
     __metadata("design:type", Number)

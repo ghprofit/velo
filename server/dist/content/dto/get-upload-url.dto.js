@@ -50,7 +50,7 @@ __decorate([
 ], GetUploadUrlDto.prototype, "category", void 0);
 __decorate([
     (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Min)(10, { message: 'Price must be at least $10.00' }),
     __metadata("design:type", Number)
 ], GetUploadUrlDto.prototype, "price", void 0);
 __decorate([

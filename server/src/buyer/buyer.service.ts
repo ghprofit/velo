@@ -384,9 +384,10 @@ export class BuyerService {
         };
       }
 
-      // Create payment intent - buyer pays 110% of content price
-      const buyerAmount = content.price * 1.1;
-      this.logger.log(`[PURCHASE] Calculated amount: base=$${content.price}, buyer pays=$${buyerAmount} (110%)`);
+      // Create payment intent - buyer pays 115% of content price
+      const platformFeePercentage = 15;
+      const buyerAmount = content.price * 1.15;
+      this.logger.log(`[PURCHASE] Calculated amount: base=$${content.price}, buyer pays=$${buyerAmount} (115%)`);
 
       // Create Stripe payment intent with specific error handling (Bug #4)
       this.logger.log(`[PURCHASE] Creating Stripe PaymentIntent for $${buyerAmount}`);
@@ -429,6 +430,7 @@ export class BuyerService {
           buyerSessionId: session.id,
           amount: buyerAmount,
           basePrice: content.price,
+          platformFeePercentage,
           currency: 'USD',
           paymentProvider: 'STRIPE',
           paymentIntentId: paymentIntent.id,
@@ -445,7 +447,7 @@ export class BuyerService {
       // Return payment details
       return {
         clientSecret: paymentIntent.client_secret,
-        amount: buyerAmount, // Return total buyer pays (110%)
+        amount: buyerAmount, // Return total buyer pays (115%)
         paymentIntentId: paymentIntent.id,
       };
     } catch (error) {
@@ -856,12 +858,13 @@ export class BuyerService {
           },
         });
 
-        // Update creator earnings - 90% of base price
-        // For new purchases: basePrice exists, creator gets 90% of basePrice
+        // Update creator earnings - creator always gets 90% of their price
+        // platformFeePercentage only affects buyer markup, not creator earnings
+        // For new purchases: basePrice exists, creator gets 90%
         // For old purchases (migration): basePrice is null, use old calculation (85% of amount)
         const creatorEarnings = purchase.basePrice
-          ? purchase.basePrice * 0.9
-          : purchase.amount * 0.85;
+          ? purchase.basePrice * 0.9 // Creator always gets 90% of their price
+          : purchase.amount * 0.85; // Very old purchases without basePrice
 
         // Calculate when earnings will be available (24 hours from now)
         const earningsPendingUntil = new Date();

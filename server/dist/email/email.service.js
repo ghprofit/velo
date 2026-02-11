@@ -170,8 +170,8 @@ let EmailService = EmailService_1 = class EmailService {
             bonus_amount: bonusAmount.toFixed(2),
             sales_required: salesRequired,
         }, hasWaitlistBonus
-            ? `Welcome to Velo - Your $${bonusAmount.toFixed(0)} Bonus Awaits!`
-            : `Welcome to Velo, ${creatorName}!`);
+            ? `Welcome to VeloLink - Your $${bonusAmount.toFixed(0)} Bonus Awaits!`
+            : `Welcome to VeloLink, ${creatorName}!`);
     }
     async sendEmailVerification(to, userName, verificationCode, expiryMinutes = 20) {
         return this.sendHTMLTemplateEmail(to, 'EMAIL_VERIFICATION', {
@@ -207,7 +207,7 @@ let EmailService = EmailService_1 = class EmailService {
         });
     }
     async sendPurchaseReceipt(to, data) {
-        return this.sendHTMLTemplateEmail(to, 'PURCHASE_RECEIPT', data, 'Receipt for your purchase on Velo');
+        return this.sendHTMLTemplateEmail(to, 'PURCHASE_RECEIPT', data, 'Receipt for your purchase on VeloLink');
     }
     async sendCreatorSaleNotification(to, data) {
         return this.sendHTMLTemplateEmail(to, 'CREATOR_SALE_NOTIFICATION', data, 'New Sale: Someone purchased your content!');
@@ -289,7 +289,7 @@ let EmailService = EmailService_1 = class EmailService {
         return this.sendHTMLTemplateEmail(to, 'NEWSLETTER', {
             user_name: userName,
             newsletter_content: newsletterContent,
-        }, 'Velo Newsletter');
+        }, 'VeloLink Newsletter');
     }
     async sendContentApproval(to, creatorName, contentTitle, contentLink) {
         return this.sendContentApproved(to, {

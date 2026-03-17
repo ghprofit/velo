@@ -38,15 +38,33 @@ export declare class BuyerController {
     createPurchase(dto: CreatePurchaseDto): Promise<{
         alreadyPurchased: boolean;
         accessToken: string;
-        clientSecret?: undefined;
+        paymentProvider?: undefined;
+        authorizationUrl?: undefined;
+        reference?: undefined;
+        purchaseId?: undefined;
         amount?: undefined;
+        clientSecret?: undefined;
+        paymentIntentId?: undefined;
+    } | {
+        paymentProvider: string;
+        authorizationUrl: string;
+        reference: string;
+        purchaseId: string;
+        amount: number;
+        alreadyPurchased?: undefined;
+        accessToken?: undefined;
+        clientSecret?: undefined;
         paymentIntentId?: undefined;
     } | {
         clientSecret: any;
         amount: number;
         paymentIntentId: any;
+        paymentProvider: string;
         alreadyPurchased?: undefined;
         accessToken?: undefined;
+        authorizationUrl?: undefined;
+        reference?: undefined;
+        purchaseId?: undefined;
     }>;
     verifyPurchase(id: string): Promise<{
         id: string;

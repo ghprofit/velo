@@ -7,11 +7,13 @@ import { EmailModule } from '../email/email.module';
 import { S3Module } from '../s3/s3.module';
 import { RedisModule } from '../redis/redis.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PaystackModule } from '../paystack/paystack.module';
 
 @Module({
   imports: [
     PrismaModule,
     StripeModule,
+    PaystackModule,
     EmailModule,
     S3Module,
     RedisModule,

@@ -57,6 +57,7 @@ export default function Footer() {
                   alt="VeloLink logo"
                   width={200}
                   height={64}
+                  style={{ width: 'auto', height: 'auto' }}
                   priority
                 />
               </div>

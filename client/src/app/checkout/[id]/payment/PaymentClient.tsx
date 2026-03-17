@@ -96,13 +96,6 @@ export function PaymentClient({ id }: { id: string }) {
         }
         console.log('[CHECKOUT] ✅ Session found:', session.sessionToken.substring(0, 16) + '...');
 
-        // Get Stripe publishable key
-        console.log('[CHECKOUT] Fetching Stripe config...');
-        const configResponse = await stripeApi.getConfig();
-        const publishableKey = configResponse.data.publishableKey;
-        console.log('[CHECKOUT] ✅ Stripe publishable key received');
-        setStripePromise(loadStripe(publishableKey));
-
         // Get content details
         console.log('[CHECKOUT] Fetching content details...');
         const contentResponse = await buyerApi.getContentDetails(id);
@@ -112,54 +105,51 @@ export function PaymentClient({ id }: { id: string }) {
         // Get browser fingerprint for device tracking (uses cached value from checkout page)
         console.log('[CHECKOUT] Getting browser fingerprint...');
         const fingerprint = await getOrGenerateBrowserFingerprint();
-        console.log('[CHECKOUT] ✅ Fingerprint retrieved:', fingerprint);
 
-        // Create purchase and get client secret
+        // Create purchase and get payment information
         console.log('[CHECKOUT] Creating purchase...');
-        
-        if (!email) {
-          setError('Email is required to complete your purchase');
-          setLoading(false);
-          return;
-        }
-
-        console.log('[CHECKOUT] Request payload:', {
-          contentId: id,
-          sessionToken: session.sessionToken.substring(0, 16) + '...',
-          email: email,
-          fingerprint
-        });
-
         const paymentResponse = await buyerApi.createPurchase({
           contentId: id,
           sessionToken: session.sessionToken,
           email: email,
           fingerprint,
+          paymentProvider: 'PAYSTACK',
         });
 
-        console.log('[CHECKOUT] ✅ Payment intent created successfully!');
-        console.log('[CHECKOUT] Already purchased:', paymentResponse.data.alreadyPurchased || false);
+        console.log('[CHECKOUT] ✅ Purchase created successfully:', paymentResponse.data);
 
         if (paymentResponse.data.alreadyPurchased) {
-          // Already purchased, redirect to content view
           console.log('[CHECKOUT] Redirecting to content (already purchased)');
           savePurchaseToken(id, paymentResponse.data.accessToken);
           router.push(`/c/${id}?token=${paymentResponse.data.accessToken}`);
           return;
         }
 
-        // Store payment info in state
-        // Note: Purchase will be created by webhook when payment succeeds
+        if (paymentResponse.data.paymentProvider === 'PAYSTACK') {
+          if (!paymentResponse.data.authorizationUrl) {
+            throw new Error('Missing Paystack authorization URL');
+          }
+          window.location.href = paymentResponse.data.authorizationUrl;
+          setLoading(false);
+          return;
+        }
+
+        // For Stripe, initialize Stripe with publishable key and continue flow
+        console.log('[CHECKOUT] Fetching Stripe config...');
+        const configResponse = await stripeApi.getConfig();
+        const publishableKey = configResponse.data.publishableKey;
+        console.log('[CHECKOUT] ✅ Stripe publishable key received');
+        setStripePromise(loadStripe(publishableKey));
+
         setPurchaseInfo({
-          purchaseId: paymentResponse.data.paymentIntentId, // Use payment intent ID as correlation
-          accessToken: '', // Will be provided by webhook
+          purchaseId: paymentResponse.data.paymentIntentId,
+          accessToken: '',
           clientSecret: paymentResponse.data.clientSecret,
         });
 
         console.log('[CHECKOUT] ========== PAYMENT INITIALIZATION COMPLETE ==========');
         setError(null);
-      } catch (err: unknown) {
-        console.error('[CHECKOUT] ❌ ========== PAYMENT INITIALIZATION FAILED ==========');
+      } catch (err: unknown) {        console.error('[CHECKOUT] ❌ ========== PAYMENT INITIALIZATION FAILED ==========');
         console.error('[CHECKOUT] Error:', err);
         const error = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
         initializingRef.current = false; // Reset on error to allow retry

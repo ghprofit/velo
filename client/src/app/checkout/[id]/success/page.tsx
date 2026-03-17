@@ -12,8 +12,11 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
   const { id } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  // 'paymentIntentId' is set by our app on inline payments; 'payment_intent' is set by Stripe on redirect-based payments (3D Secure, bank redirects)
-  const paymentIntentId = searchParams.get('paymentIntentId') || searchParams.get('payment_intent');
+  // 'paymentIntentId' is set by our app for Stripe inline payments; 'payment_intent' from Stripe redirects; 'reference' from Paystack
+  const paymentIntentId =
+    searchParams.get('paymentIntentId') ||
+    searchParams.get('payment_intent') ||
+    searchParams.get('reference');
   const accessToken = searchParams.get('token'); // Fallback for already-purchased scenario
   
   const [status, setStatus] = useState<'processing' | 'completed' | 'error'>('processing');
@@ -29,67 +32,69 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
       return () => clearTimeout(timer);
     }
 
-    // Otherwise, poll for the purchase to be created by webhook
+    // Otherwise, confirm Paystack/Stripe purchase then poll for completion
+    const purchaseId = searchParams.get('purchaseId');
     if (!paymentIntentId) {
       setStatus('error');
       setErrorMessage('Invalid payment session. Please contact support.');
       return;
     }
 
-    let attempts = 0;
-    const maxAttempts = 60; // 60 seconds (1 second interval) - increased for webhook reliability
-    
-    const pollForPurchase = async () => {
-      try {
-        attempts++;
-        console.log(`[SUCCESS] Polling for purchase (attempt ${attempts}/${maxAttempts})...`);
-        
-        // Look up purchase by payment intent ID
-        const result = await buyerApi.verifyPurchaseByPaymentIntent(paymentIntentId as string);
-
-        // Only redirect when purchase status is COMPLETED (not PENDING)
-        if (result.data && result.data.accessToken && result.data.status === 'COMPLETED') {
-          console.log('[SUCCESS] ✅ Purchase completed! Access token received');
-          setFinalAccessToken(result.data.accessToken);
-          setStatus('completed');
-
-          // Redirect after a short delay to show the success screen
-          const timer = setTimeout(() => {
-            router.push(`/c/${id}?token=${result.data.accessToken}`);
-          }, 3000);
-
-          return () => clearTimeout(timer);
-        } else if (result.data && result.data.status === 'PENDING') {
-          // Purchase exists but webhook hasn't confirmed it yet, keep polling
-          console.log(`[SUCCESS] ⏳ Purchase PENDING (attempt ${attempts}/${maxAttempts}), waiting for webhook confirmation...`);
-        }
-        
-        if (attempts < maxAttempts) {
-          // Keep polling
-          setTimeout(pollForPurchase, 1000);
-        } else {
-          // Timeout after 60 seconds
-          console.error('[SUCCESS] ❌ Timeout waiting for purchase webhook');
-          setStatus('error');
-          setErrorMessage(
-            'Your payment was successful! We\'re still processing your purchase. Please check your email for the access link, or wait a moment and refresh this page.'
-          );
-        }
-      } catch (error) {
-        console.error('[SUCCESS] Error polling for purchase:', error);
-        if (attempts < maxAttempts) {
-          // Continue polling even on error
-          setTimeout(pollForPurchase, 1000);
-        } else {
-          setStatus('error');
-          setErrorMessage(
-            'Your payment was successful! We\'re still processing your purchase. Please check your email for the access link, or wait a moment and refresh this page.'
-          );
+    const confirmAndPoll = async () => {
+      if (purchaseId) {
+        try {
+          console.log('[SUCCESS] Confirming purchase from callback', { purchaseId, paymentIntentId });
+          await buyerApi.confirmPurchase({ purchaseId, paymentIntentId });
+        } catch (err) {
+          console.warn('[SUCCESS] Confirm purchase failed, will poll status anyway', err);
         }
       }
+
+      let attempts = 0;
+      const maxAttempts = 60;
+
+      const pollForPurchase = async () => {
+        try {
+          attempts++;
+          console.log(`[SUCCESS] Polling for purchase (attempt ${attempts}/${maxAttempts})...`);
+
+          const result = await buyerApi.verifyPurchaseByPaymentIntent(paymentIntentId as string);
+
+          if (result.data && result.data.accessToken && result.data.status === 'COMPLETED') {
+            console.log('[SUCCESS] ✅ Purchase completed! Access token received');
+            setFinalAccessToken(result.data.accessToken);
+            setStatus('completed');
+            const timer = setTimeout(() => {
+              router.push(`/c/${id}?token=${result.data.accessToken}`);
+            }, 3000);
+            return () => clearTimeout(timer);
+          } else if (result.data && result.data.status === 'PENDING') {
+            console.log(`[SUCCESS] ⏳ Purchase PENDING (attempt ${attempts}/${maxAttempts}), waiting for confirmation...`);
+          }
+
+          if (attempts < maxAttempts) {
+            setTimeout(pollForPurchase, 1000);
+          } else {
+            console.error('[SUCCESS] ❌ Timeout waiting for purchase confirmation');
+            setStatus('error');
+            setErrorMessage('Your payment was successful! We are still processing your purchase. Please check your email.');
+          }
+        } catch (error) {
+          console.error('[SUCCESS] Error polling for purchase:', error);
+          if (attempts < maxAttempts) {
+            setTimeout(pollForPurchase, 1000);
+          } else {
+            setStatus('error');
+            setErrorMessage('Your payment was successful! We are still processing your purchase. Please check your email.');
+          }
+        }
+      };
+
+      pollForPurchase();
     };
 
-    pollForPurchase();
+    confirmAndPoll();
+    return;
   }, [accessToken, paymentIntentId, id, router]);
 
   // Error state

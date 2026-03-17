@@ -1,9 +1,13 @@
-import { IsString, IsNotEmpty, IsEmail, IsOptional, MinLength, MaxLength, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsOptional, MinLength, MaxLength } from 'class-validator';
 
 export class CreatePurchaseDto {
   @IsNotEmpty()
   @IsString()
   contentId: string;
+
+  @IsOptional()
+  @IsString()
+  paymentProvider?: string;
 
   @IsNotEmpty()
   @IsString()

@@ -50,6 +50,7 @@ const schedule_1 = require("@nestjs/schedule");
 const crypto_1 = require("crypto");
 const prisma_service_1 = require("../prisma/prisma.service");
 const stripe_service_1 = require("../stripe/stripe.service");
+const paystack_service_1 = require("../paystack/paystack.service");
 const email_service_1 = require("../email/email.service");
 const s3_service_1 = require("../s3/s3.service");
 const redis_service_1 = require("../redis/redis.service");
@@ -57,9 +58,10 @@ const notifications_service_1 = require("../notifications/notifications.service"
 const create_notification_dto_1 = require("../notifications/dto/create-notification.dto");
 const crypto = __importStar(require("crypto"));
 let BuyerService = BuyerService_1 = class BuyerService {
-    constructor(prisma, stripeService, emailService, s3Service, redisService, config, notificationsService) {
+    constructor(prisma, stripeService, paystackService, emailService, s3Service, redisService, config, notificationsService) {
         this.prisma = prisma;
         this.stripeService = stripeService;
+        this.paystackService = paystackService;
         this.emailService = emailService;
         this.s3Service = s3Service;
         this.redisService = redisService;
@@ -305,6 +307,57 @@ let BuyerService = BuyerService_1 = class BuyerService {
             const platformFeePercentage = 15;
             const buyerAmount = content.price * 1.15;
             this.logger.log(`[PURCHASE] Calculated amount: base=$${content.price}, buyer pays=$${buyerAmount} (115%)`);
+            const providerValue = dto.paymentProvider
+                ? dto.paymentProvider.toUpperCase()
+                : this.config.get('DEFAULT_PAYMENT_PROVIDER')?.toUpperCase() || 'PAYSTACK';
+            const paymentProvider = providerValue === 'STRIPE' ? 'STRIPE' : 'PAYSTACK';
+            const crypto = require('crypto');
+            const accessToken = crypto.randomBytes(32).toString('hex');
+            const pendingPurchase = await this.prisma.purchase.create({
+                data: {
+                    contentId: dto.contentId,
+                    buyerSessionId: session.id,
+                    amount: buyerAmount,
+                    basePrice: content.price,
+                    platformFeePercentage,
+                    currency: 'USD',
+                    paymentProvider,
+                    status: 'PENDING',
+                    accessToken,
+                    purchaseFingerprint: dto.fingerprint,
+                    trustedFingerprints: dto.fingerprint ? [dto.fingerprint] : [],
+                    purchaseIpAddress: ipAddress,
+                },
+            });
+            if (paymentProvider === 'PAYSTACK') {
+                if (!this.paystackService.isConfigured()) {
+                    this.logger.error('[PURCHASE] Paystack requested but not configured');
+                    throw new common_1.BadRequestException('Paystack is not configured');
+                }
+                this.logger.log(`[PURCHASE] Creating Paystack transaction for $${buyerAmount}`);
+                const clientUrl = this.config.get('CLIENT_URL') || 'http://localhost:3000';
+                const callbackUrl = `${clientUrl}/checkout/${content.id}/success?purchaseId=${pendingPurchase.id}`;
+                const transaction = await this.paystackService.initializeTransaction(dto.email, buyerAmount, callbackUrl, {
+                    contentId: content.id,
+                    sessionId: session.id,
+                    purchaseId: pendingPurchase.id,
+                });
+                await this.prisma.purchase.update({
+                    where: { id: pendingPurchase.id },
+                    data: {
+                        paymentIntentId: transaction.reference,
+                        transactionId: transaction.reference,
+                    },
+                });
+                this.logger.log(`[PURCHASE] ✅ PENDING purchase created: ${pendingPurchase.id} with Paystack reference ${transaction.reference}`);
+                return {
+                    paymentProvider: 'PAYSTACK',
+                    authorizationUrl: transaction.authorizationUrl,
+                    reference: transaction.reference,
+                    purchaseId: pendingPurchase.id,
+                    amount: buyerAmount,
+                };
+            }
             this.logger.log(`[PURCHASE] Creating Stripe PaymentIntent for $${buyerAmount}`);
             let paymentIntent;
             try {
@@ -317,37 +370,24 @@ let BuyerService = BuyerService_1 = class BuyerService {
                     fingerprint: dto.fingerprint || '',
                     ipAddress: ipAddress || '',
                 });
-                this.logger.log(`[PURCHASE] PaymentIntent created successfully: ${paymentIntent.id}`);
             }
             catch (stripeError) {
                 this.logger.error('[PURCHASE] Stripe payment intent creation failed:', stripeError);
                 throw new common_1.BadRequestException('Failed to initialize payment. Please try again.');
             }
-            this.logger.log(`[PURCHASE] Creating PENDING purchase record for PaymentIntent ${paymentIntent.id}`);
-            const crypto = require('crypto');
-            const accessToken = crypto.randomBytes(32).toString('hex');
-            const pendingPurchase = await this.prisma.purchase.create({
+            await this.prisma.purchase.update({
+                where: { id: pendingPurchase.id },
                 data: {
-                    contentId: dto.contentId,
-                    buyerSessionId: session.id,
-                    amount: buyerAmount,
-                    basePrice: content.price,
-                    platformFeePercentage,
-                    currency: 'USD',
-                    paymentProvider: 'STRIPE',
                     paymentIntentId: paymentIntent.id,
-                    status: 'PENDING',
-                    accessToken,
-                    purchaseFingerprint: dto.fingerprint,
-                    trustedFingerprints: dto.fingerprint ? [dto.fingerprint] : [],
-                    purchaseIpAddress: ipAddress,
+                    transactionId: paymentIntent.id,
                 },
             });
-            this.logger.log(`[PURCHASE] ✅ PENDING purchase created: ${pendingPurchase.id}. Webhook will confirm after payment succeeds.`);
+            this.logger.log(`[PURCHASE] ✅ PENDING purchase created: ${pendingPurchase.id} with Stripe payment intent ${paymentIntent.id}`);
             return {
                 clientSecret: paymentIntent.client_secret,
                 amount: buyerAmount,
                 paymentIntentId: paymentIntent.id,
+                paymentProvider: 'STRIPE',
             };
         }
         catch (error) {
@@ -612,9 +652,30 @@ let BuyerService = BuyerService_1 = class BuyerService {
                         status: 'COMPLETED',
                     };
                 }
-                const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);
-                if (paymentIntent.status !== 'succeeded') {
-                    this.logger.error(`Payment intent ${paymentIntentId} status is ${paymentIntent.status}, expected succeeded`);
+                let verified = false;
+                if (purchase.paymentProvider === 'PAYSTACK') {
+                    if (!this.paystackService.isConfigured()) {
+                        this.logger.error(`Paystack not configured while confirming purchase ${purchaseId}`);
+                        throw new common_1.BadRequestException('Paystack is not configured');
+                    }
+                    this.logger.log(`Verifying Paystack reference ${paymentIntentId} for purchase ${purchaseId}`);
+                    const paystackResponse = await this.paystackService.verifyTransaction(paymentIntentId);
+                    if (paystackResponse.status !== 'success') {
+                        this.logger.error(`Paystack transaction ${paymentIntentId} status is ${paystackResponse.status}`);
+                        throw new common_1.BadRequestException('Payment not completed');
+                    }
+                    verified = true;
+                }
+                else {
+                    this.logger.log(`Verifying Stripe payment intent ${paymentIntentId} for purchase ${purchaseId}`);
+                    const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);
+                    if (paymentIntent.status !== 'succeeded') {
+                        this.logger.error(`Payment intent ${paymentIntentId} status is ${paymentIntent.status}, expected succeeded`);
+                        throw new common_1.BadRequestException('Payment not completed');
+                    }
+                    verified = true;
+                }
+                if (!verified) {
                     throw new common_1.BadRequestException('Payment not completed');
                 }
                 const updatedPurchase = await tx.purchase.update({
@@ -1003,6 +1064,7 @@ exports.BuyerService = BuyerService = BuyerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         stripe_service_1.StripeService,
+        paystack_service_1.PaystackService,
         email_service_1.EmailService,
         s3_service_1.S3Service,
         redis_service_1.RedisService,

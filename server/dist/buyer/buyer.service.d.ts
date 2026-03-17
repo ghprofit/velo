@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../stripe/stripe.service';
+import { PaystackService } from '../paystack/paystack.service';
 import { EmailService } from '../email/email.service';
 import { S3Service } from '../s3/s3.service';
 import { RedisService } from '../redis/redis.service';
@@ -10,6 +11,7 @@ import { CreatePurchaseDto } from './dto/create-purchase.dto';
 export declare class BuyerService {
     private prisma;
     private stripeService;
+    private paystackService;
     private emailService;
     private s3Service;
     private redisService;
@@ -22,7 +24,7 @@ export declare class BuyerService {
     private readonly ACCESS_BUFFER_MINUTES;
     private readonly VIEW_COOLDOWN_MS;
     private readonly VERIFICATION_CODE_EXPIRY_MINUTES;
-    constructor(prisma: PrismaService, stripeService: StripeService, emailService: EmailService, s3Service: S3Service, redisService: RedisService, config: ConfigService, notificationsService: NotificationsService);
+    constructor(prisma: PrismaService, stripeService: StripeService, paystackService: PaystackService, emailService: EmailService, s3Service: S3Service, redisService: RedisService, config: ConfigService, notificationsService: NotificationsService);
     createOrGetSession(dto: CreateSessionDto, ipAddress?: string, userAgent?: string): Promise<{
         id: string;
         sessionToken: string;
@@ -52,15 +54,33 @@ export declare class BuyerService {
     createPurchase(dto: CreatePurchaseDto, ipAddress?: string): Promise<{
         alreadyPurchased: boolean;
         accessToken: string;
-        clientSecret?: undefined;
+        paymentProvider?: undefined;
+        authorizationUrl?: undefined;
+        reference?: undefined;
+        purchaseId?: undefined;
         amount?: undefined;
+        clientSecret?: undefined;
+        paymentIntentId?: undefined;
+    } | {
+        paymentProvider: string;
+        authorizationUrl: string;
+        reference: string;
+        purchaseId: string;
+        amount: number;
+        alreadyPurchased?: undefined;
+        accessToken?: undefined;
+        clientSecret?: undefined;
         paymentIntentId?: undefined;
     } | {
         clientSecret: any;
         amount: number;
         paymentIntentId: any;
+        paymentProvider: string;
         alreadyPurchased?: undefined;
         accessToken?: undefined;
+        authorizationUrl?: undefined;
+        reference?: undefined;
+        purchaseId?: undefined;
     }>;
     verifyPurchase(purchaseId: string): Promise<{
         id: string;

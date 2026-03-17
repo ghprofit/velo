@@ -60,6 +60,7 @@ const analytics_module_1 = require("./analytics/analytics.module");
 const earnings_module_1 = require("./earnings/earnings.module");
 const notifications_module_1 = require("./notifications/notifications.module");
 const stripe_module_1 = require("./stripe/stripe.module");
+const paystack_module_1 = require("./paystack/paystack.module");
 const superadmin_module_1 = require("./superadmin/superadmin.module");
 const admin_module_1 = require("./admin/admin.module");
 const waitlist_module_1 = require("./waitlist/waitlist.module");
@@ -104,6 +105,7 @@ exports.AppModule = AppModule = __decorate([
             prisma_module_1.PrismaModule,
             s3_module_1.S3Module,
             stripe_module_1.StripeModule,
+            paystack_module_1.PaystackModule,
             auth_module_1.AuthModule,
             buyer_module_1.BuyerModule,
             verification_module_1.VerificationModule,

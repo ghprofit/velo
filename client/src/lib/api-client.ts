@@ -584,12 +584,7 @@ export const buyerApi = {
     apiClient.post('/buyer/purchase/confirm', data),
 };
 
-// Stripe API
-export const stripeApi = {
-  // Get Stripe publishable key
-  getConfig: () =>
-    apiClient.get('/stripe/config'),
-};
+
 
 // Admin API
 export const adminApi = {

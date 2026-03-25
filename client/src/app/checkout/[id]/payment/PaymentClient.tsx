@@ -3,11 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { loadStripe, Stripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import { buyerApi, stripeApi } from '@/lib/api-client';
+import { buyerApi } from '@/lib/api-client';
 import { getBuyerSession, getOrGenerateBrowserFingerprint, savePurchaseToken } from '@/lib/buyer-session';
-import CheckoutForm from '@/components/CheckoutForm';
 import Footer from '@/components/Footer';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -15,6 +12,86 @@ import { PageTransition } from '@/components/ui/PageTransition';
 import { staggerContainer, staggerItem } from '@/lib/animations';
 import { useCurrencyCountUp } from '@/hooks/useCountUp';
 import FloatingLogo from '@/components/FloatingLogo';
+
+interface PaystackInlinePaymentProps {
+  accessCode: string;
+  amount: number;
+  email: string;
+  onSuccess: (reference: string) => void;
+  onClose: () => void;
+}
+
+function PaystackInlinePayment({ accessCode, amount, email, onSuccess, onClose }: PaystackInlinePaymentProps) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const paystackRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Load Paystack script if not already loaded
+    if (!window.PaystackPop) {
+      const script = document.createElement('script');
+      script.src = 'https://js.paystack.co/v1/inline.js';
+      script.async = true;
+      document.head.appendChild(script);
+
+      script.onload = () => {
+        initializePayment();
+      };
+    } else {
+      initializePayment();
+    }
+
+    function initializePayment() {
+      if (window.PaystackPop && paystackRef.current) {
+        const handler = window.PaystackPop.setup({
+          key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+          email,
+          amount: Math.round(amount * 100), // Convert to cents for USD
+          currency: 'USD',
+          ref: accessCode,
+          callback: (response: any) => {
+            setIsProcessing(true);
+            console.log('[PAYSTACK] Payment successful:', response);
+            onSuccess(response.reference);
+          },
+          onClose: () => {
+            console.log('[PAYSTACK] Payment modal closed');
+            onClose();
+          },
+          metadata: {
+            custom_fields: [
+              {
+                display_name: 'Content Purchase',
+                variable_name: 'content_purchase',
+                value: 'Velo Link Content',
+              },
+            ],
+          },
+        });
+
+        handler.openIframe();
+      }
+    }
+  }, [accessCode, amount, email, onSuccess, onClose]);
+
+  return (
+    <div>
+      <div ref={paystackRef} id="paystack-payment-form"></div>
+      {isProcessing && (
+        <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+          <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+          <p className="text-green-800 font-medium">Processing payment...</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Extend window interface for Paystack
+declare global {
+  interface Window {
+    PaystackPop: any;
+  }
+}
 
 interface ContentData {
   id: string;
@@ -26,7 +103,9 @@ interface ContentData {
 interface PurchaseInfo {
   purchaseId: string;
   accessToken: string;
-  clientSecret: string;
+  accessCode?: string;
+  reference?: string;
+  amount?: number;
 }
 
 export function PaymentClient({ id }: { id: string }) {
@@ -34,11 +113,9 @@ export function PaymentClient({ id }: { id: string }) {
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
 
-  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [content, setContent] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [purchaseInfo, setPurchaseInfo] = useState<PurchaseInfo | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   
   // Prevent double initialization in React StrictMode
@@ -126,29 +203,22 @@ export function PaymentClient({ id }: { id: string }) {
         }
 
         if (paymentResponse.data.paymentProvider === 'PAYSTACK') {
-          if (!paymentResponse.data.authorizationUrl) {
-            throw new Error('Missing Paystack authorization URL');
+          if (!paymentResponse.data.accessCode) {
+            throw new Error('Missing Paystack access code');
           }
-          window.location.href = paymentResponse.data.authorizationUrl;
-          setLoading(false);
-          return;
+          console.log('[CHECKOUT] ✅ Paystack inline payment initialized with access code');
+
+          setPurchaseInfo({
+            purchaseId: paymentResponse.data.purchaseId,
+            accessToken: '',
+            accessCode: paymentResponse.data.accessCode,
+            reference: paymentResponse.data.reference,
+            amount: paymentResponse.data.amount,
+          });
+
+          console.log('[CHECKOUT] ========== PAYMENT INITIALIZATION COMPLETE ==========');
+          setError(null);
         }
-
-        // For Stripe, initialize Stripe with publishable key and continue flow
-        console.log('[CHECKOUT] Fetching Stripe config...');
-        const configResponse = await stripeApi.getConfig();
-        const publishableKey = configResponse.data.publishableKey;
-        console.log('[CHECKOUT] ✅ Stripe publishable key received');
-        setStripePromise(loadStripe(publishableKey));
-
-        setPurchaseInfo({
-          purchaseId: paymentResponse.data.paymentIntentId,
-          accessToken: '',
-          clientSecret: paymentResponse.data.clientSecret,
-        });
-
-        console.log('[CHECKOUT] ========== PAYMENT INITIALIZATION COMPLETE ==========');
-        setError(null);
       } catch (err: unknown) {        console.error('[CHECKOUT] ❌ ========== PAYMENT INITIALIZATION FAILED ==========');
         console.error('[CHECKOUT] Error:', err);
         const error = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
@@ -171,27 +241,20 @@ export function PaymentClient({ id }: { id: string }) {
   const handlePaymentSuccess = async (
     purchaseId: string,
     accessToken: string,
-    paymentIntentId: string
+    reference: string
   ) => {
     try {
       console.log('[PAYMENT] ✅ Payment succeeded!');
-      console.log('[PAYMENT] Payment Intent ID:', paymentIntentId);
-      
-      // Payment is successful, webhook will create the purchase and send emails
-      // We redirect to success page where they'll wait for webhook processing
+      console.log('[PAYMENT] Paystack Reference:', reference);
+
+      // Payment is successful, redirect to success page
+      // The webhook will handle updating the purchase status
       console.log('[PAYMENT] 🔄 Redirecting to success page...');
-      // Pass the payment intent ID so success page can poll for purchase completion
-      router.push(`/checkout/${id}/success?paymentIntentId=${paymentIntentId}`);
+      router.push(`/checkout/${id}/success?reference=${reference}`);
     } catch (error) {
       console.error('[PAYMENT] ❌ Unexpected error:', error);
       setError('An unexpected error occurred. Please try again.');
     }
-  };
-
-  const handlePaymentError = (errorMessage: string) => {
-    console.error('Payment failed:', errorMessage);
-    // Redirect to the payment failed page
-    router.push(`/checkout/${id}/failed`);
   };
 
   if (!email) {
@@ -209,7 +272,7 @@ export function PaymentClient({ id }: { id: string }) {
     );
   }
 
-  if (error || !content || !purchaseInfo?.clientSecret) {
+  if (error || !content || !purchaseInfo?.accessCode) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
@@ -229,33 +292,7 @@ export function PaymentClient({ id }: { id: string }) {
     );
   }
 
-  const appearance = {
-    theme: 'stripe' as const,
-    variables: {
-      colorPrimary: '#4f46e5',
-      colorBackground: '#ffffff',
-      colorText: '#1f2937',
-      colorDanger: '#ef4444',
-      fontFamily: 'system-ui, sans-serif',
-      spacingUnit: '4px',
-      borderRadius: '8px',
-    },
-  };
 
-  const paymentElementOptions = {
-    layout: {
-      type: (isMobile ? 'accordion' : 'tabs') as 'accordion' | 'tabs',
-      defaultCollapsed: isMobile, // Collapse all payment methods on mobile by default
-      radios: isMobile,
-      spacedAccordionItems: isMobile,
-    },
-    wallets: {
-      applePay: 'auto' as const,
-      googlePay: 'auto' as const,
-      amazonPay: 'auto' as const,
-    },
-    paymentMethodOrder: ['card', 'wechat_pay', 'apple_pay', 'google_pay', 'amazon_pay', 'cashapp', 'link'],
-  };
 
   return (
     <PageTransition>
@@ -410,7 +447,7 @@ export function PaymentClient({ id }: { id: string }) {
                     <svg className="w-5 h-5 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="font-medium">Powered by Stripe</span>
+                    <span className="font-medium">Powered by Paystack</span>
                   </motion.div>
                 </div>
               </motion.div>
@@ -431,25 +468,14 @@ export function PaymentClient({ id }: { id: string }) {
                 {/* Payment Form */}
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Details</h2>
-                  {stripePromise && purchaseInfo.clientSecret && (
-                    <Elements
-                      key={purchaseInfo.clientSecret} // Force remount when clientSecret changes
-                      stripe={stripePromise}
-                      options={{
-                        clientSecret: purchaseInfo.clientSecret,
-                        appearance,
-                      }}
-                    >
-                      <CheckoutForm
-                        amount={content.price * 1.15}
-                        onSuccess={handlePaymentSuccess}
-                        onError={handlePaymentError}
-                        paymentElementOptions={paymentElementOptions}
-                        purchaseId={purchaseInfo.purchaseId}
-                        accessToken={purchaseInfo.accessToken}
-                        contentId={id}
-                      />
-                    </Elements>
+                  {purchaseInfo.accessCode && (
+                    <PaystackInlinePayment
+                      accessCode={purchaseInfo.accessCode}
+                      amount={content.price * 1.15}
+                      email={email || ''}
+                      onSuccess={(reference) => handlePaymentSuccess(purchaseInfo.purchaseId, '', reference)}
+                      onClose={() => setError('Payment was cancelled')}
+                    />
                   )}
 
                   {/* Price Breakdown */}

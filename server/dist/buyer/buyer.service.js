@@ -905,7 +905,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
         if (purchase.trustedFingerprints.length >= this.MAX_TRUSTED_DEVICES) {
             throw new common_1.BadRequestException('Maximum devices reached');
         }
-        const code = (randomBytes(3).readUIntBE(0, 3) % 900000 + 100000).toString();
+        const code = (crypto.randomBytes(3).readUIntBE(0, 3) % 900000 + 100000).toString();
         const expiresAt = new Date(Date.now() + this.VERIFICATION_CODE_EXPIRY_MINUTES * 60 * 1000);
         const codes = purchase.deviceVerificationCodes || [];
         codes.push({ code, fingerprint, expiresAt: expiresAt.toISOString() });

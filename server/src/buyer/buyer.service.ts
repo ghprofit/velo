@@ -1210,7 +1210,7 @@ export class BuyerService {
     }
 
     // Generate 6-digit code (Bug #15: crypto-secure random)
-    const code = (randomBytes(3).readUIntBE(0, 3) % 900000 + 100000).toString();
+    const code = (crypto.randomBytes(3).readUIntBE(0, 3) % 900000 + 100000).toString();
     const expiresAt = new Date(
       Date.now() + this.VERIFICATION_CODE_EXPIRY_MINUTES * 60 * 1000,
     );

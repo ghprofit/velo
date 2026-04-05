@@ -551,6 +551,7 @@ export default function AdminSettingsPage() {
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <p className="text-sm text-gray-700 mb-4">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc):</p>
                         <div className="w-48 h-48 bg-white border-2 border-gray-300 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={qrCode} alt="2FA QR Code" className="w-full h-full" />
                         </div>
                         <p className="text-sm text-gray-700 mb-2 font-semibold">Or enter this code manually:</p>

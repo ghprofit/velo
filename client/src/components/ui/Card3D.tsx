@@ -238,7 +238,10 @@ export function TestimonialCard3D({
         <p className="text-gray-700 mb-4 italic">&ldquo;{quote}&rdquo;</p>
         <div className="flex items-center gap-3">
           {avatar ? (
-            <img src={avatar} alt={author} className="w-12 h-12 rounded-full" />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={avatar} alt={author} className="w-12 h-12 rounded-full" />
+            </>
           ) : (
             <div className="w-12 h-12 rounded-full bg-linear-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-semibold">
               {author.charAt(0)}

@@ -17,7 +17,6 @@ export default function CreatorVerifyIdentityPage() {
   const [error, setError] = useState<string | null>(null);
   const [verificationSession, setVerificationSession] = useState<VeriffSessionResponse | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatusType>('PENDING');
-  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const { user } = useAppSelector((state) => state.auth);
 
@@ -29,7 +28,6 @@ export default function CreatorVerifyIdentityPage() {
 
       console.log('Verification status check:', data);
       setVerificationStatus(data.verificationStatus);
-      setSessionId(data.veriffSessionId);
       setError(null); // Clear any previous errors on successful check
     } catch (err: unknown) {
       console.error('Failed to fetch verification status:', err);
@@ -101,7 +99,6 @@ export default function CreatorVerifyIdentityPage() {
       const sessionData = response.data.data;
 
       setVerificationSession(sessionData);
-      setSessionId(sessionData.sessionId);
       setVerificationStatus('IN_PROGRESS');
 
       // Update the already-opened window with the verification URL

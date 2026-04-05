@@ -95,7 +95,7 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
 
     confirmAndPoll();
     return;
-  }, [accessToken, paymentIntentId, id, router]);
+  }, [accessToken, paymentIntentId, id, router, searchParams]);
 
   // Error state
   if (status === 'error') {

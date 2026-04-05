@@ -499,6 +499,7 @@ export function ContentClient({ id }: { id: string }) {
                             )}
                             {itemFileType === 'IMAGE' && item.signedUrl && (
                               <div className="relative aspect-video">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={item.signedUrl}
                                   alt={`${purchasedContent.title} - Image ${index + 1}`}
@@ -572,13 +573,16 @@ export function ContentClient({ id }: { id: string }) {
                 {effectiveContentType === 'IMAGE' && (
                   <div className="aspect-video relative">
                     {purchasedContent.contentItems && purchasedContent.contentItems.length > 0 && purchasedContent.contentItems[0].signedUrl ? (
-                      <img
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                         src={purchasedContent.contentItems[0].signedUrl}
                         alt={purchasedContent.title}
                         className="w-full h-full object-contain select-none absolute inset-0"
                         draggable={false}
                         onContextMenu={(e) => e.preventDefault()}
                       />
+                      </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-white">
                         <div className="text-center">
@@ -780,6 +784,7 @@ export function ContentClient({ id }: { id: string }) {
 
                     {itemFileType === 'IMAGE' && currentItem.signedUrl && (
                       <div className="relative max-h-[90vh] mx-auto flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={currentItem.signedUrl}
                           alt={`${purchasedContent.title} - Item ${lightboxIndex + 1}`}

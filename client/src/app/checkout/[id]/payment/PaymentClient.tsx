@@ -48,6 +48,7 @@ function PaystackInlinePayment({ accessCode, amount, email, onSuccess, onClose }
           amount: Math.round(amount * 100), // Convert to cents for USD
           currency: 'USD',
           ref: accessCode,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           callback: (response: any) => {
             setIsProcessing(true);
             console.log('[PAYSTACK] Payment successful:', response);
@@ -89,6 +90,7 @@ function PaystackInlinePayment({ accessCode, amount, email, onSuccess, onClose }
 // Extend window interface for Paystack
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     PaystackPop: any;
   }
 }
@@ -103,6 +105,7 @@ interface ContentData {
 interface PurchaseInfo {
   purchaseId: string;
   accessToken: string;
+  clientSecret?: string;
   accessCode?: string;
   reference?: string;
   amount?: number;
@@ -116,8 +119,8 @@ export function PaymentClient({ id }: { id: string }) {
   const [content, setContent] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  
+  const [purchaseInfo, setPurchaseInfo] = useState<PurchaseInfo | null>(null);
+
   // Prevent double initialization in React StrictMode
   const initializingRef = useRef(false);
 
@@ -125,18 +128,6 @@ export function PaymentClient({ id }: { id: string }) {
   const contentPriceAnimated = useCurrencyCountUp(content?.price || 0, '$', 1000);
   const platformFeeAnimated = useCurrencyCountUp((content?.price || 0) * 0.15, '$', 1000);
   const totalPriceAnimated = useCurrencyCountUp((content?.price || 0) * 1.15, '$', 1000);
-
-  // Detect mobile screen size
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   useEffect(() => {
     if (!email) {

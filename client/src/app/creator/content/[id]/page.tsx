@@ -75,6 +75,48 @@ export default function ContentDetailPage() {
   // Platform fee configuration
   const PLATFORM_FEE_RATE = 0.10;
 
+  // Fetch signed URLs for content preview
+  const fetchPreviewUrls = useCallback(async () => {
+    if (!content || !content.contentItems) return;
+    
+    setLoadingPreview(true);
+    try {
+      console.log('[CREATOR PREVIEW] Fetching signed URLs for content:', contentId);
+      
+      const response = await contentApi.getContentById(contentId);
+      console.log('[CREATOR PREVIEW] API Response:', response);
+      
+      // Handle response structure - API might return data directly or nested in .data
+      const contentData = response.data?.data || response.data;
+      console.log('[CREATOR PREVIEW] Content data:', contentData);
+      
+      // If the API returns signed URLs in contentItems, use them
+      if (contentData?.contentItems && Array.isArray(contentData.contentItems)) {
+        const urls: { [key: string]: string } = {};
+        let urlCount = 0;
+        
+        contentData.contentItems.forEach((item: ContentItem) => {
+          if (item.signedUrl) {
+            urls[item.id] = item.signedUrl;
+            urlCount++;
+            console.log(`[CREATOR PREVIEW] Got signed URL for item ${item.id}:`, item.signedUrl.substring(0, 100) + '...');
+          } else {
+            console.warn(`[CREATOR PREVIEW] No signed URL for item ${item.id}`);
+          }
+        });
+        
+        console.log(`[CREATOR PREVIEW] Total signed URLs fetched: ${urlCount}`);
+        setPreviewUrls(urls);
+      } else {
+        console.error('[CREATOR PREVIEW] No content items in response or invalid structure');
+      }
+    } catch (err) {
+      console.error('[CREATOR PREVIEW] Failed to fetch preview URLs:', err);
+    } finally {
+      setLoadingPreview(false);
+    }
+  }, [content, contentId]);
+
   useEffect(() => {
     const fetchContent = async () => {
       try {
@@ -124,7 +166,7 @@ export default function ContentDetailPage() {
     if (contentId) {
       fetchContent();
     }
-  }, [contentId]);
+  }, [contentId, fetchPreviewUrls]);
 
   const handleDelete = async () => {
     try {
@@ -166,47 +208,7 @@ export default function ContentDetailPage() {
     return 'UNKNOWN';
   };
 
-  // Fetch signed URLs for content preview
-  const fetchPreviewUrls = useCallback(async () => {
-    if (!content || !content.contentItems) return;
-    
-    setLoadingPreview(true);
-    try {
-      console.log('[CREATOR PREVIEW] Fetching signed URLs for content:', contentId);
-      
-      const response = await contentApi.getContentById(contentId);
-      console.log('[CREATOR PREVIEW] API Response:', response);
-      
-      // Handle response structure - API might return data directly or nested in .data
-      const contentData = response.data?.data || response.data;
-      console.log('[CREATOR PREVIEW] Content data:', contentData);
-      
-      // If the API returns signed URLs in contentItems, use them
-      if (contentData?.contentItems && Array.isArray(contentData.contentItems)) {
-        const urls: { [key: string]: string } = {};
-        let urlCount = 0;
-        
-        contentData.contentItems.forEach((item: ContentItem) => {
-          if (item.signedUrl) {
-            urls[item.id] = item.signedUrl;
-            urlCount++;
-            console.log(`[CREATOR PREVIEW] Got signed URL for item ${item.id}:`, item.signedUrl.substring(0, 100) + '...');
-          } else {
-            console.warn(`[CREATOR PREVIEW] No signed URL for item ${item.id}`);
-          }
-        });
-        
-        console.log(`[CREATOR PREVIEW] Total signed URLs fetched: ${urlCount}`);
-        setPreviewUrls(urls);
-      } else {
-        console.error('[CREATOR PREVIEW] No content items in response or invalid structure');
-      }
-    } catch (err) {
-      console.error('[CREATOR PREVIEW] Failed to fetch preview URLs:', err);
-    } finally {
-      setLoadingPreview(false);
-    }
-  }, [content, contentId]);
+
 
   // Open lightbox and fetch preview URLs if needed
   const openLightbox = (index: number) => {
@@ -480,6 +482,7 @@ export default function ContentDetailPage() {
             {content.contentType !== 'VIDEO' && content.contentType !== 'IMAGE' && content.contentType !== 'GALLERY' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="aspect-video bg-gray-100 relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={content.thumbnailUrl}
                     alt={content.title}
@@ -526,6 +529,7 @@ export default function ContentDetailPage() {
                           {/* Show actual image/video if preview URL available */}
                           {previewUrls[item.id] && itemFileType === 'IMAGE' && (
                             <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={previewUrls[item.id]}
                                 alt={fileName || 'Gallery item'}

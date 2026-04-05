@@ -11,90 +11,90 @@ interface AdminSidebarProps {
   activeTab: string;
 }
 
+// Define menu items with role-based access
+const allMenuItems = [
+  { 
+    id: 'dashboard', 
+    label: 'Dashboard', 
+    icon: 'dashboard', 
+    href: '/admin/dashboard',
+    roles: ['FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'],
+  },
+  { 
+    id: 'creator-management', 
+    label: 'Creator Management', 
+    icon: 'users', 
+    hasSubmenu: true,
+    roles: ['CONTENT_ADMIN'],
+  },
+  { 
+    id: 'creators', 
+    label: 'Creators', 
+    icon: 'creator', 
+    href: '/admin/creators', 
+    isSubmenu: true,
+    roles: ['CONTENT_ADMIN'],
+  },
+  { 
+    id: 'content', 
+    label: 'Content', 
+    icon: 'content', 
+    href: '/admin/content', 
+    isSubmenu: true,
+    roles: ['CONTENT_ADMIN'],
+  },
+  { 
+    id: 'payments', 
+    label: 'Payments', 
+    icon: 'payments', 
+    href: '/admin/payments', 
+    isSubmenu: true,
+    roles: ['FINANCIAL_ADMIN'],
+  },
+  { 
+    id: 'payouts', 
+    label: 'Payout Requests', 
+    icon: 'payouts', 
+    href: '/admin/payouts', 
+    isSubmenu: true,
+    roles: ['FINANCIAL_ADMIN'],
+  },
+  { 
+    id: 'reports', 
+    label: 'Reports & Analytics', 
+    icon: 'reports', 
+    href: '/admin/reports', 
+    isSubmenu: true,
+    roles: ['ANALYTICS_ADMIN', 'FINANCIAL_ADMIN'],
+  },
+  { 
+    id: 'support', 
+    label: 'Support', 
+    icon: 'support', 
+    href: '/admin/support',
+    roles: ['SUPPORT_SPECIALIST'],
+  },
+  { 
+    id: 'notifications', 
+    label: 'Notifications', 
+    icon: 'notifications', 
+    href: '/admin/notifications',
+    roles: ['FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'],
+  },
+  { 
+    id: 'settings', 
+    label: 'Settings', 
+    icon: 'settings', 
+    href: '/admin/settings',
+    roles: ['FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'],
+  },
+];
+
 export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { logout, isLoggingOut } = useLogout();
   const { user } = useAuth();
-
-  // Define menu items with role-based access
-  const allMenuItems = [
-    { 
-      id: 'dashboard', 
-      label: 'Dashboard', 
-      icon: 'dashboard', 
-      href: '/admin/dashboard',
-      roles: ['FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'],
-    },
-    { 
-      id: 'creator-management', 
-      label: 'Creator Management', 
-      icon: 'users', 
-      hasSubmenu: true,
-      roles: ['CONTENT_ADMIN'],
-    },
-    { 
-      id: 'creators', 
-      label: 'Creators', 
-      icon: 'creator', 
-      href: '/admin/creators', 
-      isSubmenu: true,
-      roles: ['CONTENT_ADMIN'],
-    },
-    { 
-      id: 'content', 
-      label: 'Content', 
-      icon: 'content', 
-      href: '/admin/content', 
-      isSubmenu: true,
-      roles: ['CONTENT_ADMIN'],
-    },
-    { 
-      id: 'payments', 
-      label: 'Payments', 
-      icon: 'payments', 
-      href: '/admin/payments', 
-      isSubmenu: true,
-      roles: ['FINANCIAL_ADMIN'],
-    },
-    { 
-      id: 'payouts', 
-      label: 'Payout Requests', 
-      icon: 'payouts', 
-      href: '/admin/payouts', 
-      isSubmenu: true,
-      roles: ['FINANCIAL_ADMIN'],
-    },
-    { 
-      id: 'reports', 
-      label: 'Reports & Analytics', 
-      icon: 'reports', 
-      href: '/admin/reports', 
-      isSubmenu: true,
-      roles: ['ANALYTICS_ADMIN', 'FINANCIAL_ADMIN'],
-    },
-    { 
-      id: 'support', 
-      label: 'Support', 
-      icon: 'support', 
-      href: '/admin/support',
-      roles: ['SUPPORT_SPECIALIST'],
-    },
-    { 
-      id: 'notifications', 
-      label: 'Notifications', 
-      icon: 'notifications', 
-      href: '/admin/notifications',
-      roles: ['FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'],
-    },
-    { 
-      id: 'settings', 
-      label: 'Settings', 
-      icon: 'settings', 
-      href: '/admin/settings',
-      roles: ['FINANCIAL_ADMIN', 'CONTENT_ADMIN', 'SUPPORT_SPECIALIST', 'ANALYTICS_ADMIN'],
-    },
-  ];
 
   // Filter menu items based on user's admin role
   const menuItems = useMemo(() => {

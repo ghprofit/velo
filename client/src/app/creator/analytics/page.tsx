@@ -38,24 +38,6 @@ interface ContentPerformanceResponse {
   totalPages: number;
 }
 
-interface CountryData {
-  country: string;
-  countryCode: string;
-  views: number;
-  percentage: number;
-}
-
-interface DeviceData {
-  device: string;
-  views: number;
-  percentage: number;
-}
-
-interface BrowserData {
-  browser: string;
-  views: number;
-  percentage: number;
-}
 
 // interface DemographicsData {
 //   geographic: {

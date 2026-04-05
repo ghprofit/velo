@@ -1,23 +1,50 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PaystackService {
   private readonly logger = new Logger(PaystackService.name);
   private readonly secretKey: string;
+  private readonly webhookSecret: string;
   private readonly apiBase = 'https://api.paystack.co';
 
   constructor(private config: ConfigService) {
     this.secretKey = this.config.get<string>('PAYSTACK_SECRET_KEY') || '';
+    this.webhookSecret = this.config.get<string>('PAYSTACK_WEBHOOK_SECRET') || '';
+
     if (!this.secretKey) {
       this.logger.warn('PAYSTACK_SECRET_KEY is not configured; Paystack purchase flows will be disabled.');
     } else {
       this.logger.log('✓ Paystack initialized');
     }
+
+    if (!this.webhookSecret) {
+      this.logger.warn('PAYSTACK_WEBHOOK_SECRET is not configured; webhook signature verification is disabled!');
+    } else {
+      this.logger.log('✓ Paystack webhook secret loaded');
+    }
   }
 
   isConfigured(): boolean {
     return !!this.secretKey;
+  }
+
+  verifyWebhookSignature(rawBody: string | Buffer, signature: string): boolean {
+    if (!this.webhookSecret) {
+      throw new UnauthorizedException('PAYSTACK_WEBHOOK_SECRET is not configured');
+    }
+
+    const payload = typeof rawBody === 'string' ? rawBody : rawBody.toString();
+    const hash = crypto.createHmac('sha512', this.webhookSecret).update(payload).digest('hex');
+
+    const isValid = crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature));
+
+    if (!isValid) {
+      this.logger.warn(`Paystack webhook signature verification failed: computed=${hash} header=${signature}`);
+    }
+
+    return isValid;
   }
 
   private getAuthHeaders() {
@@ -71,7 +98,49 @@ export class PaystackService {
     }
   }
 
-  async verifyTransaction(reference: string): Promise<{ status: string; amount: number; currency: string; paidAt: string; customerEmail: string;}> {
+  async initializeInlineTransaction(
+    email: string,
+    amount: number,
+    callbackUrl: string,
+    metadata: Record<string, string> = {},
+    currency: string = 'USD',
+  ): Promise<{ accessCode: string; reference: string }> {
+    try {
+      const url = `${this.apiBase}/transaction/initialize`;
+      const body = {
+        email,
+        amount: Math.round(amount * 100), // Paystack expects amount in the smallest currency unit
+        currency: currency.toUpperCase(),
+        callback_url: callbackUrl,
+        metadata,
+        channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+
+      const json = (await response.json()) as any;
+      if (!response.ok || !json.status) {
+        const errorMessage = json.message || 'Failed to initialize Paystack inline payment';
+        this.logger.error(`Paystack inline initialize error: ${errorMessage}`);
+        throw new BadRequestException(errorMessage);
+      }
+
+      const { access_code, reference } = json.data;
+      if (!access_code || !reference) {
+        this.logger.error('Paystack inline initialize response missing access code or reference', json);
+        throw new BadRequestException('Failed to initialize Paystack inline payment');
+      }
+
+      return { accessCode: access_code, reference };
+    } catch (error: any) {
+      this.logger.error('Paystack inline initialize transaction failed:', error?.message || error);
+      throw new BadRequestException('Failed to initialize Paystack inline payment');
+    }
+  }
     try {
       const url = `${this.apiBase}/transaction/verify/${encodeURIComponent(reference)}`;
       const response = await fetch(url, {

@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../stripe/stripe.service';
 import { PaystackService } from '../paystack/paystack.service';
@@ -395,10 +394,9 @@ export class BuyerService {
         ? dto.paymentProvider.toUpperCase()
         : this.config.get<string>('DEFAULT_PAYMENT_PROVIDER')?.toUpperCase() || 'PAYSTACK';
       const paymentProvider = providerValue === 'STRIPE' ? 'STRIPE' : 'PAYSTACK';
-
-      const crypto = require('crypto');
       const accessToken = crypto.randomBytes(32).toString('hex');
 
+      this.logger.log(`[PURCHASE] Initializing ${paymentProvider} purchase record...`);
       const pendingPurchase = await this.prisma.purchase.create({
         data: {
           contentId: dto.contentId,
@@ -495,28 +493,31 @@ export class BuyerService {
         paymentIntentId: paymentIntent.id,
         paymentProvider: 'STRIPE',
       };
-    } catch (error) {
+    } catch (error: any) {
       // Log with context (Bug #4)
       this.logger.error(`[PURCHASE] ❌ Payment intent creation FAILED for content ${dto.contentId}`);
-      this.logger.error(`[PURCHASE] Error:`, error);
-      if (error instanceof Error) {
-        this.logger.error(`[PURCHASE] Error message: ${error.message}`);
-        this.logger.error(`[PURCHASE] Error stack:`, error.stack);
+
+      // Extract detailed error message for easier debugging
+      const errorMessage = error?.message || (typeof error === 'string' ? error : 'Unknown error');
+      this.logger.error(`[PURCHASE] Error Detail: ${errorMessage}`);
+
+      if (error?.stack) {
+        this.logger.debug(`[PURCHASE] Stack trace: ${error.stack}`);
+      }
+
+      // Check if it's a Prisma error (often denotes missing column/migration)
+      if (error?.code?.startsWith('P')) {
+        this.logger.error(`[PURCHASE] Database Error Detect (Prisma Code ${error.code}). Ensure migrations are applied.`);
+        throw new BadRequestException('Database error: Your account might need a schema update. Please contact support.');
       }
 
       // Re-throw with user-friendly message
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      if (error instanceof BadRequestException) {
+      if (error instanceof UnauthorizedException || error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
 
       throw new BadRequestException(
-        'An error occurred while processing your purchase. Please try again.',
+        `Failed to process purchase: ${errorMessage}`,
       );
     }
   }

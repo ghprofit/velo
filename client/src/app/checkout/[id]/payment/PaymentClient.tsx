@@ -46,7 +46,7 @@ function PaystackInlinePayment({ accessCode, amount, email, onSuccess, onClose }
           key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
           email,
           amount: Math.round(amount * 100), // Convert to cents for USD
-          currency: 'USD',
+          currency: 'GHS', // Changed to GHS as per account support
           ref: accessCode,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           callback: (response: any) => {

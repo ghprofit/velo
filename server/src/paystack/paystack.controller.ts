@@ -159,7 +159,7 @@ export class PaystackController {
             {
               buyer_email: purchase.buyerSession.email,
               content_title: purchase.content.title,
-              amount: `$${purchase.amount.toFixed(2)}`,
+              amount: `GHS ${purchase.amount.toFixed(2)}`,
               date: new Date().toLocaleDateString(),
               access_link: `${clientUrl}/c/${purchase.contentId}?accessToken=${purchase.accessToken}`,
               transaction_id: purchase.paymentIntentId || '',

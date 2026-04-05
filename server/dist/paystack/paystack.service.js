@@ -123,7 +123,7 @@ let PaystackService = PaystackService_1 = class PaystackService {
             throw new common_1.BadRequestException('Failed to initialize Paystack payment');
         }
     }
-    async initializeInlineTransaction(email, amount, callbackUrl, metadata = {}, currency = 'USD') {
+    async initializeInlineTransaction(email, amount, callbackUrl, metadata = {}, currency = 'GHS') {
         try {
             const url = `${this.apiBase}/transaction/initialize`;
             const body = {

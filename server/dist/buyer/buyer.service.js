@@ -319,7 +319,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
                     amount: buyerAmount,
                     basePrice: content.price,
                     platformFeePercentage,
-                    currency: 'USD',
+                    currency: 'GHS',
                     paymentProvider,
                     status: 'PENDING',
                     accessToken,
@@ -333,14 +333,14 @@ let BuyerService = BuyerService_1 = class BuyerService {
                     this.logger.error('[PURCHASE] Paystack requested but not configured');
                     throw new common_1.BadRequestException('Paystack is not configured');
                 }
-                this.logger.log(`[PURCHASE] Creating Paystack inline transaction for $${buyerAmount}`);
+                this.logger.log(`[PURCHASE] Creating Paystack inline transaction for GHS ${buyerAmount}`);
                 const clientUrl = this.config.get('CLIENT_URL') || 'http://localhost:3000';
                 const callbackUrl = `${clientUrl}/checkout/${content.id}/success?purchaseId=${pendingPurchase.id}`;
                 const transaction = await this.paystackService.initializeInlineTransaction(dto.email, buyerAmount, callbackUrl, {
                     contentId: content.id,
                     sessionId: session.id,
                     purchaseId: pendingPurchase.id,
-                }, 'USD');
+                }, 'GHS');
                 await this.prisma.purchase.update({
                     where: { id: pendingPurchase.id },
                     data: {

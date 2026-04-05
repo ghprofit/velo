@@ -1,0 +1,177 @@
+import { Request } from 'express';
+import { BuyerService } from './buyer.service';
+import { CreateSessionDto } from './dto/create-session.dto';
+import { CreatePurchaseDto } from './dto/create-purchase.dto';
+import { VerifyAccessDto } from './dto/verify-access.dto';
+import { ConfirmPurchaseDto } from './dto/confirm-purchase.dto';
+import { CheckEligibilityDto } from './dto/check-eligibility.dto';
+import { RequestDeviceVerificationDto } from './dto/request-device-verification.dto';
+import { VerifyDeviceCodeDto } from './dto/verify-device-code.dto';
+export declare class BuyerController {
+    private readonly buyerService;
+    constructor(buyerService: BuyerService);
+    createSession(dto: CreateSessionDto, ipAddress: string, req: Request): Promise<{
+        id: string;
+        sessionToken: string;
+        fingerprint: string | null;
+        ipAddress: string | null;
+        expiresAt: Date;
+    }>;
+    getContentDetails(id: string): Promise<{
+        id: string;
+        title: string;
+        description: string | null;
+        price: number;
+        thumbnailUrl: string;
+        contentType: string;
+        duration: number | null;
+        viewCount: number;
+        purchaseCount: number;
+        itemCount: number;
+        creator: {
+            id: string;
+            displayName: string;
+            profileImage: string | null;
+            verificationStatus: import(".prisma/client").$Enums.VerificationStatus;
+        };
+    }>;
+    createPurchase(dto: CreatePurchaseDto): Promise<{
+        alreadyPurchased: boolean;
+        accessToken: string;
+        paymentProvider?: undefined;
+        accessCode?: undefined;
+        reference?: undefined;
+        purchaseId?: undefined;
+        amount?: undefined;
+        clientSecret?: undefined;
+        paymentIntentId?: undefined;
+    } | {
+        paymentProvider: string;
+        accessCode: string;
+        reference: string;
+        purchaseId: string;
+        amount: number;
+        alreadyPurchased?: undefined;
+        accessToken?: undefined;
+        clientSecret?: undefined;
+        paymentIntentId?: undefined;
+    } | {
+        clientSecret: any;
+        amount: number;
+        paymentIntentId: any;
+        paymentProvider: string;
+        alreadyPurchased?: undefined;
+        accessToken?: undefined;
+        accessCode?: undefined;
+        reference?: undefined;
+        purchaseId?: undefined;
+    }>;
+    verifyPurchase(id: string): Promise<{
+        id: string;
+        status: string;
+        accessToken: string;
+        content: {
+            id: string;
+            title: string;
+            contentType: string;
+        };
+    }>;
+    verifyPurchaseByPaymentIntent(paymentIntentId: string): Promise<{
+        id: string;
+        status: string;
+        accessToken: string;
+        content: {
+            id: string;
+            title: string;
+            contentType: string;
+        };
+    }>;
+    getContentAccess(dto: VerifyAccessDto, ipAddress: string): Promise<{
+        content: {
+            id: string;
+            title: string;
+            description: string | null;
+            contentType: string;
+            s3Key: string;
+            s3Bucket: string;
+            thumbnailUrl: string;
+            duration: number | null;
+            creator: {
+                displayName: string;
+                profileImage: string | null;
+            };
+            contentItems: ({
+                id: string;
+                s3Key: string;
+                s3Bucket: string;
+                order: number;
+                signedUrl: string;
+            } | null)[];
+        };
+        purchase: {
+            viewCount: number;
+            purchasedAt: Date;
+        };
+    }>;
+    checkAccessEligibility(dto: CheckEligibilityDto): Promise<{
+        hasAccess: boolean;
+        reason: string;
+        isExpired?: undefined;
+        needsEmailVerification?: undefined;
+        canAddMoreDevices?: undefined;
+        accessExpiresAt?: undefined;
+        timeRemaining?: undefined;
+    } | {
+        hasAccess: boolean;
+        isExpired: boolean;
+        reason: string;
+        needsEmailVerification?: undefined;
+        canAddMoreDevices?: undefined;
+        accessExpiresAt?: undefined;
+        timeRemaining?: undefined;
+    } | {
+        hasAccess: boolean;
+        needsEmailVerification: boolean;
+        reason: string;
+        canAddMoreDevices: boolean;
+        isExpired?: undefined;
+        accessExpiresAt?: undefined;
+        timeRemaining?: undefined;
+    } | {
+        hasAccess: boolean;
+        accessExpiresAt: Date | null;
+        timeRemaining: number | null;
+        reason?: undefined;
+        isExpired?: undefined;
+        needsEmailVerification?: undefined;
+        canAddMoreDevices?: undefined;
+    }>;
+    getSessionPurchases(sessionToken: string): Promise<{
+        id: string;
+        accessToken: string;
+        purchasedAt: Date;
+        viewCount: number;
+        content: {
+            id: string;
+            title: string;
+            thumbnailUrl: string;
+            contentType: string;
+        };
+    }[]>;
+    confirmPurchase(dto: ConfirmPurchaseDto): Promise<{
+        purchaseId: string;
+        accessToken: string;
+        status: string;
+    }>;
+    requestDeviceCode(dto: RequestDeviceVerificationDto): Promise<{
+        success: boolean;
+    }>;
+    verifyDevice(dto: VerifyDeviceCodeDto): Promise<{
+        success: boolean;
+    }>;
+    resendInvoice(dto: {
+        purchaseId: string;
+        email: string;
+    }): Promise<any>;
+}
+//# sourceMappingURL=buyer.controller.d.ts.map

@@ -338,3 +338,19 @@ Prisma connected to database
 [95m[Nest] 35368  - [39m04/05/2026, 11:37:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
 [95m[Nest] 35368  - [39m04/05/2026, 11:38:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking pending video moderation jobs...[39m
 [95m[Nest] 35368  - [39m04/05/2026, 11:38:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:39:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[33m[Nest] 35368  - [39m04/05/2026, 11:39:23 PM [33m   WARN[39m [38;5;3m[ContentModerationCron] [39m[33mScheduled review cron: Connection timeout (will retry)[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:40:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking pending video moderation jobs...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:40:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:41:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:42:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:42:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking pending video moderation jobs...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:43:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:44:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking pending video moderation jobs...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:44:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:45:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:46:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking pending video moderation jobs...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:46:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:47:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:48:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking pending video moderation jobs...[39m
+[95m[Nest] 35368  - [39m04/05/2026, 11:48:00 PM [95m  DEBUG[39m [38;5;3m[ContentModerationCron] [39m[95mChecking for scheduled content reviews...[39m

@@ -103,7 +103,7 @@ export class PaystackService {
     amount: number,
     callbackUrl: string,
     metadata: Record<string, string> = {},
-    currency: string = 'GHS',
+    currency: string = 'USD',
   ): Promise<{ accessCode: string; reference: string }> {
     try {
       const url = `${this.apiBase}/transaction/initialize`;

@@ -334,14 +334,14 @@ let BuyerService = BuyerService_1 = class BuyerService {
                     this.logger.error('[PURCHASE] Paystack requested but not configured');
                     throw new common_1.BadRequestException('Paystack is not configured');
                 }
-                this.logger.log(`[PURCHASE] Creating Paystack transaction for $${buyerAmount}`);
+                this.logger.log(`[PURCHASE] Creating Paystack inline transaction for $${buyerAmount}`);
                 const clientUrl = this.config.get('CLIENT_URL') || 'http://localhost:3000';
                 const callbackUrl = `${clientUrl}/checkout/${content.id}/success?purchaseId=${pendingPurchase.id}`;
-                const transaction = await this.paystackService.initializeTransaction(dto.email, buyerAmount, callbackUrl, {
+                const transaction = await this.paystackService.initializeInlineTransaction(dto.email, buyerAmount, callbackUrl, {
                     contentId: content.id,
                     sessionId: session.id,
                     purchaseId: pendingPurchase.id,
-                });
+                }, 'USD');
                 await this.prisma.purchase.update({
                     where: { id: pendingPurchase.id },
                     data: {
@@ -352,7 +352,7 @@ let BuyerService = BuyerService_1 = class BuyerService {
                 this.logger.log(`[PURCHASE] ✅ PENDING purchase created: ${pendingPurchase.id} with Paystack reference ${transaction.reference}`);
                 return {
                     paymentProvider: 'PAYSTACK',
-                    authorizationUrl: transaction.authorizationUrl,
+                    accessCode: transaction.accessCode,
                     reference: transaction.reference,
                     purchaseId: pendingPurchase.id,
                     amount: buyerAmount,

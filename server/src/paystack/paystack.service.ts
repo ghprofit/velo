@@ -141,6 +141,9 @@ export class PaystackService {
       throw new BadRequestException('Failed to initialize Paystack inline payment');
     }
   }
+  async verifyTransaction(
+    reference: string,
+  ): Promise<{ status: string; amount: number; currency: string; paidAt: string; customerEmail: string }> {
     try {
       const url = `${this.apiBase}/transaction/verify/${encodeURIComponent(reference)}`;
       const response = await fetch(url, {

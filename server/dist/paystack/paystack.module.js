@@ -9,11 +9,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaystackModule = void 0;
 const common_1 = require("@nestjs/common");
 const paystack_service_1 = require("./paystack.service");
+const paystack_controller_1 = require("./paystack.controller");
 let PaystackModule = class PaystackModule {
 };
 exports.PaystackModule = PaystackModule;
 exports.PaystackModule = PaystackModule = __decorate([
     (0, common_1.Module)({
+        controllers: [paystack_controller_1.PaystackController],
         providers: [paystack_service_1.PaystackService],
         exports: [paystack_service_1.PaystackService],
     })

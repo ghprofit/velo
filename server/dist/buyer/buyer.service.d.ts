@@ -55,7 +55,7 @@ export declare class BuyerService {
         alreadyPurchased: boolean;
         accessToken: string;
         paymentProvider?: undefined;
-        authorizationUrl?: undefined;
+        accessCode?: undefined;
         reference?: undefined;
         purchaseId?: undefined;
         amount?: undefined;
@@ -63,7 +63,7 @@ export declare class BuyerService {
         paymentIntentId?: undefined;
     } | {
         paymentProvider: string;
-        authorizationUrl: string;
+        accessCode: string;
         reference: string;
         purchaseId: string;
         amount: number;
@@ -78,7 +78,7 @@ export declare class BuyerService {
         paymentProvider: string;
         alreadyPurchased?: undefined;
         accessToken?: undefined;
-        authorizationUrl?: undefined;
+        accessCode?: undefined;
         reference?: undefined;
         purchaseId?: undefined;
     }>;

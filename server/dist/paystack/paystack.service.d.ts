@@ -3,12 +3,18 @@ export declare class PaystackService {
     private config;
     private readonly logger;
     private readonly secretKey;
+    private readonly webhookSecret;
     private readonly apiBase;
     constructor(config: ConfigService);
     isConfigured(): boolean;
+    verifyWebhookSignature(rawBody: string | Buffer, signature: string): boolean;
     private getAuthHeaders;
     initializeTransaction(email: string, amount: number, callbackUrl: string, metadata?: Record<string, string>): Promise<{
         authorizationUrl: string;
+        reference: string;
+    }>;
+    initializeInlineTransaction(email: string, amount: number, callbackUrl: string, metadata?: Record<string, string>, currency?: string): Promise<{
+        accessCode: string;
         reference: string;
     }>;
     verifyTransaction(reference: string): Promise<{

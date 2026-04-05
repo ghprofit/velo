@@ -153,11 +153,17 @@ export class PaystackController {
       // Send confirmation email to buyer
       if (purchase.buyerSession.email) {
         try {
-          await this.emailService.sendPurchaseConfirmation(
+          const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
+          await this.emailService.sendPurchaseReceipt(
             purchase.buyerSession.email,
-            purchase.content.title,
-            purchase.amount,
-            purchase.accessToken,
+            {
+              buyer_email: purchase.buyerSession.email,
+              content_title: purchase.content.title,
+              amount: `$${purchase.amount.toFixed(2)}`,
+              date: new Date().toLocaleDateString(),
+              access_link: `${clientUrl}/c/${purchase.contentId}?accessToken=${purchase.accessToken}`,
+              transaction_id: purchase.paymentIntentId || '',
+            }
           );
           this.logger.log(`Confirmation email sent to ${purchase.buyerSession.email}`);
         } catch (emailError) {
@@ -169,10 +175,10 @@ export class PaystackController {
       try {
         await this.notificationsService.createNotification({
           userId: purchase.buyerSession.id,
-          type: NotificationType.PURCHASE_COMPLETED,
+          type: NotificationType.PURCHASE_MADE,
           title: 'Purchase Completed',
           message: `Your purchase of "${purchase.content.title}" has been completed successfully.`,
-          data: {
+          metadata: {
             purchaseId: purchase.id,
             contentId: purchase.contentId,
             amount: purchase.amount,

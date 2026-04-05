@@ -132,13 +132,16 @@ export class PaystackService {
       const { access_code, reference } = json.data;
       if (!access_code || !reference) {
         this.logger.error('Paystack inline initialize response missing access code or reference', json);
-        throw new BadRequestException('Failed to initialize Paystack inline payment');
+        throw new BadRequestException('Failed to initialize Paystack inline payment: Missing response data');
       }
 
       return { accessCode: access_code, reference };
     } catch (error: any) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       this.logger.error('Paystack inline initialize transaction failed:', error?.message || error);
-      throw new BadRequestException('Failed to initialize Paystack inline payment');
+      throw new BadRequestException(`Paystack initialization failed: ${error?.message || 'Connection error'}`);
     }
   }
   async verifyTransaction(

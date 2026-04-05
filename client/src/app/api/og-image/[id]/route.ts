@@ -41,7 +41,7 @@ export async function GET(
           const fallbackResponse = await fetch(fallbackLogo);
           imageBuffer = await fallbackResponse.arrayBuffer();
         }
-      } catch (e) {
+      } catch {
         const fallbackResponse = await fetch(fallbackLogo);
         imageBuffer = await fallbackResponse.arrayBuffer();
       }

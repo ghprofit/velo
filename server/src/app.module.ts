@@ -22,6 +22,7 @@ import { PaystackModule } from './paystack/paystack.module';
 import { SuperadminModule } from './superadmin/superadmin.module';
 import { AdminModule } from './admin/admin.module';
 import { WaitlistModule } from './waitlist/waitlist.module';
+import { CurrencyModule } from './currency/currency.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -77,6 +78,7 @@ import { AppService } from './app.service';
     SuperadminModule,
     AdminModule,
     WaitlistModule,
+    CurrencyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -19,6 +19,7 @@ import { NotificationType } from '../notifications/dto/create-notification.dto';
 import * as crypto from 'crypto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
+import { CurrencyService } from '../currency/currency.service';
 
 @Injectable()
 export class BuyerService {
@@ -41,6 +42,7 @@ export class BuyerService {
     private redisService: RedisService,
     private config: ConfigService,
     private notificationsService: NotificationsService,
+    private currencyService: CurrencyService,
   ) {
     // Load configuration from environment with defaults
     this.SESSION_EXPIRY_MS =
@@ -399,15 +401,23 @@ export class BuyerService {
       // MEGA-ROBUST check for Paystack
       const isPaystackProvider = paymentProvider === 'PAYSTACK' || providerValue.includes('PAY') || dto.paymentProvider?.toUpperCase() === 'PAYSTACK';
       
-      const exchangeRate = Number(this.config.get('USD_TO_GHS_RATE') || 14.5);
+      let exchangeRate: number;
       let finalAmount = buyerAmount;
       let finalCurrency = 'USD';
 
       if (isPaystackProvider) {
+        // Fetch dynamic exchange rate
+        exchangeRate = await this.currencyService.getUsdToGhsRate();
+        
         finalAmount = Number((buyerAmount * exchangeRate).toFixed(2));
         finalCurrency = 'GHS';
-        this.logger.log(`[PURCHASE] 💱 Currency Conversion: $${buyerAmount.toFixed(2)} → GHS ${finalAmount.toFixed(2)} (Rate: ${exchangeRate})`);
+        this.logger.error(`[PAYMENT_LOG] Dynamic Paystack conversion applied: GHS ${finalAmount} (Rate: ${exchangeRate})`);
+      } else {
+        // For Stripe/Others, we still need a rate for the return object even if not used for conversion
+        exchangeRate = Number(this.config.get('USD_TO_GHS_RATE') || 14.5);
       }
+
+      this.logger.log(`[PURCHASE] 💱 Currency Conversion: $${buyerAmount.toFixed(2)} → GHS ${finalAmount.toFixed(2)} (Rate: ${exchangeRate})`);
 
       this.logger.log(`[PURCHASE] Initializing ${paymentProvider} purchase record...`);
       const pendingPurchase = await this.prisma.purchase.create({

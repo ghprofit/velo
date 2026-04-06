@@ -32,17 +32,10 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const exchangeRate = Number(process.env.NEXT_PUBLIC_EXCHANGE_RATE_GHS_USD) || 15.0;
-  const isUSD = process.env.NEXT_PUBLIC_PAYSTACK_CURRENCY === 'USD';
-  
-  // Convert basic price from Cedis to USD if configured
-  const contentPriceValue = isUSD ? (content?.price || 0) / exchangeRate : (content?.price || 0);
-  const platformFeeValue = contentPriceValue * 0.15;
-  const totalPriceValue = contentPriceValue + platformFeeValue;
-
-  const contentPrice = useCurrencyCountUp(contentPriceValue, '$', 1000);
-  const platformFee = useCurrencyCountUp(platformFeeValue, '$', 1000);
-  const totalPrice = useCurrencyCountUp(totalPriceValue, '$', 1000);
+  // Animated price counts
+  const contentPrice = useCurrencyCountUp(content?.price || 0, '$', 1000);
+  const platformFee = useCurrencyCountUp((content?.price || 0) * 0.15, '$', 1000);
+  const totalPrice = useCurrencyCountUp((content?.price || 0) * 1.15, '$', 1000);
 
   useEffect(() => {
     // Check if already purchased

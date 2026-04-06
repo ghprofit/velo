@@ -42,15 +42,12 @@ function PaystackInlinePayment({ accessCode, amount, email, onSuccess, onClose }
 
     function initializePayment() {
       if (window.PaystackPop && paystackRef.current) {
-        const exchangeRate = Number(process.env.NEXT_PUBLIC_EXCHANGE_RATE_GHS_USD) || 15.0;
-        const targetCurrency = process.env.NEXT_PUBLIC_PAYSTACK_CURRENCY || 'USD';
-        
-        // Convert amount from GHS to USD for display/setup purposes if needed
-        // Note: Paystack only needs access_code to initialize with the correct 
-        // backend-determined amount, but we pass it as access_code now.
         const handler = window.PaystackPop.setup({
           key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-          access_code: accessCode,
+          email,
+          amount: Math.round(amount * 100), // Convert to cents for USD
+          currency: 'GHS', // Changed to GHS as per account support
+          ref: accessCode,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           callback: (response: any) => {
             setIsProcessing(true);
@@ -60,6 +57,15 @@ function PaystackInlinePayment({ accessCode, amount, email, onSuccess, onClose }
           onClose: () => {
             console.log('[PAYSTACK] Payment modal closed');
             onClose();
+          },
+          metadata: {
+            custom_fields: [
+              {
+                display_name: 'Content Purchase',
+                variable_name: 'content_purchase',
+                value: 'Velo Link Content',
+              },
+            ],
           },
         });
 
@@ -119,17 +125,9 @@ export function PaymentClient({ id }: { id: string }) {
   const initializingRef = useRef(false);
 
   // Animated price count-ups
-  const exchangeRate = Number(process.env.NEXT_PUBLIC_EXCHANGE_RATE_GHS_USD) || 15.0;
-  const isUSD = process.env.NEXT_PUBLIC_PAYSTACK_CURRENCY === 'USD';
-  
-  // Convert basic price from Cedis to USD if configured
-  const contentPriceValue = isUSD ? (content?.price || 0) / exchangeRate : (content?.price || 0);
-  const platformFeeValue = contentPriceValue * 0.15;
-  const totalPriceValue = contentPriceValue + platformFeeValue;
-
-  const contentPriceAnimated = useCurrencyCountUp(contentPriceValue, '$', 1000);
-  const platformFeeAnimated = useCurrencyCountUp(platformFeeValue, '$', 1000);
-  const totalPriceAnimated = useCurrencyCountUp(totalPriceValue, '$', 1000);
+  const contentPriceAnimated = useCurrencyCountUp(content?.price || 0, '$', 1000);
+  const platformFeeAnimated = useCurrencyCountUp((content?.price || 0) * 0.15, '$', 1000);
+  const totalPriceAnimated = useCurrencyCountUp((content?.price || 0) * 1.15, '$', 1000);
 
   useEffect(() => {
     if (!email) {
@@ -464,7 +462,7 @@ export function PaymentClient({ id }: { id: string }) {
                   {purchaseInfo.accessCode && (
                     <PaystackInlinePayment
                       accessCode={purchaseInfo.accessCode}
-                      amount={totalPriceValue}
+                      amount={content.price * 1.15}
                       email={email || ''}
                       onSuccess={(reference) => handlePaymentSuccess(purchaseInfo.purchaseId, '', reference)}
                       onClose={() => setError('Payment was cancelled')}

@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, BadRequestException } from '@nestjs/common';
+import { ValidationPipe, BadRequestException, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import * as bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
+  logger.log('🚀 SERVER IS RESTARTING AND LOADING NEW CURRENCY LOGIC...');
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
   });
@@ -73,7 +75,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT) || 8000;
   await app.listen(port);
-  console.log(`🚀 Server running on http://localhost:${port}`);
+  console.log(`🚀 SERVER RUNNING ON http://localhost:${port}`);
   console.log(`📚 API Documentation: http://localhost:${port}/api`);
   console.log(`🔒 CORS allowed origins: ${allowedOrigins.join(', ')}`);
 }

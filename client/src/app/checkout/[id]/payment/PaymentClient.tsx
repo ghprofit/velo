@@ -108,7 +108,10 @@ interface PurchaseInfo {
   clientSecret?: string;
   accessCode?: string;
   reference?: string;
-  amount?: number;
+  amount: number; // Final amount in charged currency (e.g. GHS)
+  currency?: string;
+  exchangeRate?: number;
+  originalAmount?: number; // Original amount in USD
 }
 
 export function PaymentClient({ id }: { id: string }) {
@@ -185,6 +188,8 @@ export function PaymentClient({ id }: { id: string }) {
         });
 
         console.log('[CHECKOUT] ✅ Purchase created successfully:', paymentResponse.data);
+        console.log('[CHECKOUT] Final Amount:', paymentResponse.data.amount, paymentResponse.data.currency);
+        console.log('[CHECKOUT] Exchange Rate:', paymentResponse.data.exchangeRate);
 
         if (paymentResponse.data.alreadyPurchased) {
           console.log('[CHECKOUT] Redirecting to content (already purchased)');
@@ -205,6 +210,9 @@ export function PaymentClient({ id }: { id: string }) {
             accessCode: paymentResponse.data.accessCode,
             reference: paymentResponse.data.reference,
             amount: paymentResponse.data.amount,
+            currency: paymentResponse.data.currency,
+            exchangeRate: paymentResponse.data.exchangeRate,
+            originalAmount: paymentResponse.data.originalAmount,
           });
 
           console.log('[CHECKOUT] ========== PAYMENT INITIALIZATION COMPLETE ==========');
@@ -462,7 +470,7 @@ export function PaymentClient({ id }: { id: string }) {
                   {purchaseInfo.accessCode && (
                     <PaystackInlinePayment
                       accessCode={purchaseInfo.accessCode}
-                      amount={content.price * 1.15}
+                      amount={purchaseInfo.amount}
                       email={email || ''}
                       onSuccess={(reference) => handlePaymentSuccess(purchaseInfo.purchaseId, '', reference)}
                       onClose={() => setError('Payment was cancelled')}
@@ -473,12 +481,34 @@ export function PaymentClient({ id }: { id: string }) {
                   <div className="mt-6 pt-6 space-y-3 border-t border-gray-200">
                     <div className="flex justify-between text-gray-600 text-sm">
                       <span>Content Price:</span>
-                      <span className="font-medium">{contentPriceAnimated}</span>
+                      <span className="font-medium">
+                        {purchaseInfo.currency === 'GHS' 
+                          ? `$${purchaseInfo.originalAmount?.toFixed(2)}` 
+                          : contentPriceAnimated}
+                      </span>
                     </div>
                     <div className="flex justify-between text-gray-600 text-sm">
-                      <span>Platform Fee:</span>
-                      <span className="font-medium">{platformFeeAnimated}</span>
+                      <span>Platform Fee (15%):</span>
+                      <span className="font-medium">
+                        {purchaseInfo.currency === 'GHS' 
+                          ? `$${((purchaseInfo.originalAmount || 0) * 0.15).toFixed(2)}` 
+                          : platformFeeAnimated}
+                      </span>
                     </div>
+
+                    {purchaseInfo.currency === 'GHS' && purchaseInfo.exchangeRate && (
+                      <div className="bg-indigo-50/50 rounded-lg p-3 my-2 border border-indigo-100/50 transition-all duration-500 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex justify-between text-indigo-700 text-xs font-medium mb-1">
+                          <span>Exchange Rate:</span>
+                          <span>1 USD = {purchaseInfo.exchangeRate} GHS</span>
+                        </div>
+                        <div className="flex justify-between text-indigo-900 text-sm font-bold">
+                          <span>Final Amount:</span>
+                          <span>GHS {purchaseInfo.amount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="border-t border-gray-200 pt-3 mt-3"></div>
                     <motion.div
                       className="flex justify-between text-lg font-bold text-gray-900"
@@ -488,7 +518,9 @@ export function PaymentClient({ id }: { id: string }) {
                     >
                       <span>Total:</span>
                       <span className="bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                        {totalPriceAnimated}
+                        {purchaseInfo.currency === 'GHS'
+                          ? `GHS ${purchaseInfo.amount.toFixed(2)}`
+                          : `$${purchaseInfo.amount.toFixed(2)}`}
                       </span>
                     </motion.div>
                   </div>

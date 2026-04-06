@@ -396,15 +396,28 @@ export class BuyerService {
       const paymentProvider = providerValue === 'STRIPE' ? 'STRIPE' : 'PAYSTACK';
       const accessToken = crypto.randomBytes(32).toString('hex');
 
+      // MEGA-ROBUST check for Paystack
+      const isPaystackProvider = paymentProvider === 'PAYSTACK' || providerValue.includes('PAY') || dto.paymentProvider?.toUpperCase() === 'PAYSTACK';
+      
+      const exchangeRate = Number(this.config.get('USD_TO_GHS_RATE') || 14.5);
+      let finalAmount = buyerAmount;
+      let finalCurrency = 'USD';
+
+      if (isPaystackProvider) {
+        finalAmount = Number((buyerAmount * exchangeRate).toFixed(2));
+        finalCurrency = 'GHS';
+        this.logger.log(`[PURCHASE] 💱 Currency Conversion: $${buyerAmount.toFixed(2)} → GHS ${finalAmount.toFixed(2)} (Rate: ${exchangeRate})`);
+      }
+
       this.logger.log(`[PURCHASE] Initializing ${paymentProvider} purchase record...`);
       const pendingPurchase = await this.prisma.purchase.create({
         data: {
           contentId: dto.contentId,
           buyerSessionId: session.id,
-          amount: buyerAmount,
+          amount: finalAmount, // Store the actual amount charged
           basePrice: content.price,
           platformFeePercentage,
-          currency: 'GHS',
+          currency: finalCurrency,
           paymentProvider,
           status: 'PENDING',
           accessToken,
@@ -420,13 +433,13 @@ export class BuyerService {
           throw new BadRequestException('Paystack is not configured');
         }
 
-        this.logger.log(`[PURCHASE] Creating Paystack inline transaction for GHS ${buyerAmount}`);
+        this.logger.log(`[PURCHASE] Creating Paystack inline transaction for GHS ${finalAmount}`);
         const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
         const callbackUrl = `${clientUrl}/checkout/${content.id}/success?purchaseId=${pendingPurchase.id}`;
 
         const transaction = await this.paystackService.initializeInlineTransaction(
           dto.email,
-          buyerAmount,
+          finalAmount,
           callbackUrl,
           {
             contentId: content.id,
@@ -451,7 +464,10 @@ export class BuyerService {
           accessCode: transaction.accessCode,
           reference: transaction.reference,
           purchaseId: pendingPurchase.id,
-          amount: buyerAmount,
+          amount: finalAmount,
+          currency: 'GHS',
+          exchangeRate: exchangeRate,
+          originalAmount: buyerAmount,
         };
       }
 

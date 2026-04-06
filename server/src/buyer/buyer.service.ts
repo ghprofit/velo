@@ -420,20 +420,31 @@ export class BuyerService {
           throw new BadRequestException('Paystack is not configured');
         }
 
-        this.logger.log(`[PURCHASE] Creating Paystack inline transaction for GHS ${buyerAmount}`);
+        // Apply exchange rate conversion if currency is USD and basePrice is GHS (default)
+        const exchangeRate = this.config.get<number>('EXCHANGE_RATE_GHS_USD') || 15.0;
+        const targetCurrency = this.config.get<string>('PAYSTACK_CURRENCY') || 'USD';
+        
+        let finalAmount = buyerAmount;
+        if (targetCurrency === 'USD') {
+          this.logger.log(`[PURCHASE] Converting GHS ${buyerAmount} to USD at rate ${exchangeRate}`);
+          finalAmount = buyerAmount / exchangeRate;
+          this.logger.log(`[PURCHASE] Final USD amount: ${finalAmount.toFixed(2)}`);
+        }
+
+        this.logger.log(`[PURCHASE] Creating Paystack inline transaction for ${targetCurrency} ${finalAmount.toFixed(2)}`);
         const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
         const callbackUrl = `${clientUrl}/checkout/${content.id}/success?purchaseId=${pendingPurchase.id}`;
 
         const transaction = await this.paystackService.initializeInlineTransaction(
           dto.email,
-          buyerAmount,
+          finalAmount,
           callbackUrl,
           {
             contentId: content.id,
             sessionId: session.id,
             purchaseId: pendingPurchase.id,
           },
-          'GHS', // Use GHS currency
+          targetCurrency,
         );
 
         await this.prisma.purchase.update({

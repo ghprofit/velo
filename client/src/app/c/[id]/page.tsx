@@ -16,17 +16,22 @@ interface ContentMetadata {
 }
 
 async function getContentData(id: string): Promise<ContentMetadata | null> {
+  console.log(`[CONTENT_PAGE] SSR Fetching content data for ID: ${id} from ${API_URL}`);
   try {
     const response = await fetch(`${API_URL}/api/buyer/content/${id}`, {
       next: { revalidate: 60 }, // Cache for 60 seconds
     });
 
     if (!response.ok) {
+      console.warn(`[CONTENT_PAGE] ❌ SSR Fetch failed: ${response.status} ${response.statusText}`);
       return null;
     }
 
-    return response.json();
-  } catch {
+    const data = await response.json();
+    console.log(`[CONTENT_PAGE] ✅ SSR Fetch successful for: ${data.title}`);
+    return data;
+  } catch (err: any) {
+    console.error(`[CONTENT_PAGE] ❌ SSR Fetch error:`, err.message);
     return null;
   }
 }

@@ -107,7 +107,7 @@ export class BuyerController {
    * Request device verification code for accessing purchase on new device
    * Rate limited to prevent spam
    */
-  @Post('request-device-code')
+  @Post('access/request-device-verification')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 requests per 5 minutes
   async requestDeviceCode(
@@ -124,7 +124,7 @@ export class BuyerController {
    * Verify device with code to grant access on new device
    * Rate limited to prevent brute force attacks
    */
-  @Post('verify-device')
+  @Post('access/verify-device')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   async verifyDevice(

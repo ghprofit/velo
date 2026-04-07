@@ -243,6 +243,7 @@ export class BuyerService {
    * Get content details for buyers (public info)
    */
   async getContentDetails(contentId: string) {
+    this.logger.log(`[CONTENT_DETAILS] Request for ID: ${contentId}`);
     const content = await this.prisma.content.findUnique({
       where: { id: contentId },
       include: {
@@ -467,7 +468,8 @@ export class BuyerService {
           },
         });
 
-        this.logger.log(`[PURCHASE] ✅ PENDING purchase created: ${pendingPurchase.id} with Paystack reference ${transaction.reference}`);
+        this.logger.log(`[PAYSTACK_INIT] Purchase ${pendingPurchase.id} initialized with reference: ${transaction.reference}`);
+        this.logger.log(`[PAYSTACK_INIT] Final PENDING purchase saved to DB`);
 
         return {
           paymentProvider: 'PAYSTACK',
@@ -584,7 +586,9 @@ export class BuyerService {
    * Verify purchase by payment intent ID (for webhook polling)
    */
   async verifyPurchaseByPaymentIntent(paymentIntentId: string) {
-    const purchase = await this.prisma.purchase.findUnique({
+    this.logger.log(`[VERIFY_POLL] Looking up purchase by paymentIntentId/reference: ${paymentIntentId}`);
+    
+    let purchase = await this.prisma.purchase.findUnique({
       where: { paymentIntentId },
       include: {
         content: {
@@ -597,9 +601,47 @@ export class BuyerService {
       },
     });
 
+    // Fallback: search by transactionId if not found by paymentIntentId
     if (!purchase) {
+      this.logger.warn(`[VERIFY_POLL] Purchase not found by paymentIntentId: ${paymentIntentId}. Trying fallback to transactionId...`);
+      // Fallback 1: Try transactionId
+      purchase = await this.prisma.purchase.findFirst({
+        where: { transactionId: paymentIntentId },
+        include: {
+          content: {
+            select: {
+              id: true,
+              title: true,
+              contentType: true,
+            },
+          },
+        },
+      });
+
+      if (!purchase) {
+        // Fallback 2: Try searching by purchase ID directly if the reference matches the ID format
+        // (sometimes the client might pass the purchaseId if paymentIntentId is missing)
+        purchase = await this.prisma.purchase.findFirst({
+          where: { id: paymentIntentId },
+          include: {
+            content: {
+              select: {
+                id: true,
+                title: true,
+                contentType: true,
+              },
+            },
+          },
+        });
+      }
+    }
+
+    if (!purchase) {
+      this.logger.error(`[VERIFY_POLL] ❌ Purchase NOT FOUND after all lookups for identifier: ${paymentIntentId}`);
       throw new NotFoundException('Purchase not found');
     }
+
+    this.logger.log(`[VERIFY_POLL] ✅ Found purchase ${purchase.id} (Status: ${purchase.status}) for identifier ${paymentIntentId}`);
 
     return {
       id: purchase.id,
@@ -613,6 +655,7 @@ export class BuyerService {
    * Get content access with signed URL (after purchase)
    */
   async getContentAccess(accessToken: string, ipAddress?: string) {
+    this.logger.log(`[CONTENT_ACCESS] Request with token: ${accessToken?.substring(0, 10)}...`);
     let purchase = await this.prisma.purchase.findUnique({
       where: { accessToken },
       include: {
@@ -633,8 +676,10 @@ export class BuyerService {
     });
 
     if (!purchase) {
+      this.logger.warn(`[CONTENT_ACCESS] ❌ Purchase not found for token: ${accessToken?.substring(0, 10)}...`);
       throw new NotFoundException('Purchase not found');
     }
+    this.logger.log(`[CONTENT_ACCESS] ✅ Purchase found for content: ${purchase.content.id}, status: ${purchase.status}`);
 
     if (purchase.status !== 'COMPLETED') {
       throw new UnauthorizedException('Purchase not completed');
@@ -869,10 +914,17 @@ export class BuyerService {
 
         // Verify payment intent matches
         if (purchase.paymentIntentId !== paymentIntentId) {
-          this.logger.error(
-            `Payment intent mismatch for purchase ${purchaseId}: expected ${purchase.paymentIntentId}, got ${paymentIntentId}`,
+          this.logger.warn(
+            `[CONFIRM] Payment intent mismatch for purchase ${purchaseId}. DB has ${purchase.paymentIntentId}, Client sent ${paymentIntentId}.`,
           );
-          throw new BadRequestException('Payment intent mismatch');
+          
+          // If Paystack, we might need to update the paymentIntentId if the reference changed
+          if (purchase.paymentProvider === 'PAYSTACK') {
+            this.logger.log(`[CONFIRM] Paystack detected, checking if client-provided reference is valid...`);
+          } else {
+            this.logger.error(`[CONFIRM] Mismatch for ${purchase.paymentProvider}. Access denied.`);
+            throw new BadRequestException('Payment intent mismatch');
+          }
         }
 
         // Idempotency check - prevent duplicate processing
@@ -888,6 +940,7 @@ export class BuyerService {
         }
 
         let verified = false;
+
         if (purchase.paymentProvider === 'PAYSTACK') {
           if (!this.paystackService.isConfigured()) {
             this.logger.error(`Paystack not configured while confirming purchase ${purchaseId}`);
@@ -896,6 +949,7 @@ export class BuyerService {
 
           this.logger.log(`Verifying Paystack reference ${paymentIntentId} for purchase ${purchaseId}`);
           const paystackResponse = await this.paystackService.verifyTransaction(paymentIntentId);
+          
           if (paystackResponse.status !== 'success') {
             this.logger.error(
               `Paystack transaction ${paymentIntentId} status is ${paystackResponse.status}`,
@@ -904,6 +958,18 @@ export class BuyerService {
           }
 
           verified = true;
+          
+          // CRITICAL: Synchronize reference if it differs (important for Paystack)
+          if (purchase.paymentIntentId !== paymentIntentId) {
+            this.logger.log(`[CONFIRM] Synchronizing Paystack reference: ${purchase.paymentIntentId} -> ${paymentIntentId}`);
+            await tx.purchase.update({
+              where: { id: purchaseId },
+              data: { 
+                paymentIntentId: paymentIntentId,
+                transactionId: paymentIntentId 
+              }
+            });
+          }
         } else {
           this.logger.log(`Verifying Stripe payment intent ${paymentIntentId} for purchase ${purchaseId}`);
           const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);
@@ -1158,7 +1224,7 @@ export class BuyerService {
    * Check if buyer has access to content (pre-check before loading)
    */
   async checkAccessEligibility(accessToken: string, fingerprint: string) {
-    this.logger.log(`Checking access eligibility for token: ${accessToken?.substring(0, 10)}...`);
+    this.logger.log(`[ELIGIBILITY_CHECK] Checking for token: ${accessToken?.substring(0, 10)}..., fingerprint: ${fingerprint?.substring(0, 10)}...`);
 
     const purchase = await this.prisma.purchase.findUnique({
       where: { accessToken },

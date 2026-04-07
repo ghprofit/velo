@@ -156,13 +156,21 @@ export function ContentClient({ id }: { id: string }) {
           }
 
           // Check eligibility BEFORE fetching content
-          console.log('[CONTENT] Checking eligibility with:', { 
-            accessToken: accessToken.substring(0, 20) + '...', 
-            fingerprint: fingerprint.substring(0, 20) + '...' 
+          console.log('[CONTENT] Checking access eligibility...', {
+            contentId: id,
+            accessToken: accessToken.substring(0, 10) + '...',
+            fingerprint: fingerprint.substring(0, 10) + '...',
           });
-          let eligibilityResponse = await buyerApi.checkAccessEligibility(accessToken, fingerprint);
+          let eligibilityResponse;
+          try {
+            eligibilityResponse = await buyerApi.checkAccessEligibility(accessToken, fingerprint);
+          } catch (err: any) {
+            console.error('[CONTENT] ❌ checkAccessEligibility API error:', err.response?.status, err.response?.data);
+            throw err; // Re-throw to hit the main catch block
+          }
+
           let eligibility = eligibilityResponse.data;
-          console.log('[CONTENT] Access eligibility check:', eligibility);
+          console.log('[CONTENT] Access eligibility response:', eligibility);
           
           // If purchase is still PENDING, retry after a short delay (database consistency issue)
           if (eligibility.reason?.includes('status is PENDING')) {

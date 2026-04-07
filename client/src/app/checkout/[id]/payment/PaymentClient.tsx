@@ -15,64 +15,58 @@ import FloatingLogo from '@/components/FloatingLogo';
 
 interface PaystackInlinePaymentProps {
   accessCode: string;
-  amount: number;
   email: string;
+  amount: number;
   onSuccess: (reference: string) => void;
   onClose: () => void;
 }
 
-function PaystackInlinePayment({ accessCode, amount, email, onSuccess, onClose }: PaystackInlinePaymentProps) {
+function PaystackInlinePayment({ accessCode, email, amount, onSuccess, onClose }: PaystackInlinePaymentProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const paystackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
+    function initializePayment() {
+      if (cancelled || !window.PaystackPop) return;
+      const handler = window.PaystackPop.setup({
+        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+        email,
+        amount: Math.round(amount * 100),
+        currency: 'GHS',
+        access_code: accessCode,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        callback: (response: any) => {
+          if (cancelled) return;
+          setIsProcessing(true);
+          console.log('[PAYSTACK] Payment successful, full response:', JSON.stringify(response));
+          console.log('[PAYSTACK] response.reference:', response.reference);
+          console.log('[PAYSTACK] response.trxref:', response.trxref);
+          onSuccess(response.reference || response.trxref);
+        },
+        onClose: () => {
+          if (cancelled) return;
+          console.log('[PAYSTACK] Payment modal closed');
+          onClose();
+        },
+      });
+      handler.openIframe();
+    }
+
     // Load Paystack script if not already loaded
     if (!window.PaystackPop) {
       const script = document.createElement('script');
       script.src = 'https://js.paystack.co/v1/inline.js';
       script.async = true;
+      script.onload = () => initializePayment();
       document.head.appendChild(script);
-
-      script.onload = () => {
-        initializePayment();
-      };
     } else {
       initializePayment();
     }
 
-    function initializePayment() {
-      if (window.PaystackPop && paystackRef.current) {
-        const handler = window.PaystackPop.setup({
-          key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-          email,
-          amount: Math.round(amount * 100), // Convert to cents for USD
-          currency: 'GHS', // Changed to GHS as per account support
-          ref: accessCode,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          callback: (response: any) => {
-            setIsProcessing(true);
-            console.log('[PAYSTACK] Payment successful:', response);
-            onSuccess(response.reference);
-          },
-          onClose: () => {
-            console.log('[PAYSTACK] Payment modal closed');
-            onClose();
-          },
-          metadata: {
-            custom_fields: [
-              {
-                display_name: 'Content Purchase',
-                variable_name: 'content_purchase',
-                value: 'Velo Link Content',
-              },
-            ],
-          },
-        });
-
-        handler.openIframe();
-      }
-    }
-  }, [accessCode, amount, email, onSuccess, onClose]);
+    return () => { cancelled = true; };
+  }, [accessCode, email, amount, onSuccess, onClose]);
 
   return (
     <div>
@@ -247,9 +241,9 @@ export function PaymentClient({ id }: { id: string }) {
       console.log('[PAYMENT] Paystack Reference:', reference);
 
       // Payment is successful, redirect to success page
-      // The webhook will handle updating the purchase status
+      // The success page will verify directly with Paystack (webhook serves as backup)
       console.log('[PAYMENT] 🔄 Redirecting to success page...');
-      router.push(`/checkout/${id}/success?reference=${reference}`);
+      router.push(`/checkout/${id}/success?reference=${reference}&purchaseId=${purchaseId}`);
     } catch (error) {
       console.error('[PAYMENT] ❌ Unexpected error:', error);
       setError('An unexpected error occurred. Please try again.');
@@ -470,8 +464,8 @@ export function PaymentClient({ id }: { id: string }) {
                   {purchaseInfo.accessCode && (
                     <PaystackInlinePayment
                       accessCode={purchaseInfo.accessCode}
-                      amount={purchaseInfo.amount}
                       email={email || ''}
+                      amount={purchaseInfo.amount}
                       onSuccess={(reference) => handlePaymentSuccess(purchaseInfo.purchaseId, '', reference)}
                       onClose={() => setError('Payment was cancelled')}
                     />

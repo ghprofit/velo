@@ -405,8 +405,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                     </div>
                     <div className="flex items-center justify-center gap-4 pt-1">
                       {/* add paystack logo */}
-                      <Image src="https://www.velolink.club/assets/paystack.png" alt="Paystack" height={30} className="h-5" />
-                      <span className="text-xs font-medium text-gray-400">•</span>
+                      {/* <Image src="https://www.velolink.club/assets/paystack.png" alt="Paystack" height={30} className="h-5" />
+                      <span className="text-xs font-medium text-gray-400">•</span> */}
                       <span className="text-xs font-medium text-gray-500">VISA</span>
                       <span className="text-xs font-medium text-gray-500">Mastercard</span>
                       <span className="text-xs font-medium text-gray-500">Apple Pay</span>

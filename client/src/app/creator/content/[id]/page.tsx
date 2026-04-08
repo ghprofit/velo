@@ -77,8 +77,6 @@ export default function ContentDetailPage() {
 
   // Fetch signed URLs for content preview
   const fetchPreviewUrls = useCallback(async () => {
-    if (!content || !content.contentItems) return;
-    
     setLoadingPreview(true);
     try {
       console.log('[CREATOR PREVIEW] Fetching signed URLs for content:', contentId);
@@ -115,7 +113,7 @@ export default function ContentDetailPage() {
     } finally {
       setLoadingPreview(false);
     }
-  }, [content, contentId]);
+  }, [contentId]);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -166,7 +164,8 @@ export default function ContentDetailPage() {
     if (contentId) {
       fetchContent();
     }
-  }, [contentId, fetchPreviewUrls]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentId]);
 
   const handleDelete = async () => {
     try {

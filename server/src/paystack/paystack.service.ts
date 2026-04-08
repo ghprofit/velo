@@ -6,23 +6,14 @@ import * as crypto from 'crypto';
 export class PaystackService {
   private readonly logger = new Logger(PaystackService.name);
   private readonly secretKey: string;
-  private readonly webhookSecret: string;
   private readonly apiBase = 'https://api.paystack.co';
 
   constructor(private config: ConfigService) {
     this.secretKey = this.config.get<string>('PAYSTACK_SECRET_KEY') || '';
-    this.webhookSecret = this.config.get<string>('PAYSTACK_WEBHOOK_SECRET') || '';
-
     if (!this.secretKey) {
       this.logger.warn('PAYSTACK_SECRET_KEY is not configured; Paystack purchase flows will be disabled.');
     } else {
       this.logger.log('✓ Paystack initialized');
-    }
-
-    if (!this.webhookSecret) {
-      this.logger.warn('PAYSTACK_WEBHOOK_SECRET is not configured; webhook signature verification is disabled!');
-    } else {
-      this.logger.log('✓ Paystack webhook secret loaded');
     }
   }
 
@@ -31,17 +22,25 @@ export class PaystackService {
   }
 
   verifyWebhookSignature(rawBody: string | Buffer, signature: string): boolean {
-    if (!this.webhookSecret) {
-      throw new UnauthorizedException('PAYSTACK_WEBHOOK_SECRET is not configured');
+    if (!this.secretKey) {
+      throw new UnauthorizedException('PAYSTACK_SECRET_KEY is not configured');
     }
 
     const payload = typeof rawBody === 'string' ? rawBody : rawBody.toString();
-    const hash = crypto.createHmac('sha512', this.webhookSecret).update(payload).digest('hex');
+    // Paystack signs webhooks with the secret key (no separate webhook secret)
+    const hash = crypto.createHmac('sha512', this.secretKey).update(payload).digest('hex');
+
+    this.logger.debug(`Webhook verification — computed: ${hash}, received: ${signature}, bodyLength: ${payload.length}`);
+
+    if (hash.length !== signature.length) {
+      this.logger.warn(`Paystack webhook signature length mismatch: computed=${hash.length} header=${signature.length}`);
+      return false;
+    }
 
     const isValid = crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature));
 
     if (!isValid) {
-      this.logger.warn(`Paystack webhook signature verification failed: computed=${hash} header=${signature}`);
+      this.logger.warn(`Paystack webhook signature mismatch — computed: ${hash} | received: ${signature}`);
     }
 
     return isValid;

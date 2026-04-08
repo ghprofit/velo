@@ -164,8 +164,9 @@ export function ContentClient({ id }: { id: string }) {
           let eligibilityResponse;
           try {
             eligibilityResponse = await buyerApi.checkAccessEligibility(accessToken, fingerprint);
-          } catch (err: any) {
-            console.error('[CONTENT] ❌ checkAccessEligibility API error:', err.response?.status, err.response?.data);
+          } catch (err: unknown) {
+            const e = err as { response?: { status?: number; data?: unknown } };
+            console.error('[CONTENT] ❌ checkAccessEligibility API error:', e.response?.status, e.response?.data);
             throw err; // Re-throw to hit the main catch block
           }
 

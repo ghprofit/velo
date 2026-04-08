@@ -124,6 +124,7 @@ export function PaymentClient({ id }: { id: string }) {
   // Animated price count-ups
   const contentPriceAnimated = useCurrencyCountUp(content?.price || 0, '$', 1000);
   const platformFeeAnimated = useCurrencyCountUp((content?.price || 0) * 0.15, '$', 1000);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const totalPriceAnimated = useCurrencyCountUp((content?.price || 0) * 1.15, '$', 1000);
 
   useEffect(() => {

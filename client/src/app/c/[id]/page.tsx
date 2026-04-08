@@ -30,8 +30,8 @@ async function getContentData(id: string): Promise<ContentMetadata | null> {
     const data = await response.json();
     console.log(`[CONTENT_PAGE] ✅ SSR Fetch successful for: ${data.title}`);
     return data;
-  } catch (err: any) {
-    console.error(`[CONTENT_PAGE] ❌ SSR Fetch error:`, err.message);
+  } catch (err: unknown) {
+    console.error(`[CONTENT_PAGE] ❌ SSR Fetch error:`, err instanceof Error ? err.message : err);
     return null;
   }
 }

@@ -30,7 +30,7 @@ export class PaystackService {
     // Paystack signs webhooks with the secret key (no separate webhook secret)
     const hash = crypto.createHmac('sha512', this.secretKey).update(payload).digest('hex');
 
-    this.logger.debug(`Webhook verification — computed: ${hash}, received: ${signature}, bodyLength: ${payload.length}`);
+    this.logger.log(`Webhook verify — computed: ${hash.substring(0, 16)}..., received: ${signature?.substring(0, 16)}..., bodyLength: ${payload.length}`);
 
     if (hash.length !== signature.length) {
       this.logger.warn(`Paystack webhook signature length mismatch: computed=${hash.length} header=${signature.length}`);

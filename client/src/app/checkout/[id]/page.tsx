@@ -404,7 +404,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                       <span className="font-medium">Secure payment • Instant access</span>
                     </div>
                     <div className="flex items-center justify-center gap-4 pt-1">
-                      {/* <Image src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" width={80} height={20} className="h-5" /> */}
+                      {/* add paystack logo */}
+                      <Image src="./assets/paystack.png" alt="Paystack" width={80} height={20} className="h-5" />
                       <span className="text-xs font-medium text-gray-400">•</span>
                       <span className="text-xs font-medium text-gray-500">VISA</span>
                       <span className="text-xs font-medium text-gray-500">Mastercard</span>

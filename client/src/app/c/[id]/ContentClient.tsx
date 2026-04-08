@@ -1049,7 +1049,7 @@ export function ContentClient({ id }: { id: string }) {
                       <span className="font-medium">Secure payment • Instant access</span>
                     </div>
                     <div className="flex items-center justify-center gap-4 pt-2">
-                      <Image src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=white" alt="Stripe" width={80} height={20} className="h-5" />
+                      <Image src="https://www.velolink.club/assets/paystack.png" alt="Paystack" height={30} className="h-5" />
                       <span className="text-xs font-medium text-gray-400">•</span>
                       <span className="text-xs font-medium text-gray-500">VISA</span>
                       <span className="text-xs font-medium text-gray-500">Mastercard</span>

@@ -18,7 +18,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { EarningsModule } from './earnings/earnings.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { StripeModule } from './stripe/stripe.module';
-import { PaystackModule } from './paystack/paystack.module';
+import { StrypayModule } from './strypay/strypay.module';
 import { SuperadminModule } from './superadmin/superadmin.module';
 import { AdminModule } from './admin/admin.module';
 import { WaitlistModule } from './waitlist/waitlist.module';
@@ -65,7 +65,7 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     PrismaModule,
     S3Module,
     StripeModule,
-    PaystackModule,
+    StrypayModule,
     AuthModule,
     BuyerModule,
     VerificationModule,

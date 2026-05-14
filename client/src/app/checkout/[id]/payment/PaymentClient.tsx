@@ -13,82 +13,6 @@ import { staggerContainer, staggerItem } from '@/lib/animations';
 import { useCurrencyCountUp } from '@/hooks/useCountUp';
 import FloatingLogo from '@/components/FloatingLogo';
 
-interface PaystackInlinePaymentProps {
-  accessCode: string;
-  email: string;
-  amount: number;
-  onSuccess: (reference: string) => void;
-  onClose: () => void;
-}
-
-function PaystackInlinePayment({ accessCode, email, amount, onSuccess, onClose }: PaystackInlinePaymentProps) {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const paystackRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    function initializePayment() {
-      if (cancelled || !window.PaystackPop) return;
-      const handler = window.PaystackPop.setup({
-        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-        email,
-        amount: Math.round(amount * 100),
-        currency: 'GHS',
-        access_code: accessCode,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        callback: (response: any) => {
-          if (cancelled) return;
-          setIsProcessing(true);
-          console.log('[PAYSTACK] Payment successful, full response:', JSON.stringify(response));
-          console.log('[PAYSTACK] response.reference:', response.reference);
-          console.log('[PAYSTACK] response.trxref:', response.trxref);
-          onSuccess(response.reference || response.trxref);
-        },
-        onClose: () => {
-          if (cancelled) return;
-          console.log('[PAYSTACK] Payment modal closed');
-          onClose();
-        },
-      });
-      handler.openIframe();
-    }
-
-    // Load Paystack script if not already loaded
-    if (!window.PaystackPop) {
-      const script = document.createElement('script');
-      script.src = 'https://js.paystack.co/v1/inline.js';
-      script.async = true;
-      script.onload = () => initializePayment();
-      document.head.appendChild(script);
-    } else {
-      initializePayment();
-    }
-
-    return () => { cancelled = true; };
-  }, [accessCode, email, amount, onSuccess, onClose]);
-
-  return (
-    <div>
-      <div ref={paystackRef} id="paystack-payment-form"></div>
-      {isProcessing && (
-        <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-          <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
-          <p className="text-green-800 font-medium">Processing payment...</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Extend window interface for Paystack
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    PaystackPop: any;
-  }
-}
-
 interface ContentData {
   id: string;
   title: string;
@@ -100,7 +24,8 @@ interface PurchaseInfo {
   purchaseId: string;
   accessToken: string;
   clientSecret?: string;
-  accessCode?: string;
+  checkoutUrl?: string;
+  txRef?: string;
   reference?: string;
   amount: number; // Final amount in charged currency (e.g. GHS)
   currency?: string;
@@ -179,7 +104,7 @@ export function PaymentClient({ id }: { id: string }) {
           sessionToken: session.sessionToken,
           email: email,
           fingerprint,
-          paymentProvider: 'PAYSTACK',
+          paymentProvider: 'STRYPAY',
         });
 
         console.log('[CHECKOUT] ✅ Purchase created successfully:', paymentResponse.data);
@@ -193,16 +118,17 @@ export function PaymentClient({ id }: { id: string }) {
           return;
         }
 
-        if (paymentResponse.data.paymentProvider === 'PAYSTACK') {
-          if (!paymentResponse.data.accessCode) {
-            throw new Error('Missing Paystack access code');
+        if (paymentResponse.data.paymentProvider === 'STRYPAY') {
+          if (!paymentResponse.data.checkoutUrl) {
+            throw new Error('Missing StrydPay checkout URL');
           }
-          console.log('[CHECKOUT] ✅ Paystack inline payment initialized with access code');
+          console.log('[CHECKOUT] StrydPay hosted checkout initialized');
 
           setPurchaseInfo({
             purchaseId: paymentResponse.data.purchaseId,
             accessToken: '',
-            accessCode: paymentResponse.data.accessCode,
+            checkoutUrl: paymentResponse.data.checkoutUrl,
+            txRef: paymentResponse.data.txRef,
             reference: paymentResponse.data.reference,
             amount: paymentResponse.data.amount,
             currency: paymentResponse.data.currency,
@@ -212,6 +138,7 @@ export function PaymentClient({ id }: { id: string }) {
 
           console.log('[CHECKOUT] ========== PAYMENT INITIALIZATION COMPLETE ==========');
           setError(null);
+          window.location.href = paymentResponse.data.checkoutUrl;
         }
       } catch (err: unknown) {        console.error('[CHECKOUT] ❌ ========== PAYMENT INITIALIZATION FAILED ==========');
         console.error('[CHECKOUT] Error:', err);
@@ -232,25 +159,6 @@ export function PaymentClient({ id }: { id: string }) {
     initializePayment();
   }, [id, email, router]);
 
-  const handlePaymentSuccess = async (
-    purchaseId: string,
-    accessToken: string,
-    reference: string
-  ) => {
-    try {
-      console.log('[PAYMENT] ✅ Payment succeeded!');
-      console.log('[PAYMENT] Paystack Reference:', reference);
-
-      // Payment is successful, redirect to success page
-      // The success page will verify directly with Paystack (webhook serves as backup)
-      console.log('[PAYMENT] 🔄 Redirecting to success page...');
-      router.push(`/checkout/${id}/success?reference=${reference}&purchaseId=${purchaseId}`);
-    } catch (error) {
-      console.error('[PAYMENT] ❌ Unexpected error:', error);
-      setError('An unexpected error occurred. Please try again.');
-    }
-  };
-
   if (!email) {
     return null;
   }
@@ -266,7 +174,7 @@ export function PaymentClient({ id }: { id: string }) {
     );
   }
 
-  if (error || !content || !purchaseInfo?.accessCode) {
+  if (error || !content || !purchaseInfo?.checkoutUrl) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
@@ -441,7 +349,7 @@ export function PaymentClient({ id }: { id: string }) {
                     <svg className="w-5 h-5 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="font-medium">Powered by Paystack</span>
+                    <span className="font-medium">Powered by StrydPay</span>
                   </motion.div>
                 </div>
               </motion.div>
@@ -462,15 +370,10 @@ export function PaymentClient({ id }: { id: string }) {
                 {/* Payment Form */}
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Details</h2>
-                  {purchaseInfo.accessCode && (
-                    <PaystackInlinePayment
-                      accessCode={purchaseInfo.accessCode}
-                      email={email || ''}
-                      amount={purchaseInfo.amount}
-                      onSuccess={(reference) => handlePaymentSuccess(purchaseInfo.purchaseId, '', reference)}
-                      onClose={() => setError('Payment was cancelled')}
-                    />
-                  )}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+                    <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+                    <p className="text-green-800 font-medium">Redirecting to StrydPay checkout...</p>
+                  </div>
 
                   {/* Price Breakdown */}
                   <div className="mt-6 pt-6 space-y-3 border-t border-gray-200">
@@ -556,3 +459,4 @@ export function PaymentClient({ id }: { id: string }) {
     </PageTransition>
   );
 }
+

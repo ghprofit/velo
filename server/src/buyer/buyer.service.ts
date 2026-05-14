@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../stripe/stripe.service';
-import { PaystackService } from '../paystack/paystack.service';
+import { StrypayService } from '../strypay/strypay.service';
 import { EmailService } from '../email/email.service';
 import { S3Service } from '../s3/s3.service';
 import { RedisService } from '../redis/redis.service';
@@ -36,7 +36,7 @@ export class BuyerService {
   constructor(
     private prisma: PrismaService,
     private stripeService: StripeService,
-    private paystackService: PaystackService,
+    private strypayService: StrypayService,
     private emailService: EmailService,
     private s3Service: S3Service,
     private redisService: RedisService,
@@ -395,30 +395,17 @@ export class BuyerService {
 
       const providerValue = dto.paymentProvider
         ? dto.paymentProvider.toUpperCase()
-        : this.config.get<string>('DEFAULT_PAYMENT_PROVIDER')?.toUpperCase() || 'PAYSTACK';
-      const paymentProvider = providerValue === 'STRIPE' ? 'STRIPE' : 'PAYSTACK';
+        : this.config.get<string>('DEFAULT_PAYMENT_PROVIDER')?.toUpperCase() || 'STRYPAY';
+      const paymentProvider = providerValue === 'STRIPE' ? 'STRIPE' : 'STRYPAY';
       const accessToken = crypto.randomBytes(32).toString('hex');
 
-      // MEGA-ROBUST check for Paystack
-      const isPaystackProvider = paymentProvider === 'PAYSTACK' || providerValue.includes('PAY') || dto.paymentProvider?.toUpperCase() === 'PAYSTACK';
-      
       let exchangeRate: number;
       let finalAmount = buyerAmount;
       let finalCurrency = 'USD';
 
-      if (isPaystackProvider) {
-        // Fetch dynamic exchange rate
-        exchangeRate = await this.currencyService.getUsdToGhsRate();
-        
-        finalAmount = Number((buyerAmount * exchangeRate).toFixed(2));
-        finalCurrency = 'GHS';
-        this.logger.error(`[PAYMENT_LOG] Dynamic Paystack conversion applied: GHS ${finalAmount} (Rate: ${exchangeRate})`);
-      } else {
-        // For Stripe/Others, we still need a rate for the return object even if not used for conversion
-        exchangeRate = Number(this.config.get('USD_TO_GHS_RATE') || 14.5);
-      }
+      exchangeRate = Number(this.config.get('USD_TO_GHS_RATE') || 14.5);
 
-      this.logger.log(`[PURCHASE] 💱 Currency Conversion: $${buyerAmount.toFixed(2)} → GHS ${finalAmount.toFixed(2)} (Rate: ${exchangeRate})`);
+      this.logger.log(`[PURCHASE] Final checkout amount: ${finalCurrency} ${finalAmount.toFixed(2)}`);
 
       this.logger.log(`[PURCHASE] Initializing ${paymentProvider} purchase record...`);
       const pendingPurchase = await this.prisma.purchase.create({
@@ -438,47 +425,55 @@ export class BuyerService {
         },
       });
 
-      if (paymentProvider === 'PAYSTACK') {
-        if (!this.paystackService.isConfigured()) {
-          this.logger.error('[PURCHASE] Paystack requested but not configured');
-          throw new BadRequestException('Paystack is not configured');
+      if (paymentProvider === 'STRYPAY') {
+        if (!this.strypayService.isConfigured()) {
+          this.logger.error('[PURCHASE] StrydPay requested but not configured');
+          throw new BadRequestException('StrydPay is not configured');
         }
 
-        this.logger.log(`[PURCHASE] Creating Paystack inline transaction for GHS ${finalAmount}`);
+        this.logger.log(`[PURCHASE] Creating StrydPay checkout for ${finalCurrency} ${finalAmount}`);
         const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
-        const callbackUrl = `${clientUrl}/checkout/${content.id}/success?purchaseId=${pendingPurchase.id}`;
+        const apiUrl =
+          this.config.get<string>('API_URL') ||
+          this.config.get<string>('BACKEND_URL') ||
+          'http://localhost:8000';
+        const redirectUrl = `${clientUrl}/checkout/${content.id}/success?purchaseId=${pendingPurchase.id}`;
+        const callbackUrl = `${apiUrl.replace(/\/$/, '')}/api/strypay/webhook`;
 
-        const transaction = await this.paystackService.initializeInlineTransaction(
-          dto.email,
-          finalAmount,
+        const transaction = await this.strypayService.createCheckout({
+          amount: Number(finalAmount.toFixed(2)),
+          currency: finalCurrency,
+          customerEmail: dto.email,
+          customerName: dto.email,
+          description: `Purchase: ${content.title}`,
+          redirectUrl,
           callbackUrl,
-          {
+          metadata: {
             contentId: content.id,
             sessionId: session.id,
             purchaseId: pendingPurchase.id,
           },
-          'GHS', // Use GHS currency
-        );
+        });
 
         await this.prisma.purchase.update({
           where: { id: pendingPurchase.id },
           data: {
-            paymentIntentId: transaction.reference,
-            transactionId: transaction.reference,
+            paymentIntentId: transaction.txRef,
+            transactionId: transaction.txRef,
           },
         });
 
-        this.logger.log(`[PAYSTACK_INIT] Purchase ${pendingPurchase.id} initialized with reference: ${transaction.reference}`);
-        this.logger.log(`[PAYSTACK_INIT] Final PENDING purchase saved to DB`);
+        this.logger.log(`[STRYPAY_INIT] Purchase ${pendingPurchase.id} initialized with tx_ref: ${transaction.txRef}`);
 
         return {
-          paymentProvider: 'PAYSTACK',
-          accessCode: transaction.accessCode,
-          reference: transaction.reference,
+          paymentProvider: 'STRYPAY',
+          checkoutUrl: transaction.checkoutUrl,
+          txRef: transaction.txRef,
+          reference: transaction.txRef,
           purchaseId: pendingPurchase.id,
-          amount: finalAmount,
-          currency: 'GHS',
-          exchangeRate: exchangeRate,
+          amount: transaction.amount || finalAmount,
+          currency: transaction.currency || finalCurrency,
+          exchangeRate,
           originalAmount: buyerAmount,
         };
       }
@@ -574,6 +569,25 @@ export class BuyerService {
       throw new NotFoundException('Purchase not found');
     }
 
+    if (
+      purchase.status === 'PENDING' &&
+      purchase.paymentProvider === 'STRYPAY' &&
+      purchase.paymentIntentId
+    ) {
+      try {
+        this.logger.log(`[VERIFY_POLL] Checking StrydPay status for pending purchase ${purchase.id}`);
+        const confirmed = await this.confirmPurchase(purchase.id, purchase.paymentIntentId);
+        return {
+          id: purchase.id,
+          status: confirmed.status,
+          accessToken: confirmed.accessToken,
+          content: purchase.content,
+        };
+      } catch (error: any) {
+        this.logger.warn(`[VERIFY_POLL] StrydPay status check did not complete purchase ${purchase.id}: ${error?.message || error}`);
+      }
+    }
+
     return {
       id: purchase.id,
       status: purchase.status,
@@ -642,6 +656,25 @@ export class BuyerService {
     }
 
     this.logger.log(`[VERIFY_POLL] ✅ Found purchase ${purchase.id} (Status: ${purchase.status}) for identifier ${paymentIntentId}`);
+
+    if (
+      purchase.status === 'PENDING' &&
+      purchase.paymentProvider === 'STRYPAY' &&
+      purchase.paymentIntentId
+    ) {
+      try {
+        this.logger.log(`[VERIFY_POLL] Checking StrydPay status for pending purchase ${purchase.id}`);
+        const confirmed = await this.confirmPurchase(purchase.id, purchase.paymentIntentId);
+        return {
+          id: purchase.id,
+          status: confirmed.status,
+          accessToken: confirmed.accessToken,
+          content: purchase.content,
+        };
+      } catch (error: any) {
+        this.logger.warn(`[VERIFY_POLL] StrydPay status check did not complete purchase ${purchase.id}: ${error?.message || error}`);
+      }
+    }
 
     return {
       id: purchase.id,
@@ -876,7 +909,8 @@ export class BuyerService {
   ): Promise<{ purchaseId: string; accessToken: string; status: string }> {
     this.logger.log(`Confirming purchase ${purchaseId} with payment intent ${paymentIntentId}`);
 
-    const idempotencyKey = `client_${paymentIntentId}`;
+    let confirmedPaymentIntentId = paymentIntentId;
+    let idempotencyKey = `client_${paymentIntentId}`;
 
     try {
       const result = await this.prisma.$transaction(
@@ -918,9 +952,8 @@ export class BuyerService {
             `[CONFIRM] Payment intent mismatch for purchase ${purchaseId}. DB has ${purchase.paymentIntentId}, Client sent ${paymentIntentId}.`,
           );
           
-          // If Paystack, we might need to update the paymentIntentId if the reference changed
-          if (purchase.paymentProvider === 'PAYSTACK') {
-            this.logger.log(`[CONFIRM] Paystack detected, checking if client-provided reference is valid...`);
+          if (purchase.paymentProvider === 'STRYPAY') {
+            this.logger.log(`[CONFIRM] StrydPay detected, checking stored tx_ref...`);
           } else {
             this.logger.error(`[CONFIRM] Mismatch for ${purchase.paymentProvider}. Access denied.`);
             throw new BadRequestException('Payment intent mismatch');
@@ -941,32 +974,37 @@ export class BuyerService {
 
         let verified = false;
 
-        if (purchase.paymentProvider === 'PAYSTACK') {
-          if (!this.paystackService.isConfigured()) {
-            this.logger.error(`Paystack not configured while confirming purchase ${purchaseId}`);
-            throw new BadRequestException('Paystack is not configured');
+        if (purchase.paymentProvider === 'STRYPAY') {
+          if (!this.strypayService.isConfigured()) {
+            this.logger.error(`StrydPay not configured while confirming purchase ${purchaseId}`);
+            throw new BadRequestException('StrydPay is not configured');
           }
 
-          this.logger.log(`Verifying Paystack reference ${paymentIntentId} for purchase ${purchaseId}`);
-          const paystackResponse = await this.paystackService.verifyTransaction(paymentIntentId);
+          const txRef = purchase.paymentIntentId === paymentIntentId
+            ? paymentIntentId
+            : purchase.paymentIntentId || paymentIntentId;
+          confirmedPaymentIntentId = txRef;
+          idempotencyKey = `client_${txRef}`;
+
+          this.logger.log(`Verifying StrydPay tx_ref ${txRef} for purchase ${purchaseId}`);
+          const strypayResponse = await this.strypayService.checkPaymentStatus(txRef);
           
-          if (paystackResponse.status !== 'success') {
+          if (!this.strypayService.isSuccessfulStatus(strypayResponse.status)) {
             this.logger.error(
-              `Paystack transaction ${paymentIntentId} status is ${paystackResponse.status}`,
+              `StrydPay transaction ${txRef} status is ${strypayResponse.status}`,
             );
             throw new BadRequestException('Payment not completed');
           }
 
           verified = true;
           
-          // CRITICAL: Synchronize reference if it differs (important for Paystack)
-          if (purchase.paymentIntentId !== paymentIntentId) {
-            this.logger.log(`[CONFIRM] Synchronizing Paystack reference: ${purchase.paymentIntentId} -> ${paymentIntentId}`);
+          if (purchase.paymentIntentId !== txRef) {
+            this.logger.log(`[CONFIRM] Synchronizing StrydPay tx_ref: ${purchase.paymentIntentId} -> ${txRef}`);
             await tx.purchase.update({
               where: { id: purchaseId },
               data: { 
-                paymentIntentId: paymentIntentId,
-                transactionId: paymentIntentId 
+                paymentIntentId: txRef,
+                transactionId: txRef 
               }
             });
           }
@@ -990,7 +1028,7 @@ export class BuyerService {
           where: { id: purchase.id },
           data: {
             status: 'COMPLETED',
-            transactionId: paymentIntentId,
+            transactionId: confirmedPaymentIntentId,
             completionIdempotencyKey: idempotencyKey,
             completedBy: 'CLIENT',
             completedAt: new Date(),
@@ -1116,7 +1154,7 @@ export class BuyerService {
               amount: purchaseWithRelations.amount.toFixed(2),
               date: new Date().toLocaleDateString(),
               access_link: `${clientUrl}/c/${purchaseWithRelations.contentId}?token=${purchaseWithRelations.accessToken}`,
-              transaction_id: paymentIntentId,
+              transaction_id: confirmedPaymentIntentId,
             });
             this.logger.log(`[EMAIL] ✅ Purchase receipt sent to ${buyerEmail}`);
           } catch (error) {
@@ -1202,7 +1240,10 @@ export class BuyerService {
         const existingPurchase = await this.prisma.purchase.findFirst({
           where: {
             id: purchaseId,
-            paymentIntentId,
+            OR: [
+              { paymentIntentId: confirmedPaymentIntentId },
+              { transactionId: confirmedPaymentIntentId },
+            ],
           },
         });
 
@@ -1524,3 +1565,4 @@ export class BuyerService {
     }
   }
 }
+

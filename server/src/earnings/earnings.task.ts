@@ -46,7 +46,7 @@ export class EarningsTaskService {
           await this.prisma.$transaction(async (tx) => {
             // Calculate earnings amount
             const earningsAmount = purchase.basePrice
-              ? purchase.basePrice * 0.9
+              ? purchase.basePrice * 0.8
               : purchase.amount * 0.85;
 
             // Move from pending to available balance

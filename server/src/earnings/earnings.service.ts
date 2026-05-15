@@ -63,7 +63,7 @@ export class EarningsService {
   async getBalance(userId: string): Promise<BalanceResponse> {
     const creatorProfile = await this.getCreatorProfile(userId);
 
-    // Use totalEarnings from profile (correctly tracks 90%/85% of purchases)
+    // Use totalEarnings from profile (correctly tracks 80%/85% of purchases)
     // This is maintained by Stripe webhook handlers when purchases are completed
     const lifetimeEarnings = creatorProfile.totalEarnings || 0;
 
@@ -225,8 +225,8 @@ export class EarningsService {
       id: purchase.id,
       type: 'PURCHASE' as const,
       amount: (purchase.basePrice && purchase.basePrice > 0)
-        ? purchase.basePrice * 0.9
-        : (purchase.amount / 1.1) * 0.9, // Derive base price from amount, then take 90%
+        ? purchase.basePrice * 0.8
+        : purchase.amount * 0.85, // Legacy no-basePrice records used the old 85% charged-amount share
       currency: purchase.currency,
       status: purchase.status,
       date: purchase.createdAt,

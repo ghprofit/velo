@@ -261,9 +261,9 @@ export class StripeController {
                 },
               });
 
-              // Update creator earnings - creator always gets 90% of their price
+              // Update creator earnings - creator always gets 80% of their price
               // platformFeePercentage (15%) only affects buyer markup, not creator cut
-              const creatorEarnings = basePrice * 0.9;
+              const creatorEarnings = basePrice * 0.8;
 
               // Calculate when earnings will be available (24 hours from now)
               const earningsPendingUntil = new Date();
@@ -343,12 +343,12 @@ export class StripeController {
             },
           });
 
-          // Update creator earnings - creator always gets 90% of their price
+          // Update creator earnings - creator always gets 80% of their price
           // platformFeePercentage only affects buyer markup, not creator earnings
-          // For new purchases: basePrice exists, creator gets 90%
+          // For new purchases: basePrice exists, creator gets 80%
           // For old purchases (migration): use old calculation
           const creatorEarnings = purchase.basePrice
-            ? purchase.basePrice * 0.9 // Creator always gets 90% of their price
+            ? purchase.basePrice * 0.8 // Creator always gets 80% of their price
             : purchase.amount * 0.85; // Very old purchases without basePrice
 
           // Calculate when earnings will be available (24 hours from now)
@@ -716,7 +716,7 @@ export class StripeController {
 
           // Calculate creator earnings that need to be reversed
           const creatorEarnings = purchase.basePrice
-            ? purchase.basePrice * 0.9
+            ? purchase.basePrice * 0.8
             : purchase.amount * 0.85;
 
           // Get current creator balance state

@@ -22,7 +22,7 @@ export default function VeloAdvantage() {
       ),
       title: 'Creator-First Payouts',
       description:
-        'You keep 90% of every sale. Funds are available quickly after the standard 7-day buffer.',
+        'You keep 80% of every sale. Funds are available quickly after the standard 7-day buffer.',
     },
     {
       icon: (

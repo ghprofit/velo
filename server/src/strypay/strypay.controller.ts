@@ -95,7 +95,7 @@ export class StrypayController {
           }
 
           const creatorEarnings = purchase.basePrice
-            ? purchase.basePrice * 0.9
+            ? purchase.basePrice * 0.8
             : purchase.amount * 0.85;
           const earningsPendingUntil = new Date();
           earningsPendingUntil.setHours(earningsPendingUntil.getHours() + 24);

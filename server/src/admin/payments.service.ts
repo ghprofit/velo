@@ -14,6 +14,7 @@ import {
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
+  private readonly WITHDRAWAL_FEE_PERCENTAGE = 5;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -21,6 +22,17 @@ export class PaymentsService {
     private readonly notificationsService: NotificationsService,
     private readonly stripeService: StripeService,
   ) {}
+
+  private calculateWithdrawalFee(requestedAmount: number) {
+    const withdrawalFee = Number((requestedAmount * (this.WITHDRAWAL_FEE_PERCENTAGE / 100)).toFixed(2));
+    const netPayoutAmount = Number((requestedAmount - withdrawalFee).toFixed(2));
+
+    return {
+      withdrawalFeePercentage: this.WITHDRAWAL_FEE_PERCENTAGE,
+      withdrawalFee,
+      netPayoutAmount,
+    };
+  }
 
   async getPaymentStats(): Promise<PaymentStatsDto> {
     // Get total revenue from completed purchases
@@ -661,6 +673,7 @@ export class PaymentsService {
     // Map requests to include bank details for admin viewing
     const requestsWithBankDetails = requests.map((request) => ({
       ...request,
+      ...this.calculateWithdrawalFee(request.requestedAmount),
       creator: {
         ...request.creator,
         // Include bank details for manual payout processing
@@ -719,7 +732,10 @@ export class PaymentsService {
 
     return {
       success: true,
-      data: request,
+      data: {
+        ...request,
+        ...this.calculateWithdrawalFee(request.requestedAmount),
+      },
     };
   }
 
@@ -760,6 +776,7 @@ export class PaymentsService {
     }
 
     // Create transaction: Update PayoutRequest + Create Payout + Deduct balance
+    const feeDetails = this.calculateWithdrawalFee(request.requestedAmount);
     const result = await this.prisma.$transaction(async (tx) => {
       // Update payout request to COMPLETED (manual payout done by admin)
       const updatedRequest = await tx.payoutRequest.update({
@@ -776,12 +793,12 @@ export class PaymentsService {
       const payout = await tx.payout.create({
         data: {
           creatorId: request.creatorId,
-          amount: request.requestedAmount,
+          amount: feeDetails.netPayoutAmount,
           currency: request.currency,
           status: 'COMPLETED',
           paymentMethod: 'BANK_TRANSFER',
           processedAt: new Date(),
-          notes: `Manual bank transfer by admin - Request ID: ${requestId}`,
+          notes: `Manual bank transfer by admin - Request ID: ${requestId}. Gross: $${request.requestedAmount.toFixed(2)}, withdrawal fee (${feeDetails.withdrawalFeePercentage}%): $${feeDetails.withdrawalFee.toFixed(2)}, net payout: $${feeDetails.netPayoutAmount.toFixed(2)}`,
         },
       });
 
@@ -822,18 +839,20 @@ export class PaymentsService {
       userId: request.creator.userId,
       type: NotificationType.PAYOUT_SENT,
       title: 'Payout Successful',
-      message: `Your payout of $${request.requestedAmount.toFixed(2)} has been sent to your bank account.`,
+      message: `Your payout of $${feeDetails.netPayoutAmount.toFixed(2)} has been sent to your bank account after a $${feeDetails.withdrawalFee.toFixed(2)} withdrawal fee.`,
       metadata: {
         requestId: requestId,
         payoutId: result.payout.id,
-        amount: request.requestedAmount,
+        requestedAmount: request.requestedAmount,
+        withdrawalFee: feeDetails.withdrawalFee,
+        netPayoutAmount: feeDetails.netPayoutAmount,
       },
     });
 
     // Send email
     await this.emailService.sendPayoutProcessed(request.creator.user.email, {
       creator_name: request.creator.displayName,
-      amount: request.requestedAmount.toFixed(2),
+      amount: feeDetails.netPayoutAmount.toFixed(2),
       payout_date: new Date().toLocaleDateString(),
       transaction_id: result.payout.id,
     });

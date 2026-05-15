@@ -321,7 +321,7 @@ export const HTML_TEMPLATES = {
 
       <h3>Creator Benefits:</h3>
       <ul style="color: #4b5563; line-height: 1.8;">
-        <li>Keep <strong>85%</strong> of every sale</li>
+        <li>Keep <strong>80%</strong> of every sale</li>
         <li>Instant access for your buyers</li>
         <li>Secure content hosting</li>
         <li>Analytics to track your performance</li>
@@ -851,7 +851,7 @@ export const HTML_TEMPLATES = {
           <td class="amount">$${data.sale_amount}</td>
         </tr>
         <tr>
-          <th>Your Earnings (90%)</th>
+          <th>Your Earnings (80%)</th>
           <td class="amount" style="color: #10b981;">$${data.creator_earnings}</td>
         </tr>
         <tr>

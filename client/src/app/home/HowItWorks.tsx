@@ -223,7 +223,7 @@ export default function HowItWorks() {
               <div className="absolute -top-8 -right-12 w-32 h-32 bg-white rounded-2xl shadow-xl p-3 animate-float hidden lg:block border-2 border-green-100">
                 <div className="text-3xl mb-2">💰</div>
                 <p className="text-xs font-semibold text-gray-700">Fast Payout</p>
-                <p className="text-xs text-green-600 font-bold">90%</p>
+                <p className="text-xs text-green-600 font-bold">80%</p>
               </div>
 
               <div className="absolute top-24 -left-14 w-28 h-28 bg-white rounded-2xl shadow-xl p-3 animate-float animation-delay-2500 hidden lg:block border-2 border-emerald-100">

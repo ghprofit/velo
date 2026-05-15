@@ -12,6 +12,9 @@ interface PayoutRequest {
   id: string;
   creatorId: string;
   requestedAmount: number;
+  withdrawalFeePercentage?: number;
+  withdrawalFee?: number;
+  netPayoutAmount?: number;
   currency: string;
   status: string;
   createdAt: string;
@@ -191,6 +194,16 @@ export default function AdminPayoutsPage() {
     }
   };
 
+  const getWithdrawalDetails = (request: PayoutRequest) => {
+    const withdrawalFee = request.withdrawalFee ?? request.requestedAmount * 0.05;
+    const netPayoutAmount = request.netPayoutAmount ?? request.requestedAmount - withdrawalFee;
+    return {
+      withdrawalFeePercentage: request.withdrawalFeePercentage ?? 5,
+      withdrawalFee,
+      netPayoutAmount,
+    };
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <AdminSidebar activeTab="payouts" />
@@ -310,7 +323,10 @@ export default function AdminPayoutsPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {requests.map((request) => (
+                    {requests.map((request) => {
+                      const withdrawal = getWithdrawalDetails(request);
+
+                      return (
                       <tr key={request.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
@@ -323,6 +339,9 @@ export default function AdminPayoutsPage() {
                             ${request.requestedAmount.toFixed(2)}
                           </div>
                           <div className="text-xs text-gray-500">{request.currency}</div>
+                          <div className="text-xs text-gray-500">
+                            Fee ${withdrawal.withdrawalFee.toFixed(2)} • Send ${withdrawal.netPayoutAmount.toFixed(2)}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
@@ -398,7 +417,8 @@ export default function AdminPayoutsPage() {
                           )}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -414,6 +434,24 @@ export default function AdminPayoutsPage() {
                   Payout of <span className="font-semibold">${selectedRequest.requestedAmount.toFixed(2)}</span> for{' '}
                   <span className="font-semibold">{selectedRequest.creator.displayName}</span>
                 </p>
+
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Payout Breakdown</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Requested Amount:</span>
+                      <span className="font-medium text-gray-900">${selectedRequest.requestedAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Withdrawal Fee ({getWithdrawalDetails(selectedRequest).withdrawalFeePercentage}%):</span>
+                      <span className="font-medium text-gray-900">- ${getWithdrawalDetails(selectedRequest).withdrawalFee.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-indigo-200 pt-2">
+                      <span className="font-semibold text-gray-900">Amount to Send:</span>
+                      <span className="font-bold text-indigo-700">${getWithdrawalDetails(selectedRequest).netPayoutAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Bank Details Section */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
@@ -480,7 +518,7 @@ export default function AdminPayoutsPage() {
 
                 <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-6">
                   <p className="text-sm text-yellow-800">
-                    <strong>Important:</strong> Please send <span className="font-semibold">${selectedRequest.requestedAmount.toFixed(2)}</span> to the bank account above manually before clicking Approve. Clicking Approve will notify the creator that their payout has been sent.
+                    <strong>Important:</strong> Please send <span className="font-semibold">${getWithdrawalDetails(selectedRequest).netPayoutAmount.toFixed(2)}</span> to the bank account above manually before clicking Approve. The full requested amount will be deducted from the creator&apos;s balance, including the 5% withdrawal fee.
                   </p>
                 </div>
                 <div className="flex gap-3 justify-end">
@@ -577,6 +615,14 @@ export default function AdminPayoutsPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Requested Amount:</span>
                     <span className="text-xl font-bold text-indigo-600">${selectedRequest.requestedAmount.toFixed(2)} {selectedRequest.currency}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-gray-600">Withdrawal Fee ({getWithdrawalDetails(selectedRequest).withdrawalFeePercentage}%):</span>
+                    <span className="text-gray-900">- ${getWithdrawalDetails(selectedRequest).withdrawalFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-gray-600">Net Payout:</span>
+                    <span className="font-semibold text-indigo-700">${getWithdrawalDetails(selectedRequest).netPayoutAmount.toFixed(2)} {selectedRequest.currency}</span>
                   </div>
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-gray-600">Status:</span>

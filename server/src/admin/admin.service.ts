@@ -34,7 +34,7 @@ export class AdminService {
     });
     const totalRevenue = revenueAggregate._sum?.amount || 0;
 
-    // Get total creator earnings (sum of all creator totalEarnings - 90% net)
+    // Get total creator earnings (sum of all creator totalEarnings - 80% net)
     const earningsAggregate = await this.prisma.creatorProfile.aggregate({
       _sum: { totalEarnings: true },
     });

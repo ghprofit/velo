@@ -12,6 +12,7 @@ import { SetupBankAccountDto, BankAccountResponseDto } from './dto/bank-account.
 @Injectable()
 export class CreatorsService {
   private readonly logger = new Logger(CreatorsService.name);
+  private readonly WITHDRAWAL_FEE_PERCENTAGE = 5;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -20,6 +21,17 @@ export class CreatorsService {
     private readonly notificationsService: NotificationsService,
     private readonly stripeService: StripeService,
   ) {}
+
+  private calculateWithdrawalFee(requestedAmount: number) {
+    const withdrawalFee = Number((requestedAmount * (this.WITHDRAWAL_FEE_PERCENTAGE / 100)).toFixed(2));
+    const netPayoutAmount = Number((requestedAmount - withdrawalFee).toFixed(2));
+
+    return {
+      withdrawalFeePercentage: this.WITHDRAWAL_FEE_PERCENTAGE,
+      withdrawalFee,
+      netPayoutAmount,
+    };
+  }
 
   /**
    * Initiate identity verification for a creator
@@ -527,6 +539,7 @@ export class CreatorsService {
   async requestPayout(userId: string, requestedAmount: number) {
     try {
       this.logger.log(`Payout request initiated by user: ${userId} for amount: ${requestedAmount}`);
+      const feeDetails = this.calculateWithdrawalFee(requestedAmount);
 
       // Wrap entire operation in transaction to prevent race conditions
       const result = await this.prisma.$transaction(
@@ -639,6 +652,8 @@ export class CreatorsService {
             creatorId: result.user.creatorProfile.id,
             creatorName: result.user.creatorProfile.displayName,
             amount: requestedAmount,
+            withdrawalFee: feeDetails.withdrawalFee,
+            netPayoutAmount: feeDetails.netPayoutAmount,
             availableBalance: result.availableBalance,
           },
         );
@@ -677,6 +692,9 @@ export class CreatorsService {
       return {
         id: result.payoutRequest.id,
         requestedAmount: result.payoutRequest.requestedAmount,
+        withdrawalFeePercentage: feeDetails.withdrawalFeePercentage,
+        withdrawalFee: feeDetails.withdrawalFee,
+        netPayoutAmount: feeDetails.netPayoutAmount,
         availableBalance: result.availableBalance,
         currency: result.payoutRequest.currency,
         status: result.payoutRequest.status,
@@ -719,22 +737,7 @@ export class CreatorsService {
         },
       });
 
-      // Calculate total completed payouts
-      const completedPayouts = await this.prisma.payout.aggregate({
-        where: {
-          creatorId: user.creatorProfile.id,
-          status: 'COMPLETED',
-        },
-        _sum: {
-          amount: true,
-        },
-      });
-
-      const totalPayouts = completedPayouts._sum.amount || 0;
-
-      // Calculate current available balance: totalEarnings - completedPayouts
-      // Earnings are immediately available after purchase - no pending period
-      let currentBalance = user.creatorProfile.totalEarnings - totalPayouts;
+      let currentBalance = user.creatorProfile.availableBalance || 0;
 
       // Add unlocked waitlist bonus to available balance if applicable
       if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
@@ -744,17 +747,22 @@ export class CreatorsService {
         }
       }
 
-      return requests.map(request => ({
-        id: request.id,
-        requestedAmount: request.requestedAmount,
-        availableBalance: currentBalance, // Use current balance, not stale snapshot
-        currency: request.currency,
-        status: request.status,
-        reviewedAt: request.reviewedAt,
-        reviewNotes: request.reviewNotes,
-        createdAt: request.createdAt,
-        payout: request.payout,
-      }));
+      return requests.map(request => {
+        const feeDetails = this.calculateWithdrawalFee(request.requestedAmount);
+
+        return {
+          id: request.id,
+          requestedAmount: request.requestedAmount,
+          ...feeDetails,
+          availableBalance: currentBalance,
+          currency: request.currency,
+          status: request.status,
+          reviewedAt: request.reviewedAt,
+          reviewNotes: request.reviewNotes,
+          createdAt: request.createdAt,
+          payout: request.payout,
+        };
+      });
     } catch (error) {
       this.logger.error(`Failed to get payout requests for user ${userId}:`, error);
       throw error;
@@ -798,21 +806,7 @@ export class CreatorsService {
         throw new NotFoundException('Payout request not found');
       }
 
-      // Calculate total completed payouts
-      const completedPayouts = await this.prisma.payout.aggregate({
-        where: {
-          creatorId: user.creatorProfile.id,
-          status: 'COMPLETED',
-        },
-        _sum: {
-          amount: true,
-        },
-      });
-
-      const totalPayouts = completedPayouts._sum.amount || 0;
-
-      // Calculate current available balance: totalEarnings - completedPayouts
-      let currentBalance = user.creatorProfile.totalEarnings - totalPayouts;
+      let currentBalance = user.creatorProfile.availableBalance || 0;
 
       // Add unlocked waitlist bonus to available balance if applicable
       if (user.creatorProfile.waitlistBonus > 0 && !user.creatorProfile.bonusWithdrawn) {
@@ -824,7 +818,8 @@ export class CreatorsService {
       return {
         id: request.id,
         requestedAmount: request.requestedAmount,
-        availableBalance: currentBalance, // Use current balance, not stale snapshot
+        ...this.calculateWithdrawalFee(request.requestedAmount),
+        availableBalance: currentBalance,
         currency: request.currency,
         status: request.status,
         emailVerifiedAt: request.emailVerifiedAt,

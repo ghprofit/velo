@@ -1054,12 +1054,12 @@ export class BuyerService {
           },
         });
 
-        // Update creator earnings - creator always gets 90% of their price
+        // Update creator earnings - creator always gets 80% of their price
         // platformFeePercentage only affects buyer markup, not creator earnings
-        // For new purchases: basePrice exists, creator gets 90%
+        // For new purchases: basePrice exists, creator gets 80%
         // For old purchases (migration): basePrice is null, use old calculation (85% of amount)
         const creatorEarnings = purchase.basePrice
-          ? purchase.basePrice * 0.9 // Creator always gets 90% of their price
+          ? purchase.basePrice * 0.8 // Creator always gets 80% of their price
           : purchase.amount * 0.85; // Very old purchases without basePrice
 
         // Calculate when earnings will be available (24 hours from now)
@@ -1141,7 +1141,7 @@ export class BuyerService {
 
         // Calculate creator earnings from purchase data
         const creatorEarnings = purchaseWithRelations.basePrice
-          ? purchaseWithRelations.basePrice * 0.9
+          ? purchaseWithRelations.basePrice * 0.8
           : purchaseWithRelations.amount * 0.85;
 
         // 1. Send purchase receipt to buyer

@@ -50,10 +50,10 @@ export class AnalyticsService {
     });
 
     // Calculate totals (net creator revenue)
-    // For new purchases: creator earns 90% of basePrice
+    // For new purchases: creator earns 80% of basePrice
     // For legacy purchases: creator earns 85% of amount (no basePrice stored)
     const totalRevenue = purchases.reduce((sum, p) => {
-      const net = p.basePrice != null ? p.basePrice * 0.9 : p.amount * 0.85;
+      const net = p.basePrice != null ? p.basePrice * 0.8 : p.amount * 0.85;
       return sum + net;
     }, 0);
     const totalUnlocks = purchases.length;
@@ -155,7 +155,7 @@ export class AnalyticsService {
 
       // Net creator revenue per day
       const revenue = dayPurchases.reduce((sum, p) => {
-        const net = p.basePrice != null ? p.basePrice * 0.9 : p.amount * 0.85;
+        const net = p.basePrice != null ? p.basePrice * 0.8 : p.amount * 0.85;
         return sum + net;
       }, 0);
       const unlocks = dayPurchases.length;
@@ -257,7 +257,7 @@ export class AnalyticsService {
       });
 
       revenueMap = purchases.reduce((acc, p) => {
-        const net = p.basePrice != null ? p.basePrice * 0.9 : p.amount * 0.85;
+        const net = p.basePrice != null ? p.basePrice * 0.8 : p.amount * 0.85;
         acc[p.contentId] = (acc[p.contentId] || 0) + net;
         return acc;
       }, {} as Record<string, number>);

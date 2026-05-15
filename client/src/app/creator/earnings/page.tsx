@@ -52,6 +52,9 @@ interface ContentItem {
 interface PayoutRequest {
   id: string;
   requestedAmount: number;
+  withdrawalFeePercentage?: number;
+  withdrawalFee?: number;
+  netPayoutAmount?: number;
   availableBalance: number;
   currency: string;
   status: string;
@@ -178,6 +181,15 @@ export default function EarningsPage() {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
+  };
+
+  const getWithdrawalDetails = (requestedAmount: number, withdrawalFee?: number, netPayoutAmount?: number) => {
+    const fee = withdrawalFee ?? requestedAmount * 0.05;
+    const net = netPayoutAmount ?? requestedAmount - fee;
+    return {
+      fee,
+      net,
+    };
   };
 
   const formatDate = (dateString: string) => {
@@ -444,6 +456,11 @@ export default function EarningsPage() {
                   };
 
                   const styles = getRequestStatusStyles(request.status);
+                  const withdrawal = getWithdrawalDetails(
+                    request.requestedAmount,
+                    request.withdrawalFee,
+                    request.netPayoutAmount,
+                  );
 
                   return (
                     <div key={request.id} className={`p-4 sm:p-5 ${styles.statusBg} border border-gray-200 rounded-lg`}>
@@ -464,6 +481,9 @@ export default function EarningsPage() {
                         <div className="text-left sm:text-right pl-14 sm:pl-0">
                           <p className="text-lg sm:text-xl font-bold text-gray-900">
                             {formatCurrency(request.requestedAmount)}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Fee {formatCurrency(withdrawal.fee)} • Net {formatCurrency(withdrawal.net)}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${styles.statusColor} ${styles.statusBg}`}>

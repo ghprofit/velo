@@ -171,6 +171,9 @@ export class CreatorsController {
         data: {
           id: result.id,
           requestedAmount: result.requestedAmount,
+          withdrawalFeePercentage: result.withdrawalFeePercentage,
+          withdrawalFee: result.withdrawalFee,
+          netPayoutAmount: result.netPayoutAmount,
           availableBalance: result.availableBalance,
           currency: result.currency,
           status: result.status,

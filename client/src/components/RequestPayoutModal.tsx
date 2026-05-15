@@ -62,8 +62,10 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
     setError(null);
   };
 
-  const processingFee = parseFloat(amount) > 0 ? 1.00 : 0;
-  const netPayout = parseFloat(amount || '0') - processingFee;
+  const withdrawalFeePercentage = 5;
+  const requestedAmount = parseFloat(amount || '0');
+  const processingFee = requestedAmount > 0 ? requestedAmount * (withdrawalFeePercentage / 100) : 0;
+  const netPayout = Math.max(0, requestedAmount - processingFee);
 
   const validateAmount = () => {
     const numAmount = parseFloat(amount);
@@ -259,7 +261,7 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
                 <span className="font-semibold text-gray-900">${parseFloat(amount || '0').toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-700">VELOLink Processing Fee</span>
+                <span className="text-gray-700">Withdrawal Fee ({withdrawalFeePercentage}%)</span>
                 <span className="font-semibold text-gray-900">- ${processingFee.toFixed(2)}</span>
               </div>
               <div className="pt-3 border-t border-gray-200">
@@ -281,7 +283,7 @@ export default function RequestPayoutModal({ isOpen, onClose, availableBalance, 
             </div>
 
             <p className="text-xs text-gray-500 text-center mt-3">
-              Fees may vary based on region and payment provider.
+              A 5% withdrawal fee is deducted from the requested amount.
             </p>
           </div>
 

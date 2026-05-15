@@ -870,7 +870,7 @@ export default function UploadContentPage() {
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1.5 sm:mt-2">
-                    Minimum price: $10.00. You&apos;ll receive <span className="font-semibold text-gray-900">${price && !isNaN(parseFloat(price)) ? (parseFloat(price) * 0.90).toFixed(2) : '0.00'}</span> (90% of your price)
+                    Minimum price: $10.00. You&apos;ll receive <span className="font-semibold text-gray-900">${price && !isNaN(parseFloat(price)) ? (parseFloat(price) * 0.80).toFixed(2) : '0.00'}</span> (80% of your price)
                   </p>
                 </div>
               </div>

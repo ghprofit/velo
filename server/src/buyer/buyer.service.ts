@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../stripe/stripe.service';
-import { StrypayService } from '../strypay/strypay.service';
+import { VcomService } from '../vcom/vcom.service';
 import { EmailService } from '../email/email.service';
 import { S3Service } from '../s3/s3.service';
 import { RedisService } from '../redis/redis.service';
@@ -36,7 +36,7 @@ export class BuyerService {
   constructor(
     private prisma: PrismaService,
     private stripeService: StripeService,
-    private strypayService: StrypayService,
+    private vcomService: VcomService,
     private emailService: EmailService,
     private s3Service: S3Service,
     private redisService: RedisService,
@@ -395,8 +395,8 @@ export class BuyerService {
 
       const providerValue = dto.paymentProvider
         ? dto.paymentProvider.toUpperCase()
-        : this.config.get<string>('DEFAULT_PAYMENT_PROVIDER')?.toUpperCase() || 'STRYPAY';
-      const paymentProvider = providerValue === 'STRIPE' ? 'STRIPE' : 'STRYPAY';
+        : this.config.get<string>('DEFAULT_PAYMENT_PROVIDER')?.toUpperCase() || 'VCOM';
+      const paymentProvider = providerValue === 'STRIPE' ? 'STRIPE' : 'VCOM';
       const accessToken = crypto.randomBytes(32).toString('hex');
 
       let exchangeRate: number;
@@ -425,54 +425,52 @@ export class BuyerService {
         },
       });
 
-      if (paymentProvider === 'STRYPAY') {
-        if (!this.strypayService.isConfigured()) {
-          this.logger.error('[PURCHASE] StrydPay requested but not configured');
-          throw new BadRequestException('StrydPay is not configured');
+      if (paymentProvider === 'VCOM') {
+        if (!this.vcomService.isConfigured()) {
+          this.logger.error('[PURCHASE] vcom checkout requested but not configured');
+          throw new BadRequestException('vcom checkout is not configured');
         }
 
-        this.logger.log(`[PURCHASE] Creating StrydPay checkout for ${finalCurrency} ${finalAmount}`);
-        const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
-        const apiUrl =
-          this.config.get<string>('API_URL') ||
-          this.config.get<string>('BACKEND_URL') ||
-          'http://localhost:8000';
-        const redirectUrl = `${clientUrl}/checkout/${content.id}/success?purchaseId=${pendingPurchase.id}`;
-        const callbackUrl = `${apiUrl.replace(/\/$/, '')}/api/strypay/webhook`;
+        // vcom's Paystack integration settles in GHS, so convert the USD buyer
+        // amount up front rather than pushing conversion into the gateway.
+        const ghsAmount = Number((finalAmount * exchangeRate).toFixed(2));
+        const reference = `GHPROFIT-${pendingPurchase.id}`;
 
-        const transaction = await this.strypayService.createCheckout({
-          amount: Number(finalAmount.toFixed(2)),
-          currency: finalCurrency,
-          customerEmail: dto.email,
-          customerName: dto.email,
+        this.logger.log(`[PURCHASE] Creating vcom checkout for GHS ${ghsAmount} (ref ${reference})`);
+        const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
+        // vcom confirms payment with Paystack and notifies us via webhook before
+        // it ever redirects the browser onward, so the buyer can go straight to
+        // the content — no client-driven confirm/poll step needed. The content
+        // page already retries once if it lands slightly ahead of the webhook.
+        const returnUrl = `${clientUrl}/c/${content.id}?token=${accessToken}`;
+
+        const checkout = await this.vcomService.createCheckout({
+          reference,
+          amount: ghsAmount,
+          currency: 'GHS',
+          email: dto.email,
           description: `Purchase: ${content.title}`,
-          redirectUrl,
-          callbackUrl,
-          metadata: {
-            contentId: content.id,
-            sessionId: session.id,
-            purchaseId: pendingPurchase.id,
-          },
+          returnUrl,
         });
 
         await this.prisma.purchase.update({
           where: { id: pendingPurchase.id },
           data: {
-            paymentIntentId: transaction.txRef,
-            transactionId: transaction.txRef,
+            paymentIntentId: reference,
+            transactionId: reference,
           },
         });
 
-        this.logger.log(`[STRYPAY_INIT] Purchase ${pendingPurchase.id} initialized with tx_ref: ${transaction.txRef}`);
+        this.logger.log(`[VCOM_INIT] Purchase ${pendingPurchase.id} initialized with reference: ${reference}`);
 
         return {
-          paymentProvider: 'STRYPAY',
-          checkoutUrl: transaction.checkoutUrl,
-          txRef: transaction.txRef,
-          reference: transaction.txRef,
+          paymentProvider: 'VCOM',
+          checkoutUrl: checkout.checkoutUrl,
+          txRef: reference,
+          reference,
           purchaseId: pendingPurchase.id,
-          amount: transaction.amount || finalAmount,
-          currency: transaction.currency || finalCurrency,
+          amount: ghsAmount,
+          currency: 'GHS',
           exchangeRate,
           originalAmount: buyerAmount,
         };
@@ -569,25 +567,6 @@ export class BuyerService {
       throw new NotFoundException('Purchase not found');
     }
 
-    if (
-      purchase.status === 'PENDING' &&
-      purchase.paymentProvider === 'STRYPAY' &&
-      purchase.paymentIntentId
-    ) {
-      try {
-        this.logger.log(`[VERIFY_POLL] Checking StrydPay status for pending purchase ${purchase.id}`);
-        const confirmed = await this.confirmPurchase(purchase.id, purchase.paymentIntentId);
-        return {
-          id: purchase.id,
-          status: confirmed.status,
-          accessToken: confirmed.accessToken,
-          content: purchase.content,
-        };
-      } catch (error: any) {
-        this.logger.warn(`[VERIFY_POLL] StrydPay status check did not complete purchase ${purchase.id}: ${error?.message || error}`);
-      }
-    }
-
     return {
       id: purchase.id,
       status: purchase.status,
@@ -656,25 +635,6 @@ export class BuyerService {
     }
 
     this.logger.log(`[VERIFY_POLL] ✅ Found purchase ${purchase.id} (Status: ${purchase.status}) for identifier ${paymentIntentId}`);
-
-    if (
-      purchase.status === 'PENDING' &&
-      purchase.paymentProvider === 'STRYPAY' &&
-      purchase.paymentIntentId
-    ) {
-      try {
-        this.logger.log(`[VERIFY_POLL] Checking StrydPay status for pending purchase ${purchase.id}`);
-        const confirmed = await this.confirmPurchase(purchase.id, purchase.paymentIntentId);
-        return {
-          id: purchase.id,
-          status: confirmed.status,
-          accessToken: confirmed.accessToken,
-          content: purchase.content,
-        };
-      } catch (error: any) {
-        this.logger.warn(`[VERIFY_POLL] StrydPay status check did not complete purchase ${purchase.id}: ${error?.message || error}`);
-      }
-    }
 
     return {
       id: purchase.id,
@@ -952,8 +912,8 @@ export class BuyerService {
             `[CONFIRM] Payment intent mismatch for purchase ${purchaseId}. DB has ${purchase.paymentIntentId}, Client sent ${paymentIntentId}.`,
           );
           
-          if (purchase.paymentProvider === 'STRYPAY') {
-            this.logger.log(`[CONFIRM] StrydPay detected, checking stored tx_ref...`);
+          if (purchase.paymentProvider === 'VCOM') {
+            this.logger.log(`[CONFIRM] ${purchase.paymentProvider} detected, checking stored reference...`);
           } else {
             this.logger.error(`[CONFIRM] Mismatch for ${purchase.paymentProvider}. Access denied.`);
             throw new BadRequestException('Payment intent mismatch');
@@ -974,40 +934,25 @@ export class BuyerService {
 
         let verified = false;
 
-        if (purchase.paymentProvider === 'STRYPAY') {
-          if (!this.strypayService.isConfigured()) {
-            this.logger.error(`StrydPay not configured while confirming purchase ${purchaseId}`);
-            throw new BadRequestException('StrydPay is not configured');
+        if (purchase.paymentProvider === 'VCOM') {
+          if (!this.vcomService.isConfigured()) {
+            this.logger.error(`vcom checkout not configured while confirming purchase ${purchaseId}`);
+            throw new BadRequestException('vcom checkout is not configured');
           }
 
-          const txRef = purchase.paymentIntentId === paymentIntentId
-            ? paymentIntentId
-            : purchase.paymentIntentId || paymentIntentId;
-          confirmedPaymentIntentId = txRef;
-          idempotencyKey = `client_${txRef}`;
+          const reference = purchase.paymentIntentId || paymentIntentId;
+          confirmedPaymentIntentId = reference;
+          idempotencyKey = `client_${reference}`;
 
-          this.logger.log(`Verifying StrydPay tx_ref ${txRef} for purchase ${purchaseId}`);
-          const strypayResponse = await this.strypayService.checkPaymentStatus(txRef);
-          
-          if (!this.strypayService.isSuccessfulStatus(strypayResponse.status)) {
-            this.logger.error(
-              `StrydPay transaction ${txRef} status is ${strypayResponse.status}`,
-            );
+          this.logger.log(`Verifying vcom reference ${reference} for purchase ${purchaseId}`);
+          const vcomResponse = await this.vcomService.checkPaymentStatus(reference);
+
+          if (!this.vcomService.isSuccessfulStatus(vcomResponse.status)) {
+            this.logger.error(`vcom transaction ${reference} status is ${vcomResponse.status}`);
             throw new BadRequestException('Payment not completed');
           }
 
           verified = true;
-          
-          if (purchase.paymentIntentId !== txRef) {
-            this.logger.log(`[CONFIRM] Synchronizing StrydPay tx_ref: ${purchase.paymentIntentId} -> ${txRef}`);
-            await tx.purchase.update({
-              where: { id: purchaseId },
-              data: { 
-                paymentIntentId: txRef,
-                transactionId: txRef 
-              }
-            });
-          }
         } else {
           this.logger.log(`Verifying Stripe payment intent ${paymentIntentId} for purchase ${purchaseId}`);
           const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);

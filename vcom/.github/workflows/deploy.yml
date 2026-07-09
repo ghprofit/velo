@@ -1,0 +1,151 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, dom, fileinfo, mysql, gd, zip, intl, exif
+          tools: composer:v2
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: |
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress --no-scripts
+          cp .env.example .env
+          php artisan package:discover --ansi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Build frontend assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Create production environment file
+        env:
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+        run: |
+          if [ -z "$PRODUCTION_ENV" ]; then
+            echo "Missing GitHub secret PRODUCTION_ENV. Add the contents of .env.production to that secret." >&2
+            exit 1
+          fi
+          printf '%s\n' "$PRODUCTION_ENV" > production.env
+
+      - name: Create deployment archive
+        run: |
+          tarball="$RUNNER_TEMP/deploy.tar.gz"
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.env*' \
+            --exclude='node_modules' \
+            --exclude='production.env' \
+            --exclude='storage' \
+            --exclude='tests' \
+            --exclude='deploy.tar.gz' \
+            -czf "$tarball" .
+          cp "$tarball" deploy.tar.gz
+
+      - name: Prepare server deploy directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            set -e
+            mkdir -p "${{ secrets.DEPLOY_PATH }}/.deploy"
+
+      - name: Upload deployment archive
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          source: deploy.tar.gz,production.env
+          target: ${{ secrets.DEPLOY_PATH }}/.deploy
+          overwrite: true
+
+      - name: Publish deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            set -e
+            DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}"
+            cd "$DEPLOY_DIR"
+
+            if [ ! -f ".deploy/deploy.tar.gz" ]; then
+              echo "Deployment archive was not uploaded to $DEPLOY_DIR/.deploy/deploy.tar.gz" >&2
+              exit 1
+            fi
+            if [ ! -f ".deploy/production.env" ]; then
+              echo "Production environment file was not uploaded to $DEPLOY_DIR/.deploy/production.env" >&2
+              exit 1
+            fi
+
+            tar -xzf ".deploy/deploy.tar.gz" -C "$DEPLOY_DIR"
+            rm -f ".deploy/deploy.tar.gz"
+            cp ".deploy/production.env" ".env"
+            chmod 600 ".env"
+            rm -f ".deploy/production.env"
+
+            mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache tmp
+
+            if [ ! -f .env ]; then
+              echo "Missing production .env file in $DEPLOY_DIR. Create it once in cPanel before deploying." >&2
+              exit 1
+            fi
+
+            PHP_BIN="$(command -v php || true)"
+            if [ -z "$PHP_BIN" ]; then
+              for PHP_CANDIDATE in /usr/local/bin/php /usr/bin/php /opt/cpanel/ea-php84/root/usr/bin/php /opt/cpanel/ea-php83/root/usr/bin/php /opt/cpanel/ea-php82/root/usr/bin/php /opt/cpanel/ea-php81/root/usr/bin/php /opt/alt/php84/usr/bin/php /opt/alt/php83/usr/bin/php /opt/alt/php82/usr/bin/php /opt/alt/php81/usr/bin/php; do
+                if [ -x "$PHP_CANDIDATE" ]; then
+                  PHP_BIN="$PHP_CANDIDATE"
+                  break
+                fi
+              done
+            fi
+
+            if [ -z "$PHP_BIN" ]; then
+              echo "PHP CLI was not found on the server. PATH=$PATH" >&2
+              exit 1
+            fi
+
+            echo "Using PHP: $PHP_BIN"
+            "$PHP_BIN" artisan optimize:clear
+            "$PHP_BIN" artisan migrate --force
+            "$PHP_BIN" artisan config:cache
+            "$PHP_BIN" artisan route:cache
+            "$PHP_BIN" artisan view:cache
+            "$PHP_BIN" artisan storage:link --force
+            touch tmp/restart.txt 2>/dev/null || true

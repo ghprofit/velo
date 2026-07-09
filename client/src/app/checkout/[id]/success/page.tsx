@@ -13,11 +13,10 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
   const router = useRouter();
   const searchParams = useSearchParams();
   const purchaseId = searchParams.get('purchaseId');
-  // 'paymentIntentId' is set by our app for Stripe inline payments; 'payment_intent' from Stripe redirects; 'tx_ref' from StrydPay.
+  // 'paymentIntentId' is set by our app for Stripe inline payments; 'payment_intent' from Stripe redirects.
   const paymentIntentId =
     searchParams.get('paymentIntentId') ||
     searchParams.get('payment_intent') ||
-    searchParams.get('tx_ref') ||
     searchParams.get('reference') ||
     purchaseId;
   const accessToken = searchParams.get('token'); // Fallback for already-purchased scenario
@@ -35,7 +34,7 @@ export default function CheckoutSuccessPage({ params }: { params: Promise<{ id: 
       return () => clearTimeout(timer);
     }
 
-    // Otherwise, confirm StrydPay/Stripe purchase then poll for completion
+    // Otherwise, confirm Stripe purchase then poll for completion
     if (!paymentIntentId) {
       setStatus('error');
       setErrorMessage('Invalid payment session. Please contact support.');

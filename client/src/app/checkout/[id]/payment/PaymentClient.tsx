@@ -104,7 +104,7 @@ export function PaymentClient({ id }: { id: string }) {
           sessionToken: session.sessionToken,
           email: email,
           fingerprint,
-          paymentProvider: 'STRYPAY',
+          paymentProvider: 'VCOM',
         });
 
         console.log('[CHECKOUT] ✅ Purchase created successfully:', paymentResponse.data);
@@ -118,11 +118,11 @@ export function PaymentClient({ id }: { id: string }) {
           return;
         }
 
-        if (paymentResponse.data.paymentProvider === 'STRYPAY') {
+        if (paymentResponse.data.paymentProvider === 'VCOM') {
           if (!paymentResponse.data.checkoutUrl) {
-            throw new Error('Missing StrydPay checkout URL');
+            throw new Error('Missing checkout URL');
           }
-          console.log('[CHECKOUT] StrydPay hosted checkout initialized');
+          console.log(`[CHECKOUT] ${paymentResponse.data.paymentProvider} hosted checkout initialized`);
 
           setPurchaseInfo({
             purchaseId: paymentResponse.data.purchaseId,
@@ -349,7 +349,7 @@ export function PaymentClient({ id }: { id: string }) {
                     <svg className="w-5 h-5 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="font-medium">Powered by StrydPay</span>
+                    <span className="font-medium">Powered by Paystack</span>
                   </motion.div>
                 </div>
               </motion.div>
@@ -372,7 +372,7 @@ export function PaymentClient({ id }: { id: string }) {
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Details</h2>
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
                     <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
-                    <p className="text-green-800 font-medium">Redirecting to StrydPay checkout...</p>
+                    <p className="text-green-800 font-medium">Redirecting to secure checkout...</p>
                   </div>
 
                   {/* Price Breakdown */}

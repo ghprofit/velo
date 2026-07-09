@@ -7,13 +7,13 @@ import { EmailModule } from '../email/email.module';
 import { S3Module } from '../s3/s3.module';
 import { RedisModule } from '../redis/redis.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { StrypayModule } from '../strypay/strypay.module';
+import { VcomModule } from '../vcom/vcom.module';
 
 @Module({
   imports: [
     PrismaModule,
     StripeModule,
-    StrypayModule,
+    VcomModule,
     EmailModule,
     S3Module,
     RedisModule,

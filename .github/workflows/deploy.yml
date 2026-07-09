@@ -1,11 +1,18 @@
-name: Deploy to cPanel
+name: Deploy vcom to cPanel
 
 on:
   push:
     branches: [new]
+    paths:
+      - 'vcom/**'
+      - '.github/workflows/deploy.yml'
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: vcom
 
 jobs:
   deploy:
@@ -34,6 +41,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+          cache-dependency-path: vcom/package-lock.json
 
       - name: Build frontend assets
         run: |
@@ -86,7 +94,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
-          source: deploy.tar.gz,production.env
+          source: vcom/deploy.tar.gz,vcom/production.env
+          strip_components: 1
           target: ${{ secrets.DEPLOY_PATH }}/.deploy
           overwrite: true
 

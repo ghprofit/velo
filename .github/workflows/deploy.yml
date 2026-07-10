@@ -89,13 +89,8 @@ jobs:
               echo "Missing GitHub secret DEPLOY_PATH." >&2
               exit 1
             fi
-            case "$PUBLIC_DIR" in
-              */)
-                echo "DEPLOY_PATH must not end with a trailing slash." >&2
-                exit 1
-                ;;
-            esac
-            APP_DIR="${PUBLIC_DIR}_app"
+            PUBLIC_DIR="${PUBLIC_DIR%/}"
+            APP_DIR="$PUBLIC_DIR/../vcom_app"
             mkdir -p "$PUBLIC_DIR" "$APP_DIR/.deploy"
 
       - name: Upload deployment archive
@@ -108,7 +103,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           source: vcom/deploy.tar.gz,vcom/production.env
           strip_components: 1
-          target: ${{ secrets.DEPLOY_PATH }}_app/.deploy
+          target: ${{ secrets.DEPLOY_PATH }}/../vcom_app/.deploy
           overwrite: true
 
       - name: Publish deployment
@@ -127,14 +122,10 @@ jobs:
               echo "Missing GitHub secret DEPLOY_PATH." >&2
               exit 1
             fi
-            case "$PUBLIC_DIR" in
-              */)
-                echo "DEPLOY_PATH must not end with a trailing slash." >&2
-                exit 1
-                ;;
-            esac
-            APP_DIR="${PUBLIC_DIR}_app"
+            PUBLIC_DIR="${PUBLIC_DIR%/}"
+            APP_DIR="$PUBLIC_DIR/../vcom_app"
             cd "$APP_DIR"
+            APP_DIR="$(pwd -P)"
 
             if [ ! -f ".deploy/deploy.tar.gz" ]; then
               echo "Deployment archive was not uploaded to $APP_DIR/.deploy/deploy.tar.gz" >&2

@@ -84,7 +84,19 @@ jobs:
           script_stop: true
           script: |
             set -e
-            mkdir -p "${{ secrets.DEPLOY_PATH }}/.deploy"
+            PUBLIC_DIR="${{ secrets.DEPLOY_PATH }}"
+            if [ -z "$PUBLIC_DIR" ]; then
+              echo "Missing GitHub secret DEPLOY_PATH." >&2
+              exit 1
+            fi
+            case "$PUBLIC_DIR" in
+              */)
+                echo "DEPLOY_PATH must not end with a trailing slash." >&2
+                exit 1
+                ;;
+            esac
+            APP_DIR="${PUBLIC_DIR}_app"
+            mkdir -p "$PUBLIC_DIR" "$APP_DIR/.deploy"
 
       - name: Upload deployment archive
         uses: appleboy/scp-action@v1
@@ -96,7 +108,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           source: vcom/deploy.tar.gz,vcom/production.env
           strip_components: 1
-          target: ${{ secrets.DEPLOY_PATH }}/.deploy
+          target: ${{ secrets.DEPLOY_PATH }}_app/.deploy
           overwrite: true
 
       - name: Publish deployment
@@ -110,19 +122,30 @@ jobs:
           script_stop: true
           script: |
             set -e
-            DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}"
-            cd "$DEPLOY_DIR"
+            PUBLIC_DIR="${{ secrets.DEPLOY_PATH }}"
+            if [ -z "$PUBLIC_DIR" ]; then
+              echo "Missing GitHub secret DEPLOY_PATH." >&2
+              exit 1
+            fi
+            case "$PUBLIC_DIR" in
+              */)
+                echo "DEPLOY_PATH must not end with a trailing slash." >&2
+                exit 1
+                ;;
+            esac
+            APP_DIR="${PUBLIC_DIR}_app"
+            cd "$APP_DIR"
 
             if [ ! -f ".deploy/deploy.tar.gz" ]; then
-              echo "Deployment archive was not uploaded to $DEPLOY_DIR/.deploy/deploy.tar.gz" >&2
+              echo "Deployment archive was not uploaded to $APP_DIR/.deploy/deploy.tar.gz" >&2
               exit 1
             fi
             if [ ! -f ".deploy/production.env" ]; then
-              echo "Production environment file was not uploaded to $DEPLOY_DIR/.deploy/production.env" >&2
+              echo "Production environment file was not uploaded to $APP_DIR/.deploy/production.env" >&2
               exit 1
             fi
 
-            tar -xzf ".deploy/deploy.tar.gz" -C "$DEPLOY_DIR"
+            tar -xzf ".deploy/deploy.tar.gz" -C "$APP_DIR"
             rm -f ".deploy/deploy.tar.gz"
             cp ".deploy/production.env" ".env"
             chmod 600 ".env"
@@ -131,7 +154,7 @@ jobs:
             mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache tmp
 
             if [ ! -f .env ]; then
-              echo "Missing production .env file in $DEPLOY_DIR. Create it once in cPanel before deploying." >&2
+              echo "Missing production .env file in $APP_DIR. Create it once in cPanel before deploying." >&2
               exit 1
             fi
 
@@ -156,5 +179,19 @@ jobs:
             "$PHP_BIN" artisan config:cache
             "$PHP_BIN" artisan route:cache
             "$PHP_BIN" artisan view:cache
-            "$PHP_BIN" artisan storage:link --force
+
+            mkdir -p "$PUBLIC_DIR"
+            rsync -a --delete \
+              --exclude='.well-known' \
+              --exclude='cgi-bin' \
+              --exclude='storage' \
+              public/ "$PUBLIC_DIR/"
+
+            APP_DIR_ESCAPED="$(printf '%s\n' "$APP_DIR" | sed 's/[\/&]/\\&/g')"
+            sed -i "s#__DIR__.'/../storage/framework/maintenance.php'#'$APP_DIR_ESCAPED/storage/framework/maintenance.php'#g" "$PUBLIC_DIR/index.php"
+            sed -i "s#__DIR__.'/../vendor/autoload.php'#'$APP_DIR_ESCAPED/vendor/autoload.php'#g" "$PUBLIC_DIR/index.php"
+            sed -i "s#__DIR__.'/../bootstrap/app.php'#'$APP_DIR_ESCAPED/bootstrap/app.php'#g" "$PUBLIC_DIR/index.php"
+
+            rm -rf "$PUBLIC_DIR/storage"
+            ln -s "$APP_DIR/storage/app/public" "$PUBLIC_DIR/storage"
             touch tmp/restart.txt 2>/dev/null || true

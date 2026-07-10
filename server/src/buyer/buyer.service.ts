@@ -675,6 +675,36 @@ export class BuyerService {
     this.logger.log(`[CONTENT_ACCESS] ✅ Purchase found for content: ${purchase.content.id}, status: ${purchase.status}`);
 
     if (purchase.status !== 'COMPLETED') {
+      const completed = await this.completePendingVcomPurchase(purchase, 'content access');
+
+      if (completed) {
+        purchase = await this.prisma.purchase.findUnique({
+          where: { accessToken },
+          include: {
+            content: {
+              include: {
+                creator: {
+                  select: {
+                    displayName: true,
+                    profileImage: true,
+                    allowBuyerProfileView: true,
+                  },
+                },
+                contentItems: true,
+              },
+            },
+            buyerSession: true,
+          },
+        });
+
+        if (!purchase) {
+          this.logger.warn(`[CONTENT_ACCESS] ❌ Purchase disappeared after VCOM completion for token: ${accessToken?.substring(0, 10)}...`);
+          throw new NotFoundException('Purchase not found');
+        }
+      }
+    }
+
+    if (purchase.status !== 'COMPLETED') {
       throw new UnauthorizedException('Purchase not completed');
     }
 
@@ -1212,7 +1242,7 @@ export class BuyerService {
   async checkAccessEligibility(accessToken: string, fingerprint: string) {
     this.logger.log(`[ELIGIBILITY_CHECK] Checking for token: ${accessToken?.substring(0, 10)}..., fingerprint: ${fingerprint?.substring(0, 10)}...`);
 
-    const purchase = await this.prisma.purchase.findUnique({
+    let purchase = await this.prisma.purchase.findUnique({
       where: { accessToken },
     });
 
@@ -1222,6 +1252,24 @@ export class BuyerService {
         hasAccess: false,
         reason: 'Invalid purchase - not found',
       };
+    }
+
+    if (purchase.status !== 'COMPLETED') {
+      const completed = await this.completePendingVcomPurchase(purchase, 'eligibility check');
+
+      if (completed) {
+        purchase = await this.prisma.purchase.findUnique({
+          where: { accessToken },
+        });
+
+        if (!purchase) {
+          this.logger.warn(`Purchase disappeared after VCOM completion for token: ${accessToken?.substring(0, 10)}...`);
+          return {
+            hasAccess: false,
+            reason: 'Invalid purchase - not found',
+          };
+        }
+      }
     }
 
     if (purchase.status !== 'COMPLETED') {
@@ -1260,6 +1308,41 @@ export class BuyerService {
         ? purchase.accessExpiresAt.getTime() - Date.now()
         : null,
     };
+  }
+
+  private async completePendingVcomPurchase(
+    purchase: {
+      id: string;
+      status: string;
+      paymentProvider: string;
+      paymentIntentId: string | null;
+      transactionId: string | null;
+    },
+    source: string,
+  ): Promise<boolean> {
+    if (purchase.status === 'COMPLETED' || purchase.paymentProvider !== 'VCOM') {
+      return purchase.status === 'COMPLETED';
+    }
+
+    const reference = purchase.paymentIntentId || purchase.transactionId;
+
+    if (!reference) {
+      this.logger.warn(`[VCOM_FALLBACK] Purchase ${purchase.id} has no VCOM reference during ${source}`);
+      return false;
+    }
+
+    try {
+      this.logger.log(`[VCOM_FALLBACK] Verifying ${reference} during ${source} for purchase ${purchase.id}`);
+      const result = await this.confirmPurchase(purchase.id, reference);
+      return result.status === 'COMPLETED';
+    } catch (error) {
+      this.logger.warn(
+        `[VCOM_FALLBACK] Could not complete purchase ${purchase.id} from VCOM during ${source}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return false;
+    }
   }
 
   /**

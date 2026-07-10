@@ -78,10 +78,21 @@ export class VcomService {
         }),
       });
 
-      const data = (await response.json()) as any;
+      const rawBody = await response.text();
+      let data: any = {};
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : {};
+      } catch {
+        this.logger.error(
+          `vcom checkout returned non-JSON response: status=${response.status} contentType=${response.headers.get('content-type')} body=${rawBody.slice(0, 300)}`,
+        );
+        throw new BadRequestException('Failed to create vcom checkout');
+      }
+
       if (!response.ok || !data.success) {
         const errorMessage = data?.message || 'Failed to create vcom checkout';
-        this.logger.error(`vcom checkout error: ${errorMessage}`);
+        this.logger.error(`vcom checkout error: status=${response.status} message=${errorMessage}`);
         throw new BadRequestException(errorMessage);
       }
 
@@ -108,10 +119,21 @@ export class VcomService {
         { headers: this.getHeaders() },
       );
 
-      const data = (await response.json()) as any;
+      const rawBody = await response.text();
+      let data: any = {};
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : {};
+      } catch {
+        this.logger.error(
+          `vcom status returned non-JSON response: status=${response.status} contentType=${response.headers.get('content-type')} body=${rawBody.slice(0, 300)}`,
+        );
+        throw new BadRequestException('Failed to verify vcom payment');
+      }
+
       if (!response.ok || !data.success) {
         const errorMessage = data?.message || 'Failed to verify vcom payment';
-        this.logger.error(`vcom status error: ${errorMessage}`);
+        this.logger.error(`vcom status error: status=${response.status} message=${errorMessage}`);
         throw new BadRequestException(errorMessage);
       }
 

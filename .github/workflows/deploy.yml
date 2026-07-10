@@ -67,7 +67,6 @@ jobs:
             --exclude='.env*' \
             --exclude='node_modules' \
             --exclude='production.env' \
-            --exclude='storage' \
             --exclude='tests' \
             --exclude='deploy.tar.gz' \
             -czf "$tarball" .
@@ -185,5 +184,8 @@ jobs:
             sed -i "s#__DIR__.'/../bootstrap/app.php'#'$APP_DIR_ESCAPED/bootstrap/app.php'#g" "$PUBLIC_DIR/index.php"
 
             rm -rf "$PUBLIC_DIR/storage"
-            ln -s "$APP_DIR/storage/app/public" "$PUBLIC_DIR/storage"
+            mkdir -p "$PUBLIC_DIR/storage"
+            rsync -a --delete storage/app/public/ "$PUBLIC_DIR/storage/"
+            find "$PUBLIC_DIR/storage" -type d -exec chmod 755 {} \;
+            find "$PUBLIC_DIR/storage" -type f -exec chmod 644 {} \;
             touch tmp/restart.txt 2>/dev/null || true

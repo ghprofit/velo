@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Category;
 use App\Models\Setting;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Schema::defaultStringLength(191);
+
         View::composer('layouts.navigation', function ($view) {
             $view->with('allCategories', Category::where('active', true)->whereNull('parent_id')
                 ->orderByRaw("FIELD(name, 'Women', 'Men', 'Kids', 'Sports')")

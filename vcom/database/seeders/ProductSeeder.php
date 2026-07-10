@@ -34,9 +34,9 @@ class ProductSeeder extends Seeder
                 'colors' => ['Grey' => '#9ca3af', 'Rose' => '#d98ea1']],
 
             ['category_id' => $kids->id, 'name' => "Kids' Light-Up Sneaker", 'description' => "Fun light-up sole with hook-and-loop straps for easy wear. Durable outsole for playground days.", 'price' => 49.99, 'sale_price' => null, 'sku' => 'KID-001', 'featured' => true,
-                'colors' => ['White' => '#f5f5f5', 'Black' => '#111111'], 'sizes' => $sizesKids],
+                'colors' => ['Teal' => '#4fd1c5', 'Red' => '#dc2626'], 'sizes' => $sizesKids],
             ['category_id' => $kids->id, 'name' => "Kids' Velcro Trainer", 'description' => "Lightweight everyday trainer with adjustable straps built for growing feet.", 'price' => 44.99, 'sale_price' => null, 'sku' => 'KID-002', 'featured' => false,
-                'colors' => ['Grey' => '#9ca3af'], 'sizes' => $sizesKids],
+                'colors' => ['Denim' => '#3b5578'], 'sizes' => $sizesKids],
 
             ['category_id' => $sports->id, 'name' => "Pro Running Shoe", 'description' => "Engineered for performance with a responsive foam plate and breathable engineered mesh.", 'price' => 119.99, 'sale_price' => 99.99, 'sku' => 'SPT-001', 'featured' => true,
                 'colors' => ['Black' => '#111111', 'White' => '#f5f5f5', 'Red' => '#c0392b']],
@@ -49,27 +49,37 @@ class ProductSeeder extends Seeder
             $sizes = $data['sizes'] ?? $sizesAdult;
             unset($data['colors'], $data['sizes']);
 
-            $product = Product::create([
+            $product = Product::updateOrCreate([
+                'sku' => $data['sku'],
+            ], [
                 ...$data,
                 'stock' => 0,
             ]);
 
             foreach ($colors as $colorName => $hex) {
-                $color = $product->colors()->create([
+                $color = $product->colors()->updateOrCreate([
                     'name' => $colorName,
+                ], [
                     'hex_color' => $hex,
                     'sort_order' => 0,
                 ]);
 
                 foreach ($sizes as $index => $size) {
-                    $color->variants()->create([
+                    $color->variants()->updateOrCreate([
                         'product_id' => $product->id,
                         'size' => $size,
-                        // Occasionally leave a size out of stock to exercise the "sold out" state.
-                        'stock' => ($index % 5 === 4) ? 0 : rand(3, 20),
+                    ], [
+                        'product_id' => $product->id,
+                        'stock' => $this->stockFor($index, $colorName),
                     ]);
                 }
             }
         }
+    }
+
+    private function stockFor(int $index, string $colorName): int
+    {
+        // Occasionally leave a size out of stock to exercise the "sold out" state.
+        return ($index % 5 === 4) ? 0 : 3 + (($index + strlen($colorName)) % 18);
     }
 }

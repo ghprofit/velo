@@ -10,12 +10,18 @@ class AdminSeeder extends Seeder
 {
     public function run(): void
     {
-        User::create([
-            'name' => 'Admin',
+        $admin = User::firstOrCreate([
             'email' => 'admin@stryd.com',
+        ], [
+            'name' => 'Admin',
             'password' => Hash::make('password'),
             'is_admin' => true,
-            'email_verified_at' => now(),
         ]);
+
+        $admin->forceFill([
+            'name' => $admin->name ?: 'Admin',
+            'is_admin' => true,
+            'email_verified_at' => $admin->email_verified_at ?? now(),
+        ])->save();
     }
 }

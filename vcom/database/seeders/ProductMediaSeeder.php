@@ -177,9 +177,26 @@ class ProductMediaSeeder extends Seeder
             return;
         }
 
-        $product->colors()->where('name', $oldName)->update([
-            'name' => $newName,
-            'hex_color' => $hex,
-        ]);
+        $target = $product->colors()->where('name', $newName)->first();
+        $old = $product->colors()->where('name', $oldName)->first();
+
+        if ($target) {
+            $target->update(['hex_color' => $hex]);
+
+            if ($old) {
+                $old->variants()->delete();
+                $old->images()->delete();
+                $old->delete();
+            }
+
+            return;
+        }
+
+        if ($old) {
+            $old->update([
+                'name' => $newName,
+                'hex_color' => $hex,
+            ]);
+        }
     }
 }

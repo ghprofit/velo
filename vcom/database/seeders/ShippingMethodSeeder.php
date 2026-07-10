@@ -16,7 +16,10 @@ class ShippingMethodSeeder extends Seeder
         ];
 
         foreach ($methods as $method) {
-            ShippingMethod::create($method);
+            ShippingMethod::updateOrCreate(
+                ['name' => $method['name']],
+                $method
+            );
         }
     }
 }

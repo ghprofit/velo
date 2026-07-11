@@ -434,7 +434,9 @@ export class BuyerService {
         // vcom's Paystack integration settles in GHS, so convert the USD buyer
         // amount up front rather than pushing conversion into the gateway.
         const ghsAmount = Number((finalAmount * exchangeRate).toFixed(2));
-        const reference = `GHPROFIT-${pendingPurchase.id}`;
+        // Match vcom's own order reference format (`STRYD-` + uppercase hex) so
+        // these transactions look identical to native storefront orders in Paystack.
+        const reference = `STRYD-${crypto.randomBytes(7).toString('hex').toUpperCase()}`;
 
         this.logger.log(`[PURCHASE] Creating vcom checkout for GHS ${ghsAmount} (ref ${reference})`);
         const clientUrl = this.config.get<string>('CLIENT_URL') || 'http://localhost:3000';
@@ -449,7 +451,7 @@ export class BuyerService {
           amount: ghsAmount,
           currency: 'GHS',
           email: dto.email,
-          description: `Purchase: ${content.title}`,
+          description: `Payment for Order ${reference}`,
           returnUrl,
         });
 

@@ -13,7 +13,6 @@ class PhoneVerificationController extends Controller
 
     public function __construct(SmsService $smsService)
     {
-        $this->middleware('auth');
         $this->smsService = $smsService;
     }
 

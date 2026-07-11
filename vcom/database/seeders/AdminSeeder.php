@@ -11,10 +11,10 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         $admin = User::firstOrCreate([
-            'email' => 'admin@stryd.com',
+            'email' => 'admin@wearstryd.com',
         ], [
             'name' => 'Admin',
-            'password' => Hash::make('password'),
+            'password' => Hash::make('WearStryd12@'),
             'is_admin' => true,
         ]);
 

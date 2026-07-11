@@ -173,7 +173,7 @@ class CheckoutController extends Controller
                     'description' => "Payment for Order {$order->order_number}",
                     'client_reference' => $order->order_number,
                     'return_url' => route('checkout.success', $order),
-                    'currency' => Setting::get('currency', 'USD'),
+                    'currency' => Setting::get('currency', 'GHS'),
                 ];
 
                 $paymentResponse = $this->paystackService->initiatePayment($paymentData);

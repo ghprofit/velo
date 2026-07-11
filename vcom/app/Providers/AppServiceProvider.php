@@ -38,8 +38,8 @@ class AppServiceProvider extends ServiceProvider
                 'secondary' => Setting::get('secondary_color', '#10b981'),
             ]);
             $view->with('siteCurrency', [
-                'code' => Setting::get('currency', 'USD'),
-                'symbol' => Setting::get('currency_symbol', '$'),
+                'code' => Setting::get('currency', 'GHS'),
+                'symbol' => Setting::get('currency_symbol', '₵'),
             ]);
             $view->with('siteName', Setting::get('site_name', 'STRYD'));
         });

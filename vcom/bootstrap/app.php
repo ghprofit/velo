@@ -12,6 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // wearstryd.com is fronted by Cloudflare, so the app must trust its
+        // X-Forwarded-* headers to correctly detect the real scheme/host —
+        // otherwise callback URLs and secure-cookie detection can be wrong.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
         ]);

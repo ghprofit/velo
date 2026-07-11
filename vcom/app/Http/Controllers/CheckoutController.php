@@ -214,15 +214,7 @@ class CheckoutController extends Controller
 
     public function success(Order $order)
     {
-        if ($order->user_id !== auth()->id()) {
-            \Log::warning('Checkout success 403 mismatch', [
-                'order_id' => $order->id,
-                'order_number' => $order->order_number,
-                'order_user_id' => $order->user_id,
-                'auth_id' => auth()->id(),
-                'session_id' => session()->getId(),
-                'has_session_cookie' => request()->hasCookie(config('session.cookie')),
-            ]);
+        if ((int) $order->user_id !== (int) auth()->id()) {
             abort(403);
         }
 

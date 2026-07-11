@@ -14,7 +14,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        if ($order->user_id !== auth()->id()) {
+        if ((int) $order->user_id !== (int) auth()->id()) {
             abort(403);
         }
 

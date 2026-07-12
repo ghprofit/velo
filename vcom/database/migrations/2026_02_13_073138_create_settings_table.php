@@ -27,7 +27,7 @@ return new class extends Migration
             ['key' => 'hero_image', 'value' => null, 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'primary_color', 'value' => '#111111', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'secondary_color', 'value' => '#10b981', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'banner_text', 'value' => 'Free shipping on orders over $50!', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'banner_text', 'value' => 'Free shipping on orders over GH₵50!', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'show_banner', 'value' => '1', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }

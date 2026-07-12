@@ -65,11 +65,11 @@
                                 <div class="flex items-center justify-between mb-3">
                                     @if($wishlist->product->is_on_sale)
                                         <div>
-                                            <span class="text-lg font-bold text-red-600">GHS {{ number_format($wishlist->product->sale_price, 2) }}</span>
-                                            <span class="text-sm text-gray-500 line-through ml-2">GHS {{ number_format($wishlist->product->price, 2) }}</span>
+                                            <span class="text-lg font-bold text-red-600">{{ currency($wishlist->product->sale_price) }}</span>
+                                            <span class="text-sm text-gray-500 line-through ml-2">{{ currency($wishlist->product->price) }}</span>
                                         </div>
                                     @else
-                                        <span class="text-lg font-bold text-gray-900">GHS {{ number_format($wishlist->product->price, 2) }}</span>
+                                        <span class="text-lg font-bold text-gray-900">{{ currency($wishlist->product->price) }}</span>
                                     @endif
                                 </div>
 

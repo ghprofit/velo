@@ -39,7 +39,7 @@ class HomeController extends Controller
             'primary_color' => Setting::get('primary_color', '#111111'),
             'secondary_color' => Setting::get('secondary_color', '#10b981'),
             'show_banner' => Setting::get('show_banner', '1'),
-            'banner_text' => Setting::get('banner_text', 'Free shipping on orders over $50!'),
+            'banner_text' => Setting::get('banner_text', 'Free shipping on orders over GH₵50!'),
         ];
 
         // Get hero banners

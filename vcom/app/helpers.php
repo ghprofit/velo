@@ -12,8 +12,8 @@ if (!function_exists('currency')) {
      */
     function currency($amount, $showCode = false)
     {
-        $symbol = Setting::get('currency_symbol', '$');
-        $code = Setting::get('currency', 'USD');
+        $symbol = Setting::get('currency_symbol', '₵');
+        $code = Setting::get('currency', 'GHS');
         $formatted = number_format($amount, 2);
         
         if ($showCode) {
@@ -32,7 +32,7 @@ if (!function_exists('currencySymbol')) {
      */
     function currencySymbol()
     {
-        return Setting::get('currency_symbol', '$');
+        return Setting::get('currency_symbol', '₵');
     }
 }
 
@@ -44,6 +44,6 @@ if (!function_exists('currencyCode')) {
      */
     function currencyCode()
     {
-        return Setting::get('currency', 'USD');
+        return Setting::get('currency', 'GHS');
     }
 }

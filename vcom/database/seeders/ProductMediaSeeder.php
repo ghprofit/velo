@@ -161,7 +161,7 @@ class ProductMediaSeeder extends Seeder
         HeroBanner::create([
             'image_path' => 'hero-banners/hero-flatlay-1.jpg',
             'title' => 'Find Your Fit',
-            'subtitle' => 'Every color, every size — free delivery over $30',
+            'subtitle' => 'Every color, every size — free delivery over GH₵30',
             'button_text' => 'Explore Collection',
             'button_link' => null,
             'sort_order' => 1,
